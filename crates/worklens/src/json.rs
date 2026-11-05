@@ -450,6 +450,13 @@ pub fn status(s: &Snapshot, now: Timestamp) -> serde_json::Map<String, Value> {
     map.insert("ageMinutes".into(), json!(age));
     map.insert("partial".into(), json!(s.raw.failures().next().is_some()));
     map.insert("errors".into(), serde_json::to_value(&s.raw.errors).unwrap_or_default());
+    let states: serde_json::Map<String, Value> = s
+        .raw
+        .states()
+        .into_iter()
+        .map(|(source, state)| (source.to_owned(), json!(state)))
+        .collect();
+    map.insert("sourceStates".into(), states.into());
     map.insert("stale".into(), serde_json::to_value(&s.raw.stale).unwrap_or_default());
     map
 }

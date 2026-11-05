@@ -32,8 +32,8 @@ const TOOLS: &[Tool] = &[
     },
     Tool {
         name: "worklens_next",
-        description: "What's waiting on the user, ready to land, returned to them and waiting on others, in that order, oldest first within each. Each item has `reason` and `action` (suggested next step). Use the order as given; it's the user's.",
-        input_schema: || json!({ "type": "object", "properties": { "limit": { "type": "number", "description": "Max items, default 10" } } }),
+        description: "What's waiting on the user, ready to land, returned to them and waiting on others, in that order; within each, critical items first, then important, then the rest, oldest first. Each item has `reason` and `action` (suggested next step). Use the order as given; it's the user's.",
+        input_schema: || json!({ "type": "object", "properties": { "limit": { "type": "number", "description": "Max items, default 10; `more` counts the rest" } } }),
     },
     Tool {
         name: "worklens_sprint",
@@ -187,8 +187,11 @@ fn call(name: &str, args: &Args) -> anyhow::Result<String> {
         }
         "worklens_next" => {
             let turns = [Section::Waiting, Section::Land, Section::Returned, Section::Uplift, Section::Others];
-            let ids = turns.iter().flat_map(|t| s.section(*t, false)).take(args.limit.unwrap_or(10));
-            json!({ "fetchedAt": s.raw.fetched_at, "sprint": shapes::sprint(s), "items": compacts(s, ids), "errors": errors })
+            let limit = args.limit.unwrap_or(10);
+            let every: Vec<EntryIdx> = turns.iter().flat_map(|t| s.section(*t, false)).collect();
+            let more = every.len().saturating_sub(limit);
+            let ids = every.into_iter().take(limit);
+            json!({ "fetchedAt": s.raw.fetched_at, "sprint": shapes::sprint(s), "items": compacts(s, ids), "more": more, "errors": errors })
         }
         "worklens_sprint" => json!({ "sprint": shapes::sprint(s), "items": compacts(s, s.section(Section::Sprint, true)) }),
         "worklens_drift" => {

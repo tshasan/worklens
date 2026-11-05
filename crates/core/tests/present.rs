@@ -283,3 +283,21 @@ fn sections_say_why_they_were_not_checked() {
     assert_eq!(s.empty_text(Section::Drift), Section::Drift.empty());
     assert!(s.empty_text(Section::Team).contains("whiteboard tag"));
 }
+
+#[test]
+fn ages_read_in_the_largest_whole_unit() {
+    let now: Timestamp = "2026-11-03T20:00:00Z".parse().unwrap();
+    let before = |minutes: i64| now - jiff::SignedDuration::from_mins(minutes);
+    let cases = [
+        (0, "just now"),
+        (1, "1m ago"),
+        (59, "59m ago"),
+        (60, "1h ago"),
+        (1439, "24h ago"),
+        (1440, "1d ago"),
+        (2880, "2d ago"),
+    ];
+    for (minutes, text) in cases {
+        assert_eq!(present::ago(before(minutes), now), text, "{minutes} minutes");
+    }
+}

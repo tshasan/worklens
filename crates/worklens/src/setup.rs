@@ -101,10 +101,11 @@ pub fn run(st: Style) -> anyhow::Result<()> {
     let note = |text: &str| eprintln!("  {}", st.dim(text));
 
     eprintln!("{}", st.bold("worklens setup"));
-    eprintln!("Each key is checked, then kept in {}.", secrets::keychain_name());
+    eprintln!("Each key is checked, then kept in {}.", secrets::key_store());
     eprintln!("Press Enter to skip anything you don't use.\n");
 
     let mut email: Option<String> = cfg.sources.email.clone();
+    let mut saved_key = false;
 
     eprintln!("{}", st.bold("Bugzilla"));
     note("A key lets worklens see restricted (security, confidential) bugs and find you by it.");
@@ -119,6 +120,7 @@ pub fn run(st: Style) -> anyhow::Result<()> {
             Ok(name) => {
                 let at = secrets::set(Service::Bugzilla, &key)?;
                 ok(format!("signed in as {}; saved in {at}", name.as_deref().unwrap_or("?")));
+                saved_key = true;
                 email = email.or(name);
                 break;
             }
@@ -161,6 +163,7 @@ pub fn run(st: Style) -> anyhow::Result<()> {
                     Ok(who) => {
                         let at = secrets::set(Service::Phabricator, &token)?;
                         ok(format!("signed in as {who}; saved in {at}"));
+                        saved_key = true;
                         email = email.or(Some(who));
                         break;
                     }
@@ -209,6 +212,7 @@ pub fn run(st: Style) -> anyhow::Result<()> {
                 Some((who, auth, fields)) => {
                     let at = secrets::set(Service::Jira, &token)?;
                     ok(format!("signed in as {who} ({} token); saved in {at}", auth.name()));
+                    saved_key = true;
                     match (&fields.story_points, &fields.sprint) {
                         (Some(points), Some(sprint)) => ok(format!("story points are {points}, the sprint is {sprint}")),
                         _ => note("couldn't find the story points or sprint field; set storyPointsField and sprintField in the config"),
@@ -224,7 +228,17 @@ pub fn run(st: Style) -> anyhow::Result<()> {
 
     if email.is_none() {
         eprintln!();
-        let typed = ask("Your Bugzilla email (whose bugs to show)", None)?;
+        let question = "Your Bugzilla email (whose bugs to show)";
+        let mut typed = ask(question, suggested_email().as_deref())?;
+        if typed.is_empty() && !saved_key && needed(&cfg) {
+            note("This is the one answer worklens needs: it finds your bugs by your Bugzilla email.");
+            typed = ask(question, None)?;
+            if typed.is_empty() {
+                bail!(
+                    "no email, so worklens can't tell whose bugs to show: run `worklens setup` again, or set \"email\" in ~/.config/worklens.json"
+                );
+            }
+        }
         email = (!typed.is_empty()).then_some(typed);
     }
 
@@ -284,6 +298,31 @@ pub fn run(st: Style) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn suggested_email() -> Option<String> {
+    output_of("git", &["config", "--get", "user.email"])
+        .and_then(|text| address(&text))
+        .or_else(|| output_of("hg", &["config", "ui.username"]).and_then(|text| address(&text)))
+}
+
+fn output_of(program: &str, args: &[&str]) -> Option<String> {
+    let out = std::process::Command::new(program)
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .ok()?;
+    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+fn address(text: &str) -> Option<String> {
+    let inside = text
+        .split_once('<')
+        .and_then(|(_, rest)| rest.split_once('>'))
+        .map_or(text, |(inside, _)| inside)
+        .trim();
+    (inside.contains('@') && !inside.contains(char::is_whitespace)).then(|| inside.to_owned())
+}
+
 pub fn status(st: Style) -> anyhow::Result<()> {
     let cfg = config::load()?;
     for c in &cfg.credentials {
@@ -293,7 +332,7 @@ pub fn status(st: Style) -> anyhow::Result<()> {
                 "{} {:<12} {origin}; `worklens auth import` keeps a copy in {}",
                 st.yellow("~"),
                 c.service.label(),
-                secrets::keychain_name()
+                secrets::key_store()
             ),
             (Some(origin), None) => format!("{} {:<12} {origin}", st.green("✓"), c.service.label()),
             (None, None) => format!(
@@ -401,5 +440,14 @@ mod tests {
             put_setting(&mut map, &defaults, s);
         }
         assert_eq!(Value::Object(map), serde_json::json!({"email": "me@mozilla.com"}));
+    }
+
+    #[test]
+    fn an_address_comes_from_a_bare_email_or_the_brackets_of_name_and_email() {
+        assert_eq!(address("me@mozilla.com\n").as_deref(), Some("me@mozilla.com"));
+        assert_eq!(address("Ada Lovelace <ada@mozilla.com>\n").as_deref(), Some("ada@mozilla.com"));
+        assert_eq!(address("Ada Lovelace\n"), None);
+        assert_eq!(address("Ada <>"), None);
+        assert_eq!(address("\n"), None);
     }
 }

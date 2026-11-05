@@ -9,7 +9,8 @@ use serde_json::Value;
 use worklens_core::CoreConfig;
 use worklens_core::marks::Marks;
 use worklens_core::raw::Raw;
-use worklens_testkit::{Mutation, WHITEBOARD, cache, mutated, mutations, text};
+use worklens_testkit::{Mutation, WHITEBOARD, cache, mutated, mutations, screen_problems, text};
+use worklens_tui::app::Mode;
 use worklens_tui::{App, Check, Msg, Options, update, view};
 
 #[derive(Clone, Debug)]
@@ -115,11 +116,32 @@ fn msg(step: &Step) -> Option<Msg> {
     })
 }
 
+fn honest(app: &App, screen: &str) -> Result<(), TestCaseError> {
+    let (Mode::List, Some(s)) = (app.mode, &app.snapshot) else {
+        return Ok(());
+    };
+    let off: Vec<&str> = ["jira", "phabricator"]
+        .into_iter()
+        .filter(|source| {
+            let mut errors = s.raw.errors.iter().filter(|e| e.source == *source).peekable();
+            errors.peek().is_some() && errors.all(|e| e.unset)
+        })
+        .collect();
+    let failed = s.raw.errors.iter().any(|e| !e.unset) || app.error.is_some() || app.action_error.is_some();
+    let problems = screen_problems(screen, &off, failed);
+    prop_assert!(problems.is_empty(), "{problems:#?}\n{screen}");
+    Ok(())
+}
+
 fn draw(app: &App) -> Result<(), TestCaseError> {
     let (w, h) = app.size;
     let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
     terminal.draw(|f| view(app, f)).unwrap();
     let buf = terminal.backend().buffer();
+    let screen: String = (0..h)
+        .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect::<String>() + "\n")
+        .collect();
+    honest(app, &screen)?;
     for y in 0..h {
         for x in 0..w {
             let symbol = buf[(x, y)].symbol();

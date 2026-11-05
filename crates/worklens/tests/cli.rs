@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -6,10 +7,14 @@ struct Home(PathBuf);
 
 impl Home {
     fn new(name: &str) -> Self {
+        Self::with_cache(name, "raw.json")
+    }
+
+    fn with_cache(name: &str, fixture: &str) -> Self {
         let dir = std::env::temp_dir().join(format!("worklens-cli-{name}-{}", std::process::id()));
         let cache = dir.join(".cache/worklens");
         fs::create_dir_all(&cache).unwrap();
-        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../store/fixtures/raw.json");
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../store/fixtures").join(fixture);
         fs::copy(fixture, cache.join("state.json")).unwrap();
         Self(dir)
     }
@@ -21,8 +26,13 @@ impl Home {
     }
 
     fn run_exactly(&self, args: &[&str]) -> (bool, String, String) {
+        self.run_with(args, &[])
+    }
+
+    fn run_with(&self, args: &[&str], env: &[(&str, &Path)]) -> (bool, String, String) {
         let out = Command::new(env!("CARGO_BIN_EXE_worklens"))
             .args(args)
+            .envs(env.iter().copied())
             .env("HOME", &self.0)
             .env("XDG_STATE_HOME", self.0.join("state"))
             .env("NO_COLOR", "1")
@@ -423,4 +433,314 @@ fn blocker_guidance_and_dependencies_survive_cli_compact_brief_and_mcp() {
     let result: Value = serde_json::from_str(response["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert_eq!(result["dependencies"], full["dependencies"]);
     assert_eq!(result["actionUrl"], full["actionUrl"]);
+}
+
+fn says_off_never_failed(args: &[&str], text: &str) {
+    let problems = worklens_testkit::screen_problems(text, &["jira", "phabricator"], false);
+    assert!(problems.is_empty(), "`worklens {}`: {problems:#?}\n{text}", args.join(" "));
+}
+
+#[test]
+fn a_bugzilla_only_user_hears_what_is_off_and_never_that_it_failed() {
+    let home = Home::with_cache("bugzilla-only", "bugzilla_only.json");
+    let commands: [&[&str]; 6] = [
+        &["next"],
+        &["sections"],
+        &["sprint"],
+        &["drift"],
+        &["drift", "--team"],
+        &["show", "1995008"],
+    ];
+    for args in commands {
+        let (ok, out, err) = home.run(args);
+        assert!(ok, "`worklens {}` failed: {err}", args.join(" "));
+        says_off_never_failed(args, &format!("{out}{err}"));
+    }
+    for (reference, source) in [("D123", "Phabricator"), ("AIPLAT-123", "Jira")] {
+        let (ok, _, err) = home.run(&["show", reference]);
+        assert!(!ok);
+        assert!(err.contains(&format!("{source} isn't set up")), "{reference}: {err}");
+    }
+    let (_, out, _) = home.run(&["next", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(
+        json["sourceStates"],
+        serde_json::json!({"bugzilla": "ok", "jira": "off", "phabricator": "off"})
+    );
+    let (_, out, _) = Home::new("all-sources").run(&["next", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(json["sourceStates"]["phabricator"], "ok");
+}
+
+#[test]
+fn next_text_keeps_to_the_limit_and_skips_sections_that_are_off() {
+    let busy = Home::with_cache("busy-limit", "busy.json");
+    let (_, all, _) = busy.run(&["next", "--all"]);
+    let (_, two, _) = busy.run(&["next", "--limit", "2"]);
+    let rows = |text: &str| {
+        text.lines()
+            .filter(|l| l.trim_start().split_once("d  ").is_some_and(|(age, _)| age.parse::<u32>().is_ok()))
+            .count()
+    };
+    assert!(rows(&all) > 2, "{all}");
+    assert_eq!(rows(&two), 2, "{two}");
+    assert!(two.contains("more; `worklens next --all` lists them"), "{two}");
+    assert!(!all.contains("more; `worklens next --all`"), "--all leaves nothing out:\n{all}");
+    let (_, out, _) = Home::with_cache("off-sections", "bugzilla_only.json").run(&["next"]);
+    for title in ["Ready to land", "Returned to you", "Waiting on others"] {
+        assert!(!out.contains(title), "{title} is off and the header says so:\n{out}");
+    }
+    assert!(out.contains("Waiting on you"), "{out}");
+    let jira_lines = out.lines().filter(|l| l.to_lowercase().contains("jira")).count();
+    assert_eq!(jira_lines, 1, "that Jira is off is said once:\n{out}");
+}
+
+#[test]
+fn show_text_has_no_machine_stamps_and_names_each_link_once() {
+    let home = Home::new("show-text");
+    let (ok, out, err) = home.run(&["show", "1995008"]);
+    assert!(ok, "{err}");
+    assert!(!out.contains("; observed 20"), "{out}");
+    let link = "https://bugzilla.mozilla.org/show_bug.cgi?id=1995008";
+    assert_eq!(out.matches(link).count(), 1, "{out}");
+    assert!(
+        out.contains("D321987 review: quillfox: blocking"),
+        "known evidence is shown:\n{out}"
+    );
+    let folded = out
+        .lines()
+        .find(|l| l.contains("Nothing seen yet for"))
+        .unwrap_or_else(|| panic!("{out}"));
+    assert!(folded.contains("Nightly 161") && folded.contains("ESR 115"), "{folded}");
+    assert!(
+        !out.lines().any(|l| l.trim_start().starts_with("Nightly 161:")),
+        "unknowns fold into one line:\n{out}"
+    );
+
+    let (ok, landing, err) = Home::with_cache("show-landing", "busy.json").run(&["show", "2000469"]);
+    assert!(ok, "{err}");
+    assert!(
+        landing.contains("esr140 uplift: No approval flag observed"),
+        "an item up for a landing decision shows every row, unknowns too:\n{landing}"
+    );
+    assert!(!landing.contains("Nothing seen yet"), "{landing}");
+}
+
+#[test]
+fn a_first_run_with_no_keys_fetches_only_bugzilla_and_says_what_is_off() {
+    let home = Home::new("first-run");
+    fs::remove_file(home.0.join(".cache/worklens/state.json")).unwrap();
+    worklens_store::write_atomic(&home.0.join(".config/worklens.json"), |out| {
+        out.write_all(br#"{"email": "me@mozilla.com"}"#)
+    })
+    .unwrap();
+    let replay = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/replay/first_run");
+
+    let (ok, out, err) = home.run_with(&["refresh"], &[("WORKLENS_REPLAY", &replay)]);
+    assert!(ok, "{out}{err}");
+    let raw: serde_json::Value = serde_json::from_slice(&fs::read(home.0.join(".cache/worklens/state.json")).unwrap()).unwrap();
+    let asked: Vec<&str> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["url"].as_str().unwrap())
+        .collect();
+    for call in raw["calls"].as_array().unwrap() {
+        assert_eq!(call["status"], 200, "every request the real code made was answered: {call}");
+    }
+    for host in ["atlassian", "phabricator"] {
+        assert!(!asked.iter().any(|u| u.contains(host)), "no key, so no {host} request: {asked:#?}");
+    }
+    assert!(
+        asked.iter().any(|u| u.contains("v1=me%40mozilla.com")),
+        "bugs are looked up by the email: {asked:#?}"
+    );
+
+    let hand_made: serde_json::Value =
+        serde_json::from_slice(&fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../store/fixtures/bugzilla_only.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        raw["errors"], hand_made["errors"],
+        "bugzilla_only.json must match what a real first run writes"
+    );
+    assert_eq!(raw["me"]["phid"], hand_made["me"]["phid"]);
+
+    let (ok, text, err) = home.run(&["next"]);
+    assert!(ok, "{err}");
+    says_off_never_failed(&["next"], &text);
+    let waiting = text.split("Waiting on you").nth(1).unwrap_or_default();
+    assert!(
+        waiting.contains("2086888"),
+        "the needinfo the fetch found is waiting on you:\n{text}"
+    );
+    let (_, json, _) = home.run(&["next", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(json["partial"], false, "{json}");
+    assert_eq!(
+        json["sourceStates"],
+        serde_json::json!({"bugzilla": "ok", "jira": "off", "phabricator": "off"})
+    );
+}
+
+#[test]
+fn next_prints_in_the_order_its_help_describes() {
+    let busy = Home::with_cache("busy-order", "busy.json");
+    let (_, help, _) = busy.run_exactly(&["next", "--help"]);
+    assert!(help.contains("critical first"), "{help}");
+    assert!(!help.contains("What needs you, oldest first"), "{help}");
+    let (_, out, _) = busy.run(&["next", "--all", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let rank = |tier: &serde_json::Value| ["critical", "important", "other"].iter().position(|t| tier == t).unwrap();
+    let items = json["items"].as_array().unwrap();
+    for pair in items.windows(2) {
+        let (a, b) = (&pair[0], &pair[1]);
+        if a["section"] != b["section"] || a["tag"] == "r?#" || b["tag"] == "r?#" {
+            continue;
+        }
+        let key = |x: &serde_json::Value| (rank(&x["tier"]), x["since"].as_str().unwrap_or("~").to_owned());
+        assert!(
+            key(a) <= key(b),
+            "critical first, then important, then the rest; oldest first within each:\n{a}\n{b}"
+        );
+    }
+}
+
+#[test]
+fn next_json_says_how_many_items_it_left_out() {
+    let busy = Home::with_cache("busy-next-json", "busy.json");
+    let count = |args: &[&str]| -> (usize, u64) {
+        let (ok, out, err) = busy.run(args);
+        assert!(ok, "{err}");
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        (
+            v["items"].as_array().unwrap().len(),
+            v["more"].as_u64().unwrap_or_else(|| panic!("no `more` in {args:?}")),
+        )
+    };
+    let (all, none_left) = count(&["next", "--all", "--json"]);
+    assert_eq!(none_left, 0);
+    for args in [&["next", "--json"][..], &["next", "--compact"], &["next", "--limit", "3", "--json"]] {
+        let (shown, more) = count(args);
+        assert!(shown < all, "{args:?}");
+        assert_eq!(shown as u64 + more, all as u64, "{args:?}: shown plus more is every item");
+    }
+}
+
+#[test]
+fn show_lists_no_stack_dependency_the_tui_hides() {
+    let busy = Home::with_cache("busy-show-stack", "busy.json");
+    let (ok, out, err) = busy.run(&["show", "2000469"]);
+    assert!(ok, "{err}");
+    assert!(out.contains("Land the uplift to Beta 146"), "{out}");
+    assert!(
+        !out.contains("Depends: D346061 stack"),
+        "an item doesn't depend on its own stack:\n{out}"
+    );
+    let (_, blocked, _) = busy.run(&["show", "1996607"]);
+    assert!(
+        blocked.contains("Depends: bug 1996929 · ASSIGNED"),
+        "real dependencies stay:\n{blocked}"
+    );
+    assert!(blocked.contains("Depends: D338703 · needs-revision"), "{blocked}");
+}
+
+#[test]
+fn cache_age_reads_like_the_tui_not_thousands_of_minutes() {
+    let busy = Home::with_cache("busy-age", "busy.json");
+    let fixture: serde_json::Value = serde_json::from_slice(&fs::read(busy.0.join(".cache/worklens/state.json")).unwrap()).unwrap();
+    let fetched: jiff::Timestamp = fixture["fetchedAt"].as_str().unwrap().parse().unwrap();
+    let days = ((jiff::Timestamp::now().as_second() - fetched.as_second()) as f64 / 86_400.0).round();
+    let expected = format!("pdated {days}d ago");
+    for cmd in ["next", "health"] {
+        let (ok, out, err) = busy.run(&[cmd]);
+        assert!(ok, "{err}");
+        let first = out.lines().next().unwrap_or_default();
+        assert!(
+            first.contains(&expected),
+            "`{cmd}` should say {expected:?} like the TUI does: {first}"
+        );
+    }
+}
+
+#[test]
+fn sprint_text_aligns_titles_after_mixed_ids() {
+    let busy = Home::with_cache("busy-sprint-align", "busy.json");
+    let (ok, out, err) = busy.run(&["sprint"]);
+    assert!(ok, "{err}");
+    let column = |id: &str, title: &str| {
+        let line = out.lines().find(|l| l.contains(id)).unwrap_or_else(|| panic!("{id} in\n{out}"));
+        line.find(title).unwrap()
+    };
+    assert_eq!(
+        column("2006319", "Handle offline mode"),
+        column("AIPLAT-1528", "Investigate PageExtractor"),
+        "{out}"
+    );
+}
+
+#[test]
+fn sprint_text_counts_points_like_the_tui() {
+    let busy = Home::with_cache("busy-sprint-points", "busy.json");
+    let (ok, out, err) = busy.run(&["sprint"]);
+    assert!(ok, "{err}");
+    let header = out.lines().find(|l| l.contains("AI Platform 2026.22")).unwrap();
+    assert!(
+        header.contains("52 of 10 pts · over budget"),
+        "the TUI says \"52 of 10 pts · over budget\":\n{header}"
+    );
+    assert!(header.contains(" · 13 pts done"), "13 is points, not tickets:\n{header}");
+}
+
+#[test]
+fn mcp_next_says_how_many_items_it_left_out() {
+    let home = Home::new("mcp-more");
+    let input = [
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"worklens_next","arguments":{"limit":0}}}"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"worklens_next","arguments":{}}}"#,
+    ]
+    .join("\n");
+    let out = home.mcp(&input);
+    let replies: Vec<serde_json::Value> = out.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+    let result =
+        |i: usize| -> serde_json::Value { serde_json::from_str(replies[i]["result"]["content"][0]["text"].as_str().unwrap()).unwrap() };
+    let (cut, whole) = (result(1), result(2));
+    let every = whole["items"].as_array().unwrap().len() as u64;
+    assert!(every > 0, "{whole}");
+    assert_eq!(cut["items"].as_array().unwrap().len(), 0);
+    assert_eq!(cut["more"], every, "with no room, every item is counted in `more`");
+    assert_eq!(whole["more"], 0);
+}
+
+#[test]
+fn a_sprint_with_nothing_done_says_nothing_about_done() {
+    let (ok, out, err) = Home::new("sprint-none-done").run(&["sprint"]);
+    assert!(ok, "{err}");
+    let header = out.lines().find(|l| l.contains("of 10 pts")).unwrap_or_else(|| panic!("{out}"));
+    assert!(header.contains("3 of 10 pts"), "{header}");
+    assert!(
+        !header.contains("done"),
+        "the TUI leaves out 0 pts done, and so does the CLI:\n{header}"
+    );
+}
+
+#[test]
+fn drift_tells_an_unset_jira_how_to_turn_it_on_and_a_broken_one_where_to_look() {
+    let unset = Home::with_cache("drift-unset", "bugzilla_only.json");
+    let (ok, out, err) = unset.run(&["drift"]);
+    assert!(ok, "{err}");
+    assert!(out.contains("`worklens auth set jira` turns it on"), "{out}");
+    assert!(
+        !out.contains("worklens doctor"),
+        "nothing failed, so there's nothing for doctor to explain:\n{out}"
+    );
+
+    let broken = Home::with_cache("drift-broken", "bugzilla_only.json");
+    let cache = broken.0.join(".cache/worklens/state.json");
+    let mut raw: serde_json::Value = serde_json::from_slice(&fs::read(&cache).unwrap()).unwrap();
+    raw["errors"][0] = serde_json::json!({"source": "jira", "message": "401 for https://mozilla-hub.atlassian.net/rest/api/3/myself"});
+    worklens_store::write_atomic(&cache, |out| serde_json::to_writer(out, &raw).map_err(std::io::Error::other)).unwrap();
+    let (ok, out, err) = broken.run(&["drift"]);
+    assert!(ok, "{err}");
+    assert!(out.contains("Jira couldn't be read. See `worklens doctor`."), "{out}");
 }

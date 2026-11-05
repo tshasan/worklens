@@ -15,7 +15,11 @@ fn now() -> Timestamp {
 }
 
 fn app(w: u16, h: u16) -> App {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../store/fixtures/raw.json");
+    app_from("raw.json", w, h)
+}
+
+fn app_from(fixture: &str, w: u16, h: u16) -> App {
+    let path = format!("{}/../store/fixtures/{fixture}", env!("CARGO_MANIFEST_DIR"));
     let raw: Raw = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
     let opts = Options {
         cache_minutes: None,
@@ -34,7 +38,16 @@ fn screen(app: &App) -> String {
     terminal.draw(|f| view(app, f)).unwrap();
     let buf = terminal.backend().buffer();
     (0..h)
-        .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect::<String>().trim_end().to_owned())
+        .map(|y| {
+            let mut row = String::new();
+            let mut x = 0;
+            while x < w {
+                let symbol = buf[(x, y)].symbol();
+                row.push_str(symbol);
+                x += u16::try_from(unicode_width::UnicodeWidthStr::width(symbol).max(1)).unwrap_or(1);
+            }
+            row.trim_end().to_owned()
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -421,12 +434,12 @@ fn before_the_first_fetch_nothing_claims_zero_work() {
     a.busy = Some("Refreshing".into());
     let s = screen(&a);
     let tabs = s.lines().nth(1).unwrap();
-    assert!(tabs.contains("You") && tabs.contains("Team"), "{s}");
-    assert!(
-        !tabs.contains(" 0") && !tabs.contains(char::is_numeric),
-        "no counts while loading: {tabs}"
+    assert_eq!(
+        tabs.trim(),
+        "Waiting on you",
+        "only the first tab, until counts say which others have work: {s}"
     );
-    assert!(s.lines().nth(2).unwrap().starts_with("╭━━━─"), "You is underlined: {s}");
+    assert!(s.lines().nth(2).unwrap().starts_with("╭━━━━"), "it is underlined: {s}");
     assert_eq!(s.matches("Fetching").count(), 1, "one line says it's fetching:\n{s}");
     assert!(!s.contains("Select an item"), "nothing to select yet:\n{s}");
     a.busy = Some("Identifying you".into());
@@ -1106,7 +1119,7 @@ fn opening_says_what_changed_since_the_last_look_until_a_key_is_pressed() {
     let last = screen(&a).lines().last().unwrap().to_owned();
     assert!(last.contains("Since you looked, 8h ago: 1 changed"), "{last}");
     assert!(
-        last.contains("· 1995008 D321987: quillfox"),
+        last.contains("· Bug 1995008 D321987: quillfox"),
         "the first change fits, cut short:\n{last}"
     );
     press(&mut a, KeyCode::Down);
@@ -1272,7 +1285,7 @@ fn sources_show_their_rows_at_once_and_spin_only_the_pending_ones() {
         now(),
     );
     let s = screen(&a);
-    assert!(line_with(&s, "bugzilla").contains("⠋ bugzilla    checking Bugzilla answers"), "{s}");
+    assert!(line_with(&s, "bugzilla").contains("⠋ bugzilla checking Bugzilla answers"), "{s}");
     assert!(line_with(&s, "jira").contains("~ jira"), "{s}");
     assert_eq!(s.matches("fix: a fix").count(), 1, "a pending row has no fix yet:\n{s}");
     update(&mut a, Msg::Tick, now());
@@ -1282,4 +1295,208 @@ fn sources_show_their_rows_at_once_and_spin_only_the_pending_ones() {
     update(&mut a, Msg::Tick, now());
     assert_eq!(a.frame, frame, "nothing animates once every check is in");
     assert!(line_with(&screen(&a), "bugzilla").contains("✓ bugzilla"));
+}
+
+fn says_off_never_failed(screen: &str) {
+    let problems = worklens_testkit::screen_problems(screen, &["jira", "phabricator"], false);
+    assert!(problems.is_empty(), "{problems:#?}\n{screen}");
+}
+
+#[test]
+fn a_bugzilla_only_user_sees_what_is_off_and_never_that_it_failed() {
+    for (w, h) in [(80, 24), (160, 48)] {
+        let mut a = app_from("bugzilla_only.json", w, h);
+        for _ in 0..Section::COUNT {
+            says_off_never_failed(&screen(&a));
+            press(&mut a, KeyCode::Tab);
+            says_off_never_failed(&screen(&a));
+            press(&mut a, KeyCode::Right);
+        }
+        a.snapshot = None;
+        a.rows.clear();
+        a.busy = Some("Fetching bugs".into());
+        let s = screen(&a);
+        assert!(s.contains("Fetching your work…"), "{s}");
+        says_off_never_failed(&s);
+    }
+}
+
+#[test]
+fn source_rows_wrap_under_their_detail_and_keep_long_names_whole() {
+    let mut a = app(60, 24);
+    press(&mut a, KeyCode::Char('s'));
+    let check = |name: &str, detail: &str| worklens_tui::Check {
+        name: name.into(),
+        ok: false,
+        required: false,
+        detail: detail.into(),
+        fix: Some("`worklens auth set jira` (an API token from https://id.atlassian.com/manage-profile/security/api-tokens)".into()),
+        pending: false,
+    };
+    update(
+        &mut a,
+        Msg::Checks(vec![
+            check("jira", "no token; sprint and Jira drift are skipped · last fetch: not set up"),
+            check("release trains", "last fetch: 1 request, slowest 114 ms"),
+        ]),
+        now(),
+    );
+    let s = screen(&a);
+    assert!(s.contains("~ release trains last fetch"), "{s}");
+    let column = line_with(&s, "~ jira").find("no token").unwrap();
+    let body: Vec<&str> = s
+        .lines()
+        .skip_while(|l| !l.contains("~ jira"))
+        .take_while(|l| !l.contains("needed"))
+        .collect();
+    for line in &body[1..] {
+        let inner = line.trim_start_matches('│').trim_end_matches('│').trim_end();
+        if inner.is_empty() || inner.contains("~ release trains") {
+            continue;
+        }
+        let at = line.find(inner.trim_start()).unwrap();
+        assert_eq!(at, column, "wrapped text starts under the detail:\n{s}");
+    }
+}
+
+#[test]
+fn a_long_sources_page_scrolls_to_its_last_line() {
+    let mut a = app(80, 24);
+    press(&mut a, KeyCode::Char('s'));
+    let checks = (0..30)
+        .map(|i| worklens_tui::Check {
+            name: format!("source {i}"),
+            ok: true,
+            required: false,
+            detail: "reachable · last fetch: 3 requests, slowest 120 ms".into(),
+            fix: None,
+            pending: false,
+        })
+        .collect();
+    update(&mut a, Msg::Checks(checks), now());
+    assert!(!screen(&a).contains("✗ needed"), "the legend starts below the fold");
+    for _ in 0..20 {
+        press(&mut a, KeyCode::PageDown);
+    }
+    let s = screen(&a);
+    assert!(s.contains("✗ needed"), "paging down reaches the legend:\n{s}");
+    assert!(s.contains("source 29"), "{s}");
+}
+
+fn overloaded(w: u16, h: u16) -> App {
+    overloaded_with(w, h, |_| {})
+}
+
+fn overloaded_with(w: u16, h: u16, edit: impl FnOnce(&mut serde_json::Value)) -> App {
+    let path = format!("{}/../store/fixtures/busy.json", env!("CARGO_MANIFEST_DIR"));
+    let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    edit(&mut value);
+    let raw: Raw = serde_json::from_value(value).unwrap();
+    let opts = Options {
+        cache_minutes: None,
+        agent: None,
+        dir: PathBuf::from("/tmp"),
+        keys: Vec::new(),
+    };
+    let cfg = CoreConfig {
+        whiteboard: Some("[aiplatform]".into()),
+        ..CoreConfig::default()
+    };
+    let mut app = App::new(cfg, opts, Some(raw), Marks::default(), now());
+    update(&mut app, Msg::Resize(w, h), now());
+    app
+}
+
+fn filter_to(app: &mut App, text: &str) {
+    press(app, KeyCode::Char('/'));
+    for c in text.chars() {
+        press(app, KeyCode::Char(c));
+    }
+    press(app, KeyCode::Enter);
+}
+
+fn open_section(app: &mut App, tab: &str) {
+    for _ in 0..Section::COUNT {
+        let s = screen(app);
+        let tabs: Vec<char> = s.lines().nth(1).unwrap_or_default().chars().collect();
+        let border: Vec<char> = s.lines().nth(2).unwrap_or_default().chars().collect();
+        let name: Vec<char> = tab.chars().collect();
+        let at = tabs.windows(name.len()).position(|w| w == name.as_slice());
+        if at.is_some_and(|c| border.get(c) == Some(&'━')) {
+            return;
+        }
+        press(app, KeyCode::Right);
+    }
+    panic!("no {tab} section in\n{}", screen(app));
+}
+
+#[test]
+fn an_approved_uplift_does_not_promise_a_nightly_it_already_shipped_in() {
+    for (w, h) in [(80, 24), (200, 50)] {
+        let mut a = overloaded(w, h);
+        open_section(&mut a, "Land 4");
+        filter_to(&mut a, "2000469");
+        let s = screen(&a);
+        assert!(s.contains("uplift to Beta 146 approved"), "{s}");
+        assert!(s.contains("Fixed in Nightly 147"), "{s}");
+        assert!(
+            !s.contains("Lands in 147"),
+            "the fix is already in Nightly 147 and the step is a Beta uplift:\n{s}"
+        );
+        let mut a = overloaded(w, h);
+        open_section(&mut a, "Land 4");
+        filter_to(&mut a, "1998253");
+        let s = screen(&a);
+        assert!(
+            s.contains("Lands in 147 if it lands by Nov 9 "),
+            "an accepted revision still gets the countdown:\n{s}"
+        );
+    }
+}
+
+#[test]
+fn jira_keys_in_the_list_are_never_cut() {
+    for (w, h) in [(80, 24), (200, 50)] {
+        let mut a = overloaded(w, h);
+        open_section(&mut a, "Sprint 15");
+        let s = screen(&a);
+        assert!(!s.contains("AIPLAT-15…"), "rows can't share a cut key:\n{s}");
+        assert!(s.contains("AIPLAT-1528"), "{s}");
+    }
+}
+
+#[test]
+fn sprint_done_carries_its_unit() {
+    let s = screen(&overloaded(200, 50));
+    let header = line_with(&s, "of 10 pts");
+    assert!(header.contains(" · 13 pts done"), "13 is points, not tickets:\n{header}");
+}
+
+#[test]
+fn an_idea_names_its_target_quarter_once() {
+    for (w, h) in [(80, 24), (200, 50)] {
+        let mut a = overloaded(w, h);
+        open_section(&mut a, "Ideas 4");
+        filter_to(&mut a, "AIDI-81");
+        let s = screen(&a);
+        let target = line_with(&s, "Target ");
+        assert_eq!(target.matches("Q3").count(), 1, "{target}");
+        assert!(target.contains("Q3 (Sep 30, 2026)"), "the dated target stays:\n{target}");
+        let mut a = overloaded_with(w, h, |v| v["roadmap"]["ideas"]["AIDI-81"]["target"] = serde_json::Value::Null);
+        open_section(&mut a, "Ideas 4");
+        filter_to(&mut a, "AIDI-81");
+        let s = screen(&a);
+        assert!(
+            line_with(&s, "Target ").contains("Q3"),
+            "with no target, the quarter is the target:\n{s}"
+        );
+    }
+}
+
+#[test]
+fn a_sprint_with_nothing_done_says_nothing_about_done() {
+    let s = screen(&app(160, 40));
+    let header = line_with(&s, "of 10 pts");
+    assert!(header.contains("3 of 10 pts"), "{header}");
+    assert!(!header.contains("done"), "{header}");
 }

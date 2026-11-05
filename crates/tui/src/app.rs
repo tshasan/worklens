@@ -575,7 +575,7 @@ impl App {
             _ if i == 0 => true,
             Show::Always => true,
             Show::Hidden => false,
-            Show::Auto => self.snapshot.is_none() || i == self.tab || self.counts[i] > 0,
+            Show::Auto => i == self.tab || (self.snapshot.is_some() && self.counts[i] > 0),
         }
     }
 
