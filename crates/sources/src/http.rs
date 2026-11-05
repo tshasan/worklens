@@ -52,6 +52,68 @@ pub fn parse<T: DeserializeOwned>(what: &'static str, bytes: &[u8]) -> Result<T>
 pub struct Http {
     pub client: Client,
     calls: CallLog,
+    replay: Option<Replay>,
+}
+
+pub struct Replay {
+    dir: std::path::PathBuf,
+    routes: Vec<Route>,
+}
+
+struct Route {
+    method: String,
+    url: reqwest::Url,
+    file: String,
+}
+
+impl Replay {
+    pub fn load(dir: &std::path::Path) -> Result<Self> {
+        let path = dir.join("routes.json");
+        let bytes = std::fs::read(&path).map_err(|e| Error::Api(format!("replay: {}: {e}", path.display())))?;
+        let pairs: Vec<(String, String)> = parse("replay routes", &bytes)?;
+        let routes = pairs
+            .into_iter()
+            .map(|(spec, file)| {
+                let (method, url) = spec.split_once(' ').unwrap_or(("GET", spec.as_str()));
+                let url = reqwest::Url::parse(url).map_err(|e| Error::Api(format!("replay: route {spec:?}: {e}")))?;
+                Ok(Route {
+                    method: method.to_owned(),
+                    url,
+                    file,
+                })
+            })
+            .collect::<Result<_>>()?;
+        Ok(Self {
+            dir: dir.to_owned(),
+            routes,
+        })
+    }
+
+    fn answer(&self, method: &str, url: &reqwest::Url) -> Result<Vec<u8>> {
+        let route = self
+            .routes
+            .iter()
+            .find(|r| r.matches(method, url))
+            .ok_or_else(|| Error::Api(format!("replay: nothing recorded for {method} {url}")))?;
+        let path = self.dir.join(&route.file);
+        std::fs::read(&path).map_err(|e| Error::Api(format!("replay: {}: {e}", path.display())))
+    }
+}
+
+impl Route {
+    fn matches(&self, method: &str, url: &reqwest::Url) -> bool {
+        let segments = |u: &reqwest::Url| u.path().split('/').map(str::to_owned).collect::<Vec<_>>();
+        let (want, got) = (segments(&self.url), segments(url));
+        let pairs: Vec<(String, String)> = url.query_pairs().map(|(k, v)| (k.into_owned(), v.into_owned())).collect();
+        self.method == method
+            && self.url.host_str() == url.host_str()
+            && want.len() == got.len()
+            && want.iter().zip(&got).all(|(w, g)| w == "*" || w == g)
+            && self
+                .url
+                .query_pairs()
+                .all(|(k, v)| pairs.iter().any(|(pk, pv)| *pk == k && *pv == v))
+    }
 }
 
 impl Http {
@@ -62,9 +124,13 @@ impl Http {
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(30))
             .build()?;
+        let replay = std::env::var_os("WORKLENS_REPLAY")
+            .map(|dir| Replay::load(std::path::Path::new(&dir)))
+            .transpose()?;
         Ok(Self {
             client,
             calls: CallLog::default(),
+            replay,
         })
     }
 
@@ -101,6 +167,11 @@ impl Http {
                 error,
             });
         };
+        if let Some(replay) = &self.replay {
+            let answer = replay.answer(&method, req.url());
+            record(answer.is_ok().then_some(200), answer.as_ref().err().map(ToString::to_string));
+            return (answer, None);
+        }
         let res = match self.client.execute(req).await {
             Ok(res) => res,
             Err(e) => {
@@ -214,6 +285,31 @@ mod tests {
         assert_eq!(retry_delay(Some(302), None, 1), None);
         assert_eq!(retry_delay(Some(429), Some("3"), 2), None);
         assert_eq!(retry_delay(Some(503), None, 2), None);
+    }
+
+    #[test]
+    fn a_replay_route_matches_its_path_and_the_query_it_names() {
+        let route = Route {
+            method: "GET".into(),
+            url: reqwest::Url::parse("https://bugzilla.mozilla.org/rest/bug/*/comment?a=1").unwrap(),
+            file: String::new(),
+        };
+        let url = |u: &str| reqwest::Url::parse(u).unwrap();
+        assert!(route.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug/9/comment?b=2&a=1")));
+        assert!(!route.matches("POST", &url("https://bugzilla.mozilla.org/rest/bug/9/comment?a=1")));
+        assert!(!route.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug/9/comment?a=2")));
+        assert!(!route.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug/9/attachment?a=1")));
+        assert!(!route.matches("GET", &url("https://evil.example/rest/bug/9/comment?a=1")));
+        assert!(!route.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug/comment?a=1")));
+        let both = Route {
+            url: reqwest::Url::parse("https://bugzilla.mozilla.org/rest/bug?a=1&b=2").unwrap(),
+            ..route
+        };
+        assert!(both.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug?b=2&a=1")));
+        assert!(
+            !both.matches("GET", &url("https://bugzilla.mozilla.org/rest/bug?a=1")),
+            "every named pair must be present"
+        );
     }
 
     #[test]

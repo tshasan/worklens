@@ -1,0 +1,13 @@
+[
+  ["GET https://product-details.mozilla.org/1.0/firefox_versions.json", "../../../../sources/fixtures/product-details.json"],
+  ["GET https://probeinfo.telemetry.mozilla.org/glean/firefox-desktop/metrics", "../../../../sources/fixtures/glean.json"],
+  ["GET https://bugzilla.mozilla.org/rest/version", "version.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?id=1", "none.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?f1=requestees.login_name&v1=me@mozilla.com", "needinfo.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?f1=setters.login_name&v1=me@mozilla.com", "none.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?f1=regressed_by", "none.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?assigned_to=me@mozilla.com&resolution=FIXED", "none.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?assigned_to=me@mozilla.com&resolution=---", "assigned.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug/*/comment", "../../../../sources/fixtures/bugzilla/comments.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug/*/attachment", "../../../../sources/fixtures/bugzilla/attachments.json"]
+]

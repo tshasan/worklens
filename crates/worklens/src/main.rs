@@ -16,6 +16,7 @@ use clap::{Parser, Subcommand};
 use jiff::{Timestamp, Zoned};
 use serde_json::{Value, json};
 use worklens_core::marks::{self, Marks};
+use worklens_core::raw::SourceState;
 use worklens_core::section::Section;
 use worklens_core::{EntryIdx, Snapshot, brief, build_snapshot, present};
 use worklens_store::{cache_file, marks_file, read_marks, read_raw, write_raw};
@@ -50,8 +51,8 @@ enum Command {
     #[command(hide = true, about = "The interactive UI; the default in a terminal")]
     Ui,
     #[command(
-        about = "What needs you, oldest first",
-        long_about = "What needs you, oldest first.\n\nWaiting on you, ready to land, returned to you, and waiting on others."
+        about = "What needs you, critical first",
+        long_about = "What needs you, critical first.\n\nWaiting on you, ready to land, returned to you, needs uplift, and waiting on others. Within each, critical items (S1, sec-critical or tracked) come first, then important (S2, sec-high), then the rest; oldest first within each, group reviews last."
     )]
     Next {
         #[arg(long, help = "Every item, not just the first 10")]
@@ -330,7 +331,11 @@ fn health(json: bool) -> anyhow::Result<()> {
         return emit(format!("{}\n", serde_json::to_string_pretty(&value)?).as_bytes());
     }
     let st = Style::detect();
-    println!("Last fetch {age} min ago ({})", health::clock(raw.fetched_at));
+    println!(
+        "Updated {} ({})",
+        present::ago(raw.fetched_at, Timestamp::now()),
+        health::clock(raw.fetched_at)
+    );
     for h in &sources {
         let mark = match h.state {
             "ok" => st.green("✓"),
@@ -347,8 +352,10 @@ fn health(json: bool) -> anyhow::Result<()> {
 }
 
 fn find(s: &Snapshot, reference: &str) -> anyhow::Result<EntryIdx> {
-    s.find(reference)
-        .ok_or_else(|| anyhow!("{reference} isn't in your work or team drift. Try `worklens next --all`."))
+    s.find(reference).ok_or_else(|| match s.unread_source(reference) {
+        Some(why) => anyhow!("{reference} isn't in your work: {why}"),
+        None => anyhow!("{reference} isn't in your work or team drift. Try `worklens next --all`."),
+    })
 }
 
 fn run(cli: &Cli) -> anyhow::Result<()> {
@@ -410,14 +417,17 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
     let errors = || serde_json::to_value(&s.raw.errors).unwrap_or_default();
     let head = || {
         let trains = text::train_line(st, s).map(|t| format!("{t}\n")).unwrap_or_default();
-        format!("{}\n{}\n{trains}", text::header(st, s), text::sprint_line(st, s))
+        let sprint = text::sprint_line(st, s).map(|l| format!("{l}\n")).unwrap_or_default();
+        format!("{}\n{sprint}{trains}", text::header(st, s))
     };
 
     match cli.command.as_ref().unwrap_or(&Command::Next { all: false, limit: 10 }) {
         Command::Next { all, limit } => {
             const TURNS: [Section; 5] = [Section::Waiting, Section::Land, Section::Returned, Section::Uplift, Section::Others];
             let limit = if *all { usize::MAX } else { *limit };
-            let ids: Vec<EntryIdx> = TURNS.iter().flat_map(|t| s.section(*t, false)).take(limit).collect();
+            let every: Vec<EntryIdx> = TURNS.iter().flat_map(|t| s.section(*t, false)).collect();
+            let more = every.len().saturating_sub(limit);
+            let ids: Vec<EntryIdx> = every.into_iter().take(limit).collect();
             out.print(
                 || {
                     Doc::object([
@@ -427,12 +437,22 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                         ("sprint", value(json::sprint(s))),
                         ("trains", value(json!(s.raw.trains))),
                         ("items", items(&ids)),
+                        ("more", value(json!(more))),
                         ("errors", value(errors())),
                     ])
                 },
-                || json!({ "fetchedAt": s.raw.fetched_at, "sprint": json::sprint(s), "items": compacts(&ids), "errors": errors() }).into(),
+                || json!({ "fetchedAt": s.raw.fetched_at, "sprint": json::sprint(s), "items": compacts(&ids), "more": more, "errors": errors() }).into(),
                 || {
-                    let blocks: Vec<String> = TURNS.iter().map(|t| text::section_block(st, s, *t)).collect();
+                    let mut room = limit;
+                    let blocks: Vec<String> = TURNS
+                        .iter()
+                        .filter(|t| !s.off(**t))
+                        .map(|t| {
+                            let block = text::section_block(st, s, *t, room);
+                            room = room.saturating_sub(s.section(*t, false).count());
+                            block
+                        })
+                        .collect();
                     format!("{}\n{}\n", head(), blocks.join("\n\n"))
                 },
             )
@@ -467,7 +487,7 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                     json!({ "fetchedAt": s.raw.fetched_at, "sprint": json::sprint(s), "sections": sections, "errors": errors() }).into()
                 },
                 || {
-                    let blocks: Vec<String> = Section::ALL.iter().map(|x| text::section_block(st, s, *x)).collect();
+                    let blocks: Vec<String> = Section::ALL.iter().map(|x| text::section_block(st, s, *x, usize::MAX)).collect();
                     format!("{}\n{}\n", head(), blocks.join("\n\n"))
                 },
             )
@@ -493,7 +513,7 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                     ])
                 },
                 || json!({ "fetchedAt": s.raw.fetched_at, "section": section.id(), "items": compacts(&ids), "errors": errors() }).into(),
-                || format!("{}\n\n{}", text::header(st, s), text::section_block(st, s, section)),
+                || format!("{}\n\n{}", text::header(st, s), text::section_block(st, s, section, usize::MAX)),
             )
         }
         Command::Telemetry => {
@@ -532,7 +552,13 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                 || json!({ "sprint": json::sprint(s), "items": compacts(&ids) }).into(),
                 || {
                     let entries: Vec<_> = ids.iter().map(|i| s.entry(*i)).collect();
-                    format!("{}\n{}", head(), text::sprint_rows(st, s, &entries))
+                    let rows = text::sprint_rows(st, s, &entries);
+                    let body = if rows.is_empty() {
+                        st.dim(s.empty_text(Section::Sprint))
+                    } else {
+                        rows
+                    };
+                    format!("{}\n{body}\n", head())
                 },
             )
         }
@@ -564,10 +590,10 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                 || Value::from(drift_compacts()).into(),
                 || {
                     let body = if ids.is_empty() {
-                        if worklens_core::snapshot::jira_read(&s.raw) {
-                            st.green("Everything is in sync.")
-                        } else {
-                            st.yellow("Drift needs Jira, which couldn't be read; see `worklens doctor`.")
+                        match s.not_checked(Section::Drift) {
+                            None => st.green("Everything is in sync."),
+                            Some(why) if s.raw.state("jira") == SourceState::Off => st.dim(why),
+                            Some(why) => st.yellow(format!("{why} See `worklens doctor`.")),
                         }
                     } else {
                         let blocks: Vec<String> = ids

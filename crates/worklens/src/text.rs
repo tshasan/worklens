@@ -1,11 +1,11 @@
 use std::fmt::{Display, Write as _};
 
 use jiff::Timestamp;
-use worklens_core::bugs::{State, days_between};
+use worklens_core::bugs::{State, bug_url, days_between, jira_url, rev_url};
 use worklens_core::drift::Level;
 use worklens_core::rules::Reason;
 use worklens_core::section::Section;
-use worklens_core::snapshot::{ItemId, Scope, TryText, jira_read};
+use worklens_core::snapshot::{ItemId, Scope, TryText};
 use worklens_core::{Entry, Snapshot, present};
 
 pub fn no_color() -> bool {
@@ -58,8 +58,7 @@ impl Style {
 }
 
 pub fn header(st: Style, s: &Snapshot) -> String {
-    let age = days_between(Some(s.raw.fetched_at), s.now) * 24.0 * 60.0;
-    let mut out = st.dim(format!("{} · fetched {} min ago", s.me(), age.round()));
+    let mut out = st.dim(format!("{} · updated {}", s.me(), present::ago(s.raw.fetched_at, s.now)));
     for e in &s.raw.errors {
         let line = format!("{}: {}", e.source, e.message);
         let _ = write!(out, "\n{}", if e.unset { st.dim(line) } else { st.yellow(format!("! {line}")) });
@@ -67,25 +66,26 @@ pub fn header(st: Style, s: &Snapshot) -> String {
     out
 }
 
-pub fn sprint_line(st: Style, s: &Snapshot) -> String {
+pub fn sprint_line(st: Style, s: &Snapshot) -> Option<String> {
+    if s.off(Section::Sprint) {
+        return None;
+    }
     let Some(sp) = &s.sprint else {
-        return st.dim(if jira_read(&s.raw) {
-            "No active sprint."
-        } else {
-            "No sprint: Jira wasn't read."
-        });
+        return Some(st.dim(s.not_checked(Section::Sprint).unwrap_or("No active sprint.")));
     };
     let sprint = s.issue(sp.first).sprint.as_ref();
-    let committed = format!("{}/{} pts committed", sp.committed, sp.budget);
+    let committed = format!("{} of {} pts", sp.committed, sp.budget);
     let mut parts = vec![
         st.bold(sprint.map_or("", |x| x.name.as_str())),
         if sp.committed > sp.budget {
-            st.red(committed)
+            st.yellow(format!("{committed} · over budget"))
         } else {
-            st.green(committed)
+            committed
         },
-        format!("{} done", sp.done),
     ];
+    if sp.done > 0.0 {
+        parts.push(format!("{} pts done", sp.done));
+    }
     if let Some(end) = sprint.and_then(|x| x.end_date) {
         parts.push(format!("{} days left", (-days_between(Some(end), s.now)).ceil()));
     }
@@ -93,7 +93,7 @@ pub fn sprint_line(st: Style, s: &Snapshot) -> String {
         let keys: Vec<&str> = sp.unestimated.iter().map(|i| s.issue(*i).key.0.as_str()).collect();
         parts.push(st.yellow(format!("unestimated: {}", keys.join(", "))));
     }
-    parts.join(" · ")
+    Some(parts.join(" · "))
 }
 
 pub fn train_line(st: Style, s: &Snapshot) -> Option<String> {
@@ -109,8 +109,9 @@ pub fn train_line(st: Style, s: &Snapshot) -> Option<String> {
     Some(st.dim(format!("Nightly {} · {when} · Beta {} · Release {}", t.nightly, t.beta, t.release)))
 }
 
-pub fn section_block(st: Style, s: &Snapshot, section: Section) -> String {
+pub fn section_block(st: Style, s: &Snapshot, section: Section, limit: usize) -> String {
     let shown: Vec<_> = s.section(section, false).collect();
+    let cut = shown.len().saturating_sub(limit);
     let hidden = s.section(section, true).count() - shown.len();
     let mut out = format!("{} {}", st.bold(section.title()), st.dim(shown.len()));
     if hidden > 0 {
@@ -120,7 +121,7 @@ pub fn section_block(st: Style, s: &Snapshot, section: Section) -> String {
         let _ = write!(out, "\n  {}", st.dim(s.empty_text(section)));
         return out;
     }
-    for i in shown {
+    for &i in &shown[..shown.len() - cut] {
         let e = s.entry(i);
         let days = days_between(present::age_since(s, e), s.now).floor();
         let age = if days.is_finite() {
@@ -151,6 +152,9 @@ pub fn section_block(st: Style, s: &Snapshot, section: Section) -> String {
         let tag = format!("{:<4}", s.tag(e).to_string());
         let id = format!("{:<11}", s.id(e).to_string());
         let _ = write!(out, "\n{new}{age}  {tag} {} {}\n{:11}{}", st.bold(id), s.title(e), "", st.dim(why));
+    }
+    if cut > 0 {
+        let _ = write!(out, "\n  {}", st.dim(format!("{cut} more; `worklens next --all` lists them")));
     }
     out
 }
@@ -227,7 +231,7 @@ pub fn item_block(st: Style, s: &Snapshot, e: &Entry) -> String {
 
 pub fn show(st: Style, s: &Snapshot, e: &Entry) -> String {
     let mut out = item_block(st, s, e);
-    for d in worklens_core::dependencies::of(s, e) {
+    for d in worklens_core::dependencies::shown(s, e) {
         let owner = d.owner.as_deref().unwrap_or("owner unknown");
         let _ = write!(out, "\n    Depends: {} · {} · {owner}\n      {}", d.id, d.status, d.url);
     }
@@ -237,8 +241,17 @@ pub fn show(st: Style, s: &Snapshot, e: &Entry) -> String {
             let _ = write!(out, "\n  {} {change}", st.cyan("•"));
         }
     }
-    for line in worklens_core::evidence::lines(s, e) {
-        let _ = write!(out, "\n{line}");
+    for line in worklens_core::evidence::show_lines(s, e) {
+        let _ = write!(out, "\n    {}", st.dim(line));
+    }
+    let links = e
+        .bug
+        .map(|b| bug_url(s.bug(b).id))
+        .into_iter()
+        .chain(e.issue.map(|i| jira_url(&s.issue(i).key.0)))
+        .chain(e.revisions.iter().chain(&e.review).map(|r| rev_url(s.rev(*r).id)));
+    for link in links {
+        let _ = write!(out, "\n    {link}");
     }
     if let Some(c) = s.last_comment(e) {
         let excerpt: Vec<&str> = c.text.lines().take(6).collect();
@@ -253,10 +266,12 @@ pub fn show(st: Style, s: &Snapshot, e: &Entry) -> String {
 
 pub fn sprint_rows(st: Style, s: &Snapshot, entries: &[&Entry]) -> String {
     let mut out = String::new();
+    let width = entries.iter().map(|e| s.id(e).to_string().chars().count()).max().unwrap_or(0);
     for e in entries {
         let Some(issue) = e.issue.map(|i| s.issue(i)) else { continue };
         let points = issue.points.map_or_else(|| "?".to_owned(), |p| p.to_string());
-        let _ = writeln!(out, "{points:>3} pts  {:<12} {}  {}", issue.status, st.bold(s.id(e)), s.title(e));
+        let id = format!("{:<width$}", s.id(e).to_string());
+        let _ = writeln!(out, "{points:>3} pts  {:<12} {}  {}", issue.status, st.bold(id), s.title(e));
     }
     out.truncate(out.trim_end().len());
     out

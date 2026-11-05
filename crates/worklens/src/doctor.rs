@@ -86,7 +86,7 @@ fn pending(name: &str, required: bool, detail: &str) -> Check {
 
 const JIRA_FIX: &str =
     "`worklens auth set jira` (an API token from https://id.atlassian.com/manage-profile/security/api-tokens), or `worklens setup`";
-const PHAB_FIX: &str = "`worklens auth set phabricator` (a Conduit API token), or `moz-phab install-certificate`";
+const PHAB_FIX: &str = "`worklens auth set phabricator` (a Conduit API token from https://phabricator.services.mozilla.com/settings/), or `moz-phab install-certificate`";
 
 fn no_jira() -> Check {
     check("jira", false, false, "no token; sprint and Jira drift are skipped", Some(JIRA_FIX))

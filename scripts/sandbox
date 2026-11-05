@@ -1,0 +1,53 @@
+#!/bin/sh
+set -eu
+
+usage() {
+    cat <<'EOF'
+Run worklens in a throwaway home, never the real one.
+
+scripts/sandbox [--cache NAME] [--config JSON] [--replay DIR] [--keep] -- ARGS...
+
+  --cache NAME   copy crates/store/fixtures/NAME in as the cache (busy.json ...)
+  --config JSON  write this as ~/.config/worklens.json, e.g. '{"whiteboard":"[aiplatform]"}'
+  --replay DIR   answer HTTP from DIR/routes.json (crates/worklens/tests/replay/first_run)
+                 instead of the network; an unrecorded request fails loudly
+  --keep         keep the home and print its path
+
+Without --cache, add --replay so a fetch works offline. Examples:
+  scripts/sandbox --cache busy.json -- next --cached
+  scripts/sandbox --config '{"email":"me@mozilla.com"}' --replay crates/worklens/tests/replay/first_run -- refresh
+EOF
+}
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+cache="" config="" replay="" keep=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --cache) cache=$2; shift 2 ;;
+        --config) config=$2; shift 2 ;;
+        --replay) replay=$(cd "$2" && pwd); shift 2 ;;
+        --keep) keep=1; shift ;;
+        --) shift; break ;;
+        -h|--help) usage; exit 0 ;;
+        *) usage >&2; exit 2 ;;
+    esac
+done
+
+cargo build -q --manifest-path "$root/Cargo.toml" -p worklens
+home=$(mktemp -d)
+mkdir -p "$home/.cache/worklens" "$home/.config"
+[ -n "$cache" ] && cp "$root/crates/store/fixtures/$cache" "$home/.cache/worklens/state.json"
+[ -n "$config" ] && printf '%s\n' "$config" > "$home/.config/worklens.json"
+
+status=0
+env -u BUGZILLA_API_KEY -u WORKLENS_BUGZILLA_KEY -u WORKLENS_JIRA_TOKEN -u WORKLENS_PHABRICATOR_TOKEN \
+    HOME="$home" XDG_STATE_HOME="$home/state" WORKLENS_KEYCHAIN=off NO_COLOR=1 \
+    ${replay:+WORKLENS_REPLAY="$replay"} \
+    "$root/target/debug/worklens" "$@" || status=$?
+
+if [ -n "$keep" ]; then
+    echo "home kept at $home" >&2
+else
+    rm -rf "$home"
+fi
+exit $status

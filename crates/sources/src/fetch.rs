@@ -125,7 +125,12 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         .ok_or_else(identity_error)?;
     let my_phid = phab_me.as_ref().map(|m| m.phid.as_str());
 
-    log("Fetching bugs, tickets and revisions");
+    log(match (jira.is_some(), phab.is_some()) {
+        (true, true) => "Fetching bugs, tickets and revisions",
+        (true, false) => "Fetching bugs and tickets",
+        (false, true) => "Fetching bugs and revisions",
+        (false, false) => "Fetching bugs",
+    });
     let (assigned, needinfos, issues, my_revs, to_review, team, fixed, asked, groups) = futures::join!(
         bz.assigned_to(&email),
         bz.needinfo_on(&email),
@@ -212,7 +217,9 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         tag(&mut bugs, fixed, Via::Landed);
         tag(&mut bugs, asked, Via::Asked);
 
-        log("Linking Jira tickets to bugs");
+        if !issues.is_empty() {
+            log("Linking Jira tickets to bugs");
+        }
         let linked: HashSet<&str> = bugs.values().filter_map(jira_key_of).collect();
         let unlinked: Vec<&str> = issues.iter().map(|i| i.key.0.as_str()).filter(|k| !linked.contains(k)).collect();
         let mirrors = if unlinked.is_empty() {

@@ -41,9 +41,28 @@ cargo test --profile hunt -p worklens-tui --test frame_budget -- --ignored --noc
 cargo mutants --in-diff <(git diff main)    # did the tests notice when the code broke?
 ```
 
-Seeds are `store/fixtures/raw.json` and `busy.json`, an overloaded week that
+For what invariants can't judge (misleading words, layout), run the `explore`
+skill (`.claude/skills/explore`): it drives the TUI headlessly with
+`cargo run -p worklens-tui --example drive` and turns findings into tests.
+
+Seeds are `store/fixtures/raw.json`, `bugzilla_only.json` (a first run with
+no Jira or Phabricator) and `busy.json`, an overloaded week that
 `core/tests/busy.rs` holds to filling every section and firing every rule. A
 new rule or section needs a case in `busy.json` or that test fails.
+
+A test counts only if it's cheat-proof:
+
+- It runs the real code. Fake only the network, never worklens's own code:
+  `WORKLENS_REPLAY=<dir>` makes `Http` answer from `<dir>/routes.json` and
+  fail loudly on anything unrecorded (`crates/worklens/tests/replay/`), and
+  `scripts/sandbox` runs the binary in a throwaway home.
+- Its expected value comes from the fixture or the spec, never from the
+  function under test (judge "Jira is off" from `raw.errors`, not
+  `Raw::state`).
+- You have seen it go red by breaking the source, not the test, and
+  `cargo mutants --in-diff` finds no surviving mutant it should have caught.
+- `crates/testkit/tests/oracle.rs` pins the screens `screen_problems` must
+  catch and must pass. Add to both lists; never delete or loosen an entry.
 
 A failing case is saved to `crates/*/tests/robust.regressions`; commit it with the
 fix so it replays forever. `hunt` keeps overflow checks on; plain `--release`

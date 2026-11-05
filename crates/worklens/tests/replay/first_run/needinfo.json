@@ -1,0 +1,37 @@
+{
+  "bugs": [
+    {
+      "id": 2086888,
+      "summary": "Remove or update metrics expiring",
+      "status": "NEW",
+      "resolution": "",
+      "assigned_to": "nobody@mozilla.org",
+      "assigned_to_detail": {
+        "email": "nobody@mozilla.org"
+      },
+      "severity": "S3",
+      "priority": "--",
+      "keywords": [],
+      "whiteboard": "",
+      "see_also": [],
+      "last_change_time": "2026-10-29T09:00:00Z",
+      "creation_time": "2026-10-28T12:00:00Z",
+      "flags": [
+        {
+          "id": 1,
+          "type_id": 800,
+          "name": "needinfo",
+          "status": "?",
+          "requestee": "me@mozilla.com",
+          "setter": "reviewer@example.org",
+          "creation_date": "2026-10-29T09:00:00Z",
+          "modification_date": "2026-10-29T09:00:00Z"
+        }
+      ],
+      "depends_on": [],
+      "product": "Toolkit",
+      "component": "Telemetry"
+    }
+  ],
+  "faults": []
+}

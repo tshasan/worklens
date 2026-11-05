@@ -61,9 +61,31 @@ pub struct Dependencies {
     pub revisions: HashMap<String, Revision>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SourceState {
+    #[serde(rename = "ok")]
+    Read,
+    Off,
+    Failed,
+}
+
 impl Raw {
     pub fn failures(&self) -> impl Iterator<Item = &SourceError> {
         self.errors.iter().filter(|e| !e.unset)
+    }
+
+    pub fn states(&self) -> [(&'static str, SourceState); 3] {
+        ["bugzilla", "jira", "phabricator"].map(|source| (source, self.state(source)))
+    }
+
+    pub fn state(&self, source: &str) -> SourceState {
+        let mut errors = self.errors.iter().filter(|e| e.source == source);
+        match errors.next() {
+            None => SourceState::Read,
+            Some(first) if first.unset && errors.all(|e| e.unset) => SourceState::Off,
+            Some(_) => SourceState::Failed,
+        }
     }
 }
 
