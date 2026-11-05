@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "count": 1,
+    "repository": "autoland",
+    "filter_params": {
+      "count": "1"
+    }
+  },
+  "results": [
+    {
+      "id": 2090527,
+      "revision": "bdad51de82061676f1af7fb405103190204cfdfd",
+      "author": "integration-bot@example.org",
+      "branch": null,
+      "revisions": [
+        {
+          "result_set_id": 2090527,
+          "repository_id": 77,
+          "revision": "bdad51de82061676f1af7fb405103190204cfdfd",
+          "author": "Contributor <contributor@example.org>",
+          "comments": "Bug 42 - Recorded stack patch 1\n\nDifferential Revision: https://phabricator.services.mozilla.com/D338941\n"
+        },
+        {
+          "result_set_id": 2090527,
+          "repository_id": 77,
+          "revision": "5aa20c0fd0e0893d33f6fce6fca4a49d05d35e87",
+          "author": "Contributor <contributor@example.org>",
+          "comments": "Bug 42 - Recorded stack patch 2\n\nDifferential Revision: https://phabricator.services.mozilla.com/D338940\n"
+        }
+      ],
+      "revision_count": 2,
+      "push_timestamp": 1793747797,
+      "repository_id": 77
+    }
+  ]
+}

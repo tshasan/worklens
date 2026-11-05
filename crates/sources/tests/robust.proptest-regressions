@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 5605c120e01300c843a222aed17eba996ff5113f6eb4699468d1c2f19d4121d8 # shrinks to (value, ms) = (Array [Object {"buildFailureCount": Number(0), "buildInProgressCount": Number(0), "lintFailureCount": Number(0), "lintingInProgressCount": Number(1), "metrics": Object {"builds": Object {"result": String("pass")}, "linting": Object {"result": String("unknown")}, "tests": Object {"result": String("fail")}}, "needInvestigation": Number(2), "revision": String("newer"), "status": Object {"completed": Number(10), "pending": Number(1), "running": Number(2)}, "testFailureCount": Number(2), "testInProgressCount": Number(0)}], [Mutation { at: 3604328220381858923, edit: Same(2584654203456288939) }])

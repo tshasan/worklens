@@ -1,0 +1,6074 @@
+{
+ "version": 1,
+ "fetchedAt": "2026-11-03T18:50:00Z",
+ "me": {
+  "email": "harbor@mozilla.com",
+  "jiraEmail": "harbor@mozilla.com",
+  "phid": "PHID-USER-harbor"
+ },
+ "bugs": [
+  {
+   "id": 1990298,
+   "summary": "Crash in PageExtractor when the window is resized while a model is still downloading in a private browsing window on Windows ARM64 (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "fennel@mozilla.com",
+   "severity": "S1",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-31T19:35:28Z",
+   "creation_time": "2026-03-03T01:59:25Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "fennel@mozilla.com",
+     "creation_date": "2026-11-03T14:12:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1990361,
+   "summary": "Support tab grouping suggestions",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [
+    "sec-critical"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-01T04:13:46Z",
+   "creation_time": "2025-02-08T21:49:32Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "lumen@mozilla.com",
+     "creation_date": "2026-10-13T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1990396,
+   "summary": "Intermittent failure in wasm SIMD path",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "S2",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-27T15:37:34Z",
+   "creation_time": "2025-07-14T19:17:01Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "gale@mozilla.com",
+     "creation_date": "2026-09-19T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "needinfo"
+   ],
+   "release_flags": {
+    "cf_tracking_firefox146": "+",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 1990631,
+   "summary": "Refactor model hub cache",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-19T21:15:56Z",
+   "creation_time": "2026-04-06T18:54:08Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "fjord@mozilla.com",
+     "creation_date": "2026-10-13T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1990809,
+   "summary": "Remove dead code from WebGPU backend",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-28T06:05:56Z",
+   "creation_time": "2026-07-05T07:16:13Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "gale@mozilla.com",
+     "creation_date": "2026-10-25T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1991062,
+   "summary": "Add telemetry to perf regression on Speedometer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-07T01:41:33Z",
+   "creation_time": "2026-07-01T14:10:15Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "delta@mozilla.com",
+     "creation_date": "2026-11-02T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1991319,
+   "summary": "Fix memory leak in link preview",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "delta@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-30T15:58:52Z",
+   "creation_time": "2026-06-18T04:06:16Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "delta@mozilla.com",
+     "creation_date": "2026-10-13T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1991696,
+   "summary": "Improve error messages for telemetry for ML",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-05T04:56:30Z",
+   "creation_time": "2024-10-14T08:59:46Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "cinder@mozilla.com",
+     "creation_date": "2026-11-03T14:12:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1991935,
+   "summary": "Port to ESM: inference worker",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "delta@mozilla.com",
+   "severity": "S4",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-28T03:16:33Z",
+   "creation_time": "2025-07-17T02:08:57Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "delta@mozilla.com",
+     "creation_date": "2026-11-03T14:12:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1992138,
+   "summary": "Handle offline mode in about:inference",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-24T19:25:57Z",
+   "creation_time": "2025-10-02T09:51:06Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "birch@mozilla.com",
+     "creation_date": "2026-10-25T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1992502,
+   "summary": "Throttle sec review follow-up",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-23T19:52:43Z",
+   "creation_time": "2025-10-20T05:18:12Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "gale@mozilla.com",
+     "creation_date": "2026-10-31T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1992842,
+   "summary": "Hang when closing summarizer when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-05T16:39:13Z",
+   "creation_time": "2025-04-27T22:16:12Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "lumen@mozilla.com",
+     "creation_date": "2026-11-02T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1993034,
+   "summary": "Crash in prompt sanitizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "orbit@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-15T16:11:57Z",
+   "creation_time": "2026-05-22T09:05:27Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "orbit@mozilla.com",
+     "creation_date": "2026-10-13T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "needinfo"
+   ]
+  },
+  {
+   "id": 1993240,
+   "summary": "Support Smart Window (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-28T13:54:23Z",
+   "creation_time": "2025-03-20T23:43:20Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "gale@mozilla.com",
+     "creation_date": "2026-10-25T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "needinfo",
+    "assigned"
+   ]
+  },
+  {
+   "id": 1993326,
+   "summary": "Intermittent failure in translations engine",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "fjord@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-28T17:57:09Z",
+   "creation_time": "2026-06-10T19:01:38Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1993521,
+   "summary": "Refactor download manager for models",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "fennel@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-07T11:07:33Z",
+   "creation_time": "2025-04-16T21:03:05Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1993597,
+   "summary": "Remove dead code from ONNX runtime",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "cinder@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-20T08:53:39Z",
+   "creation_time": "2025-07-29T17:58:53Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1993988,
+   "summary": "Add telemetry to sidebar chatbot",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "quillfox@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-06T01:57:29Z",
+   "creation_time": "2024-09-09T14:22:02Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1994159,
+   "summary": "Fix memory leak in PageExtractor",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-16T02:25:25Z",
+   "creation_time": "2024-05-30T10:53:26Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1994305,
+   "summary": "Improve error messages for tab grouping suggestions",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "quillfox@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-23T04:09:04Z",
+   "creation_time": "2025-04-14T11:23:49Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1994555,
+   "summary": "Port to ESM: wasm SIMD path",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "birch@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-14T08:46:22Z",
+   "creation_time": "2025-07-29T00:48:56Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1994649,
+   "summary": "Handle offline mode in model hub cache",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "fjord@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-29T14:04:48Z",
+   "creation_time": "2024-07-02T00:18:23Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1994729,
+   "summary": "Throttle WebGPU backend when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "quillfox@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-16T09:38:13Z",
+   "creation_time": "2026-05-05T00:07:33Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1995115,
+   "summary": "Hang when closing perf regression on Speedometer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-05T14:22:07Z",
+   "creation_time": "2026-03-25T03:43:20Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "revision"
+   ]
+  },
+  {
+   "id": 1995195,
+   "summary": "Crash in link preview",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-02T16:03:53Z",
+   "creation_time": "2025-08-31T02:04:54Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "cf_last_resolved": "2026-10-20T20:51:01Z"
+  },
+  {
+   "id": 1995482,
+   "summary": "Support telemetry for ML",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-23T20:26:34Z",
+   "creation_time": "2025-06-15T23:33:24Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "cf_last_resolved": "2026-10-03T00:51:39Z"
+  },
+  {
+   "id": 1995716,
+   "summary": "Intermittent failure in inference worker (データ損失)",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-19T04:36:35Z",
+   "creation_time": "2024-07-30T07:14:28Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "landed"
+   ],
+   "cf_last_resolved": "2026-10-21T20:37:24Z"
+  },
+  {
+   "id": 1995979,
+   "summary": "Refactor about:inference",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-04T07:50:14Z",
+   "creation_time": "2026-02-08T18:15:32Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "landed"
+   ],
+   "cf_last_resolved": "2026-10-16T11:25:35Z",
+   "cf_crash_signature": "[@ mozilla::ml::InferenceWorker::Shutdown]"
+  },
+  {
+   "id": 1996044,
+   "summary": "Remove dead code from sec review follow-up",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "orbit@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [
+    "regression"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-15T19:59:20Z",
+   "creation_time": "2025-02-18T00:30:22Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [
+    1995195
+   ],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "regression"
+   ]
+  },
+  {
+   "id": 1996389,
+   "summary": "Add telemetry to summarizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "birch@mozilla.com",
+   "severity": "S2",
+   "priority": "P1",
+   "keywords": [
+    "regression"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-10T23:16:54Z",
+   "creation_time": "2026-04-28T01:21:21Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [
+    1995482
+   ],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "regression"
+   ]
+  },
+  {
+   "id": 1996521,
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "lumen@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [
+    "regression"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-21T14:47:36Z",
+   "creation_time": "2024-06-26T16:31:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [
+    1995716
+   ],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "regression"
+   ]
+  },
+  {
+   "id": 1996607,
+   "summary": "Improve error messages for Smart Window",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-22T09:53:38Z",
+   "creation_time": "2024-05-22T18:29:46Z",
+   "flags": [],
+   "depends_on": [
+    1996929,
+    9999999
+   ],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1996929,
+   "summary": "Port to ESM: translations engine",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-07T03:29:03Z",
+   "creation_time": "2026-06-01T23:56:41Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1997195,
+   "summary": "Handle offline mode in download manager for models when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-22T18:23:55Z",
+   "creation_time": "2026-06-21T15:26:30Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1997203,
+   "summary": "Throttle ONNX runtime",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-09T17:25:30Z",
+   "creation_time": "2024-07-27T19:59:51Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1997434,
+   "summary": "Hang when closing sidebar chatbot",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-18T13:26:52Z",
+   "creation_time": "2024-10-29T16:49:56Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1997638,
+   "summary": "Crash in PageExtractor",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-23T12:39:06Z",
+   "creation_time": "2024-06-01T12:59:55Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1997981,
+   "summary": "Support tab grouping suggestions",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-24T13:25:03Z",
+   "creation_time": "2026-01-10T23:13:30Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1998095,
+   "summary": "Intermittent failure in wasm SIMD path",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-03T17:27:38Z",
+   "creation_time": "2025-10-19T05:24:27Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1998253,
+   "summary": "Refactor model hub cache (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-29T15:45:36Z",
+   "creation_time": "2025-06-17T06:32:19Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1998555,
+   "summary": "Remove dead code from WebGPU backend",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-01T22:07:43Z",
+   "creation_time": "2026-05-15T23:50:28Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1998559,
+   "summary": "Add telemetry to perf regression on Speedometer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-19T21:29:52Z",
+   "creation_time": "2025-07-09T07:06:12Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1998940,
+   "summary": "Fix memory leak in link preview",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-14T01:26:05Z",
+   "creation_time": "2026-07-02T07:55:26Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1999233,
+   "summary": "Improve error messages for telemetry for ML",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-05T20:18:51Z",
+   "creation_time": "2025-07-23T17:18:40Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1999338,
+   "summary": "Port to ESM: inference worker when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-08T14:47:37Z",
+   "creation_time": "2026-08-21T02:06:36Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1999413,
+   "summary": "Handle offline mode in about:inference",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-07T15:03:14Z",
+   "creation_time": "2026-05-16T09:40:54Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 1999667,
+   "summary": "Throttle sec review follow-up",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-16T16:11:25Z",
+   "creation_time": "2026-05-09T14:20:32Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2000048,
+   "summary": "Hang when closing summarizer",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-12T11:00:01Z",
+   "creation_time": "2025-10-09T18:08:54Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 2000077,
+   "summary": "Crash in prompt sanitizer",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-19T19:58:20Z",
+   "creation_time": "2026-01-24T13:55:23Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 2000469,
+   "summary": "Support Smart Window",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-01T20:06:41Z",
+   "creation_time": "2025-01-08T08:25:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 2000753,
+   "summary": "Intermittent failure in translations engine",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-06T11:03:17Z",
+   "creation_time": "2025-11-20T02:45:24Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected",
+    "cf_status_firefox_esr140": "affected"
+   }
+  },
+  {
+   "id": 2000910,
+   "summary": "Refactor download manager for models",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-24T15:49:06Z",
+   "creation_time": "2026-05-27T04:59:26Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected",
+    "cf_status_firefox_esr140": "affected"
+   }
+  },
+  {
+   "id": 2001144,
+   "summary": "Remove dead code from ONNX runtime (データ損失)",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-09T03:30:39Z",
+   "creation_time": "2025-06-01T15:38:54Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected",
+    "cf_status_firefox_esr140": "affected"
+   }
+  },
+  {
+   "id": 2001438,
+   "summary": "Add telemetry to sidebar chatbot",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-19T19:29:34Z",
+   "creation_time": "2025-09-23T01:19:18Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected",
+    "cf_status_firefox_esr140": "affected"
+   }
+  },
+  {
+   "id": 2001625,
+   "summary": "Fix memory leak in PageExtractor",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-03T00:54:53Z",
+   "creation_time": "2024-11-09T22:18:43Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "---"
+   }
+  },
+  {
+   "id": 2001787,
+   "summary": "Improve error messages for tab grouping suggestions when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-01T20:34:09Z",
+   "creation_time": "2025-01-16T19:14:32Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "---"
+   }
+  },
+  {
+   "id": 2002019,
+   "summary": "Port to ESM: wasm SIMD path",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-21T08:43:38Z",
+   "creation_time": "2026-04-30T01:18:15Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "---"
+   }
+  },
+  {
+   "id": 2002419,
+   "summary": "Handle offline mode in model hub cache",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-17T20:29:23Z",
+   "creation_time": "2026-02-21T10:15:04Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2002472,
+   "summary": "Throttle WebGPU backend",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-03T07:48:40Z",
+   "creation_time": "2025-05-03T03:55:04Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2002636,
+   "summary": "Hang when closing perf regression on Speedometer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-03T05:09:36Z",
+   "creation_time": "2025-06-02T07:26:05Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2002680,
+   "summary": "Crash in link preview",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-24T18:00:31Z",
+   "creation_time": "2024-07-19T15:45:27Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2002686,
+   "summary": "Support telemetry for ML",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-30T17:53:50Z",
+   "creation_time": "2025-07-15T09:46:35Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003008,
+   "summary": "Intermittent failure in inference worker",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-23T13:16:08Z",
+   "creation_time": "2026-03-01T04:47:07Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003223,
+   "summary": "Refactor about:inference",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-23T17:53:20Z",
+   "creation_time": "2025-08-23T02:13:04Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003608,
+   "summary": "Remove dead code from sec review follow-up",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-16T01:58:08Z",
+   "creation_time": "2025-01-03T11:23:35Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003674,
+   "summary": "Add telemetry to summarizer (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-11T23:36:47Z",
+   "creation_time": "2024-11-28T01:21:40Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003775,
+   "summary": "Fix memory leak in prompt sanitizer when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-20T13:15:34Z",
+   "creation_time": "2025-08-02T04:23:15Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2003809,
+   "summary": "Improve error messages for Smart Window",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-19T22:54:25Z",
+   "creation_time": "2024-08-11T00:11:45Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 2004178,
+   "summary": "Port to ESM: translations engine",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-16T22:44:07Z",
+   "creation_time": "2025-01-06T16:06:25Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "affected"
+   }
+  },
+  {
+   "id": 2004401,
+   "summary": "Handle offline mode in download manager for models",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-09T02:32:12Z",
+   "creation_time": "2026-04-04T02:56:42Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "orbit@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-10-26T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2004524,
+   "summary": "Throttle ONNX runtime",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-07T03:28:30Z",
+   "creation_time": "2024-11-15T08:55:33Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "lumen@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-09-04T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2004727,
+   "summary": "Hang when closing sidebar chatbot",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-10T07:49:48Z",
+   "creation_time": "2025-03-08T04:09:09Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "gale@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-10-30T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2004783,
+   "summary": "Crash in PageExtractor",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-09-27T07:34:25Z",
+   "creation_time": "2026-03-13T18:50:40Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "lumen@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-10-14T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2004905,
+   "summary": "Support tab grouping suggestions",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-07T03:16:11Z",
+   "creation_time": "2024-08-17T03:08:48Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "fjord@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-10-30T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2005051,
+   "summary": "Intermittent failure in wasm SIMD path",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-12T09:55:18Z",
+   "creation_time": "2024-12-23T19:33:38Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "ember@mozilla.com",
+     "setter": "harbor@mozilla.com",
+     "creation_date": "2026-10-26T19:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2005204,
+   "summary": "Remove dead code from sec review follow-up",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1420"
+   ],
+   "last_change_time": "2026-10-31T18:26:12Z",
+   "creation_time": "2025-04-18T09:03:17Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2005547,
+   "summary": "Totally different title than Jira",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1437"
+   ],
+   "last_change_time": "2026-09-26T13:03:41Z",
+   "creation_time": "2025-01-16T15:19:29Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2005569,
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "nobody@mozilla.org",
+   "severity": "S2",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1448"
+   ],
+   "last_change_time": "2026-09-15T21:46:08Z",
+   "creation_time": "2024-10-16T23:19:28Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2005852,
+   "summary": "Improve error messages for Smart Window",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1458"
+   ],
+   "last_change_time": "2026-10-10T07:14:06Z",
+   "creation_time": "2024-11-05T06:47:15Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2006236,
+   "summary": "Port to ESM: translations engine (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1480"
+   ],
+   "last_change_time": "2026-10-09T22:43:29Z",
+   "creation_time": "2026-08-20T11:49:20Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2006319,
+   "summary": "Handle offline mode in download manager for models",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1493"
+   ],
+   "last_change_time": "2026-09-15T13:40:09Z",
+   "creation_time": "2025-09-28T13:39:05Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2006525,
+   "summary": "Throttle ONNX runtime",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1494"
+   ],
+   "last_change_time": "2026-09-27T11:02:23Z",
+   "creation_time": "2025-10-28T06:47:33Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2006583,
+   "summary": "Hang when closing sidebar chatbot",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1504"
+   ],
+   "last_change_time": "2026-09-19T13:52:46Z",
+   "creation_time": "2024-11-08T09:21:39Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2006911,
+   "summary": "Crash in PageExtractor",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1506"
+   ],
+   "last_change_time": "2026-09-10T12:55:19Z",
+   "creation_time": "2025-04-01T16:53:08Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007025,
+   "summary": "Support tab grouping suggestions",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1526"
+   ],
+   "last_change_time": "2026-09-08T11:29:21Z",
+   "creation_time": "2026-04-26T08:23:07Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007127,
+   "summary": "Support Smart Window",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-03-10T23:36:56Z",
+   "creation_time": "2024-10-23T13:20:31Z",
+   "flags": [],
+   "depends_on": [
+    1991935
+   ],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007295,
+   "summary": "Intermittent failure in translations engine",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-05-18T14:08:46Z",
+   "creation_time": "2025-08-17T09:55:07Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007461,
+   "summary": "Refactor download manager for models",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-04-19T00:59:59Z",
+   "creation_time": "2025-09-30T21:08:11Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007599,
+   "summary": "Remove dead code from ONNX runtime when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P5",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-02-12T21:51:29Z",
+   "creation_time": "2024-09-13T19:53:39Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2007979,
+   "summary": "Add telemetry to sidebar chatbot",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [
+    "leave-open",
+    "meta"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-08-12T13:03:07Z",
+   "creation_time": "2025-10-29T21:04:45Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2008297,
+   "summary": "Fix memory leak in PageExtractor",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-12-18T00:57:49Z",
+   "creation_time": "2026-02-03T17:21:56Z",
+   "flags": [],
+   "depends_on": [
+    1990298
+   ],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2008615,
+   "summary": "Improve error messages for tab grouping suggestions (データ損失)",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [
+    "intermittent-failure"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-05-17T01:52:32Z",
+   "creation_time": "2024-08-13T12:51:51Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2008645,
+   "summary": "Port to ESM: wasm SIMD path",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-07-27T16:16:13Z",
+   "creation_time": "2026-06-07T10:43:44Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2008752,
+   "summary": "Handle offline mode in model hub cache",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-03-24T00:09:02Z",
+   "creation_time": "2026-04-24T13:09:05Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2009081,
+   "summary": "Throttle WebGPU backend",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-12-12T05:04:38Z",
+   "creation_time": "2026-01-25T19:55:29Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2009392,
+   "summary": "Hang when closing perf regression on Speedometer",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [
+    "leave-open",
+    "meta"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-02-14T18:31:06Z",
+   "creation_time": "2024-08-06T20:22:12Z",
+   "flags": [],
+   "depends_on": [
+    2004178
+   ],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2009424,
+   "summary": "Crash in link preview",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P5",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-06-10T13:03:48Z",
+   "creation_time": "2025-03-02T01:54:49Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2009740,
+   "summary": "Support telemetry for ML",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [
+    "leave-open",
+    "meta"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-10-27T09:01:40Z",
+   "creation_time": "2025-12-26T13:38:02Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010124,
+   "summary": "Intermittent failure in inference worker",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "--",
+   "priority": "--",
+   "keywords": [
+    "leave-open",
+    "meta"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-10T11:22:39Z",
+   "creation_time": "2025-08-20T16:51:26Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010298,
+   "summary": "Refactor about:inference when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-08-02T20:35:51Z",
+   "creation_time": "2025-05-27T14:38:19Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010344,
+   "summary": "Remove dead code from sec review follow-up",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [
+    "perf"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-01-21T08:43:36Z",
+   "creation_time": "2024-08-05T20:11:49Z",
+   "flags": [],
+   "depends_on": [
+    1994555
+   ],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010515,
+   "summary": "Add telemetry to summarizer",
+   "status": "REOPENED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S2",
+   "priority": "P5",
+   "keywords": [
+    "leave-open",
+    "meta"
+   ],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-06-06T06:35:18Z",
+   "creation_time": "2024-09-19T04:07:58Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010741,
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2025-06-27T09:52:14Z",
+   "creation_time": "2024-11-10T20:40:47Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010816,
+   "summary": "Mismatched team title",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "lumen@mozilla.com",
+   "severity": "S3",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1619"
+   ],
+   "last_change_time": "2026-11-01T07:01:29Z",
+   "creation_time": "2025-01-30T23:40:32Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2010852,
+   "summary": "Handle offline mode in model hub cache",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "--",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1622"
+   ],
+   "last_change_time": "2026-10-19T23:55:42Z",
+   "creation_time": "2026-03-18T03:17:07Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2010879,
+   "summary": "Throttle WebGPU backend",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "ember@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1633"
+   ],
+   "last_change_time": "2026-09-18T15:17:52Z",
+   "creation_time": "2025-04-17T02:30:40Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2010906,
+   "summary": "Mismatched team title",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "fjord@mozilla.com",
+   "severity": "S2",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1634"
+   ],
+   "last_change_time": "2026-10-21T19:07:59Z",
+   "creation_time": "2024-09-10T12:15:18Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011204,
+   "summary": "Crash in link preview",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "gale@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1657"
+   ],
+   "last_change_time": "2026-09-15T21:03:10Z",
+   "creation_time": "2024-07-08T15:05:20Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Sidebar",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011255,
+   "summary": "Support telemetry for ML",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "delta@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1673"
+   ],
+   "last_change_time": "2026-09-11T06:44:52Z",
+   "creation_time": "2024-12-17T19:22:15Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011275,
+   "summary": "Mismatched team title",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "fennel@mozilla.com",
+   "severity": "S4",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1678"
+   ],
+   "last_change_time": "2026-10-15T04:36:33Z",
+   "creation_time": "2026-04-27T07:36:46Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011634,
+   "summary": "Refactor about:inference",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "fjord@mozilla.com",
+   "severity": "S3",
+   "priority": "--",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1701"
+   ],
+   "last_change_time": "2026-10-23T07:08:01Z",
+   "creation_time": "2025-12-25T12:36:17Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011714,
+   "summary": "Remove dead code from sec review follow-up (データ損失)",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "birch@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1725"
+   ],
+   "last_change_time": "2026-09-20T19:03:31Z",
+   "creation_time": "2025-09-04T10:57:08Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2011830,
+   "summary": "Mismatched team title",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "orbit@mozilla.com",
+   "severity": "S2",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1732"
+   ],
+   "last_change_time": "2026-10-06T23:52:40Z",
+   "creation_time": "2026-05-08T16:03:33Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2012154,
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "delta@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1754"
+   ],
+   "last_change_time": "2026-10-20T05:56:58Z",
+   "creation_time": "2025-10-03T16:20:23Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Machine Learning: General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2012324,
+   "summary": "Improve error messages for Smart Window",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "lumen@mozilla.com",
+   "severity": "S3",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1769"
+   ],
+   "last_change_time": "2026-09-14T21:06:18Z",
+   "creation_time": "2024-08-02T21:51:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2012502,
+   "summary": "Mismatched team title",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "delta@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1787"
+   ],
+   "last_change_time": "2026-10-22T04:28:16Z",
+   "creation_time": "2025-02-06T22:17:48Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Firefox",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2012543,
+   "summary": "Handle offline mode in download manager for models",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "quillfox@mozilla.com",
+   "severity": "--",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1808"
+   ],
+   "last_change_time": "2026-09-27T01:52:00Z",
+   "creation_time": "2025-02-14T21:20:11Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2012874,
+   "summary": "Throttle ONNX runtime",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "birch@mozilla.com",
+   "severity": "S2",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1814"
+   ],
+   "last_change_time": "2026-09-15T21:55:09Z",
+   "creation_time": "2026-05-04T22:19:43Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "Sidebar",
+   "via": [
+    "team"
+   ]
+  },
+  {
+   "id": 2013069,
+   "summary": "Mismatched team title",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "ember@mozilla.com",
+   "severity": "S4",
+   "priority": "P3",
+   "keywords": [],
+   "whiteboard": "[aiplatform]",
+   "see_also": [
+    "https://mozilla-hub.atlassian.net/browse/AIPLAT-1839"
+   ],
+   "last_change_time": "2026-09-24T01:30:04Z",
+   "creation_time": "2025-07-27T06:34:09Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Toolkit",
+   "component": "General",
+   "via": [
+    "team"
+   ]
+  }
+ ],
+ "issues": {
+  "AIPLAT-1420": {
+   "key": "AIPLAT-1420",
+   "summary": "Remove dead code from sec review follow-up",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-16T12:05:59Z",
+   "created": "2026-10-07T12:38:12Z",
+   "points": null,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1437": {
+   "key": "AIPLAT-1437",
+   "summary": "Add telemetry to summarizer",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-25T19:25:31Z",
+   "created": "2026-08-29T00:01:25Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1448": {
+   "key": "AIPLAT-1448",
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-11-02T21:48:00Z",
+   "created": "2026-04-17T19:32:43Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1458": {
+   "key": "AIPLAT-1458",
+   "summary": "Improve error messages for Smart Window",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-30T17:21:51Z",
+   "created": "2026-05-24T15:23:07Z",
+   "points": 8,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1480": {
+   "key": "AIPLAT-1480",
+   "summary": "Port to ESM: translations engine (データ損失)",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "cinder@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-26T10:26:03Z",
+   "created": "2026-10-05T13:07:18Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1493": {
+   "key": "AIPLAT-1493",
+   "summary": "Handle offline mode in download manager for models",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-15T22:50:45Z",
+   "created": "2026-07-28T15:24:37Z",
+   "points": 13,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1494": {
+   "key": "AIPLAT-1494",
+   "summary": "Throttle ONNX runtime",
+   "status": "ENG REVIEW",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-23T18:15:25Z",
+   "created": "2026-06-21T11:19:11Z",
+   "points": 2,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1504": {
+   "key": "AIPLAT-1504",
+   "summary": "Hang when closing sidebar chatbot",
+   "status": "ENG REVIEW",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-24T08:50:37Z",
+   "created": "2026-05-01T04:50:27Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1506": {
+   "key": "AIPLAT-1506",
+   "summary": "Crash in PageExtractor",
+   "status": "ENG REVIEW",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-28T12:01:39Z",
+   "created": "2026-06-27T09:58:29Z",
+   "points": null,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1526": {
+   "key": "AIPLAT-1526",
+   "summary": "Support tab grouping suggestions",
+   "status": "Blocked",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-18T04:59:23Z",
+   "created": "2026-09-11T20:35:19Z",
+   "points": 5,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1528": {
+   "key": "AIPLAT-1528",
+   "summary": "Investigate PageExtractor metrics dashboard",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-17T22:36:25Z",
+   "created": "2026-06-15T18:51:54Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1546": {
+   "key": "AIPLAT-1546",
+   "summary": "Investigate Smart Window metrics dashboard",
+   "status": "In Progress",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-19T05:31:07Z",
+   "created": "2026-06-19T23:11:58Z",
+   "points": 2,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1568": {
+   "key": "AIPLAT-1568",
+   "summary": "Investigate inference worker metrics dashboard",
+   "status": "In Progress",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-25T20:32:27Z",
+   "created": "2026-07-27T21:19:00Z",
+   "points": 2,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1583": {
+   "key": "AIPLAT-1583",
+   "summary": "Investigate model hub cache metrics dashboard",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-25T20:31:36Z",
+   "created": "2026-06-25T10:45:17Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1587": {
+   "key": "AIPLAT-1587",
+   "summary": "Investigate ONNX runtime metrics dashboard",
+   "status": "In Progress",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-11-01T05:20:28Z",
+   "created": "2026-07-29T06:48:44Z",
+   "points": 2,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1589": {
+   "key": "AIPLAT-1589",
+   "summary": "Investigate summarizer metrics dashboard",
+   "status": "To Do",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-11-01T04:28:11Z",
+   "created": "2026-05-01T19:24:56Z",
+   "points": 3,
+   "sprint": {
+    "name": "AI Platform 2026.22",
+    "state": "active",
+    "endDate": "2026-11-09T19:00:00Z"
+   }
+  },
+  "AIPLAT-1600": {
+   "key": "AIPLAT-1600",
+   "summary": "Write the Q4 design doc for local summarization",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "harbor@mozilla.com",
+   "parent": null,
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-24T13:29:19Z",
+   "created": "2026-10-05T00:34:31Z",
+   "points": null,
+   "sprint": null,
+   "ideas": [
+    "AIDI-79"
+   ]
+  },
+  "AIPLAT-1617": {
+   "key": "AIPLAT-1617",
+   "summary": "Old ticket nobody touched",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "harbor@mozilla.com",
+   "parent": null,
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-01-07T19:00:00Z",
+   "created": "2026-06-19T07:08:19Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1619": {
+   "key": "AIPLAT-1619",
+   "summary": "Port to ESM: wasm SIMD path",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "lumen@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-11-01T13:17:28Z",
+   "created": "2026-06-24T20:05:35Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1622": {
+   "key": "AIPLAT-1622",
+   "summary": "Handle offline mode in model hub cache",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "cinder@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-19T13:21:03Z",
+   "created": "2026-09-08T21:58:16Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1633": {
+   "key": "AIPLAT-1633",
+   "summary": "Throttle WebGPU backend",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "birch@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-26T07:35:33Z",
+   "created": "2026-10-11T00:37:56Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1634": {
+   "key": "AIPLAT-1634",
+   "summary": "Hang when closing perf regression on Speedometer",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "quillfox@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-24T10:03:40Z",
+   "created": "2026-09-27T02:20:45Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1657": {
+   "key": "AIPLAT-1657",
+   "summary": "Crash in link preview",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "cinder@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-15T10:45:54Z",
+   "created": "2026-06-30T03:09:47Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1673": {
+   "key": "AIPLAT-1673",
+   "summary": "Support telemetry for ML",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "cinder@mozilla.com",
+   "parent": "AIPLAT-1403",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-23T13:35:51Z",
+   "created": "2026-09-25T23:18:35Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1678": {
+   "key": "AIPLAT-1678",
+   "summary": "Intermittent failure in inference worker",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "birch@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P3",
+   "updated": "2026-10-22T21:50:15Z",
+   "created": "2026-06-12T17:30:20Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1701": {
+   "key": "AIPLAT-1701",
+   "summary": "Refactor about:inference",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "fjord@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-23T04:59:54Z",
+   "created": "2026-09-22T02:26:00Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1725": {
+   "key": "AIPLAT-1725",
+   "summary": "Remove dead code from sec review follow-up (データ損失)",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "birch@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-31T11:59:28Z",
+   "created": "2026-06-18T08:52:21Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1732": {
+   "key": "AIPLAT-1732",
+   "summary": "Add telemetry to summarizer when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "cinder@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-25T12:19:12Z",
+   "created": "2026-10-12T12:29:35Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1754": {
+   "key": "AIPLAT-1754",
+   "summary": "Fix memory leak in prompt sanitizer",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "fennel@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-21T23:03:40Z",
+   "created": "2026-07-25T02:08:25Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1769": {
+   "key": "AIPLAT-1769",
+   "summary": "Improve error messages for Smart Window",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "orbit@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-22T08:38:49Z",
+   "created": "2026-08-02T02:37:51Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1787": {
+   "key": "AIPLAT-1787",
+   "summary": "Port to ESM: translations engine",
+   "status": "In Progress",
+   "statusCategory": "indeterminate",
+   "assignee": "fennel@mozilla.com",
+   "parent": "AIPLAT-1412",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-20T10:41:52Z",
+   "created": "2026-07-14T14:20:03Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1808": {
+   "key": "AIPLAT-1808",
+   "summary": "Handle offline mode in download manager for models",
+   "status": "Closed",
+   "statusCategory": "done",
+   "assignee": "fennel@mozilla.com",
+   "parent": "AIPLAT-1409",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-29T17:49:13Z",
+   "created": "2026-08-07T01:27:55Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1814": {
+   "key": "AIPLAT-1814",
+   "summary": "Throttle ONNX runtime",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "fjord@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P1",
+   "updated": "2026-10-16T04:52:44Z",
+   "created": "2026-10-02T09:22:25Z",
+   "points": null,
+   "sprint": null
+  },
+  "AIPLAT-1839": {
+   "key": "AIPLAT-1839",
+   "summary": "Hang when closing sidebar chatbot",
+   "status": "To Do",
+   "statusCategory": "new",
+   "assignee": "ember@mozilla.com",
+   "parent": "AIPLAT-1406",
+   "type": "Task",
+   "priority": "P2",
+   "updated": "2026-10-27T16:43:18Z",
+   "created": "2026-05-14T16:06:25Z",
+   "points": null,
+   "sprint": null
+  }
+ },
+ "revisions": [
+  {
+   "id": 330108,
+   "title": "Bug 1993326 - Intermittent failure in translations engine",
+   "status": "needs-review",
+   "author": "PHID-USER-birch",
+   "bug": 1993326,
+   "modified": "2026-10-11T11:08:20Z",
+   "created": "2026-09-26T18:47:02Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-330108",
+   "diffCreated": "2026-11-01T02:51:25Z"
+  },
+  {
+   "id": 330982,
+   "title": "Bug 1993521 - Refactor download manager for models",
+   "status": "needs-review",
+   "author": "PHID-USER-birch",
+   "bug": 1993521,
+   "modified": "2026-10-15T04:49:54Z",
+   "created": "2026-10-14T18:10:05Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-330982",
+   "diffCreated": "2026-10-25T04:00:38Z"
+  },
+  {
+   "id": 331010,
+   "title": "Bug 1993597 - Remove dead code from ONNX runtime",
+   "status": "needs-review",
+   "author": "PHID-USER-ember",
+   "bug": 1993597,
+   "modified": "2026-10-26T05:17:10Z",
+   "created": "2026-10-25T18:55:07Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-331010",
+   "diffCreated": "2026-10-31T12:49:55Z"
+  },
+  {
+   "id": 331390,
+   "title": "Bug 1993988 - Add telemetry to sidebar chatbot",
+   "status": "needs-review",
+   "author": "PHID-USER-gale",
+   "bug": 1993988,
+   "modified": "2026-10-21T20:04:31Z",
+   "created": "2026-09-28T08:52:12Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-331390",
+   "diffCreated": "2026-10-26T16:15:00Z"
+  },
+  {
+   "id": 332152,
+   "title": "Bug 1994159 - Fix memory leak in PageExtractor",
+   "status": "needs-review",
+   "author": "PHID-USER-gale",
+   "bug": 1994159,
+   "modified": "2026-10-28T07:52:51Z",
+   "created": "2026-10-02T11:05:12Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-332152",
+   "diffCreated": "2026-10-18T20:38:38Z"
+  },
+  {
+   "id": 332530,
+   "title": "Bug 1994305 - Improve error messages for tab grouping suggestions",
+   "status": "needs-review",
+   "author": "PHID-USER-quill",
+   "bug": 1994305,
+   "modified": "2026-11-03T08:50:50Z",
+   "created": "2026-10-30T15:36:58Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-delta",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-332530",
+   "diffCreated": "2026-11-01T20:16:54Z"
+  },
+  {
+   "id": 333389,
+   "title": "Bug 1994555 - Port to ESM: wasm SIMD path",
+   "status": "needs-review",
+   "author": "PHID-USER-delta",
+   "bug": 1994555,
+   "modified": "2026-10-10T10:38:33Z",
+   "created": "2026-10-08T00:41:30Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-333389",
+   "diffCreated": "2026-10-13T20:31:13Z"
+  },
+  {
+   "id": 333805,
+   "title": "Bug 1994649 - Handle offline mode in model hub cache",
+   "status": "needs-review",
+   "author": "PHID-USER-birch",
+   "bug": 1994649,
+   "modified": "2026-11-01T05:52:37Z",
+   "created": "2026-10-04T19:13:18Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-333805",
+   "diffCreated": "2026-10-30T00:39:31Z"
+  },
+  {
+   "id": 333969,
+   "title": "Bug 1994729 - Throttle WebGPU backend when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "needs-review",
+   "author": "PHID-USER-lumen",
+   "bug": 1994729,
+   "modified": "2026-10-31T20:35:24Z",
+   "created": "2026-10-12T09:27:15Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-delta",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-333969",
+   "diffCreated": "2026-11-03T11:20:37Z"
+  },
+  {
+   "id": 334191,
+   "title": "Bug 1995115 - Hang when closing perf regression on Speedometer",
+   "status": "needs-review",
+   "author": "PHID-USER-cinder",
+   "bug": 1995115,
+   "modified": "2026-10-31T19:16:01Z",
+   "created": "2026-10-22T08:46:59Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-ember",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-334191",
+   "diffCreated": "2026-10-27T12:06:52Z"
+  },
+  {
+   "id": 334625,
+   "title": "WIP: Smart Window experiment",
+   "status": "needs-review",
+   "author": "PHID-USER-ember",
+   "bug": null,
+   "modified": "2026-10-04T06:36:44Z",
+   "created": "2026-10-01T06:11:36Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-334625",
+   "diffCreated": "2026-10-22T22:16:20Z"
+  },
+  {
+   "id": 335464,
+   "title": "WIP: telemetry for ML experiment",
+   "status": "needs-review",
+   "author": "PHID-USER-fjord",
+   "bug": null,
+   "modified": "2026-10-04T19:02:22Z",
+   "created": "2026-09-28T12:34:41Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-harbor",
+     "status": "added"
+    },
+    {
+     "phid": "PHID-USER-fennel",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-335464",
+   "diffCreated": "2026-10-02T22:37:21Z"
+  },
+  {
+   "id": 336263,
+   "title": "Bug 1995195 - Crash in link preview",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 1995195,
+   "modified": "2026-10-29T05:56:39Z",
+   "created": "2026-10-02T14:58:35Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-336263",
+   "diffCreated": "2026-10-19T13:27:08Z"
+  },
+  {
+   "id": 336841,
+   "title": "Bug 1995482 - Support telemetry for ML",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 1995482,
+   "modified": "2026-11-03T04:14:01Z",
+   "created": "2026-10-31T13:48:50Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-336841",
+   "diffCreated": "2026-11-03T15:44:34Z"
+  },
+  {
+   "id": 337473,
+   "title": "Bug 1995716 - Intermittent failure in inference worker (データ損失)",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 1995716,
+   "modified": "2026-10-11T04:13:18Z",
+   "created": "2026-09-25T19:56:05Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-337473",
+   "diffCreated": "2026-10-27T00:32:41Z"
+  },
+  {
+   "id": 338050,
+   "title": "Bug 1995979 - Refactor about:inference",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 1995979,
+   "modified": "2026-10-27T12:51:04Z",
+   "created": "2026-09-28T23:22:52Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-338050",
+   "diffCreated": "2026-10-18T18:17:47Z"
+  },
+  {
+   "id": 338420,
+   "title": "Bug 1996607 - Improve error messages for Smart Window",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1996607,
+   "modified": "2026-11-01T19:00:00Z",
+   "created": "2026-10-21T08:51:36Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-338420",
+   "diffCreated": "2026-11-03T12:43:25Z",
+   "projects": [
+    "PHID-PROJ-classification"
+   ],
+   "phid": "PHID-DREV-338420"
+  },
+  {
+   "id": 338703,
+   "title": "Bug 1996929 - Port to ESM: translations engine",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1996929,
+   "modified": "2026-10-28T19:00:00Z",
+   "created": "2026-11-01T05:56:43Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-338703",
+   "diffCreated": "2026-11-03T02:29:16Z"
+  },
+  {
+   "id": 338983,
+   "title": "Bug 1997195 - Handle offline mode in download manager for models when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1997195,
+   "modified": "2026-11-03T07:00:00Z",
+   "created": "2026-09-27T04:42:16Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-338983",
+   "diffCreated": "2026-10-04T15:41:39Z"
+  },
+  {
+   "id": 339714,
+   "title": "Bug 1997203 - Throttle ONNX runtime",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1997203,
+   "modified": "2026-10-04T19:00:00Z",
+   "created": "2026-10-24T11:49:25Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-339714",
+   "diffCreated": "2026-11-02T03:05:37Z"
+  },
+  {
+   "id": 340469,
+   "title": "Bug 1997434 - Hang when closing sidebar chatbot",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1997434,
+   "modified": "2026-11-03T07:00:00Z",
+   "created": "2026-10-14T01:42:28Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-340469",
+   "diffCreated": "2026-10-24T03:16:30Z"
+  },
+  {
+   "id": 340829,
+   "title": "Bug 1997638 - Crash in PageExtractor",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1997638,
+   "modified": "2026-10-22T19:00:00Z",
+   "created": "2026-09-25T11:57:30Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-lumen",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-340829",
+   "diffCreated": "2026-11-03T05:33:24Z"
+  },
+  {
+   "id": 341023,
+   "title": "Bug 1997981 - Support tab grouping suggestions",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1997981,
+   "modified": "2026-10-22T19:00:00Z",
+   "created": "2026-10-27T15:32:57Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-341023",
+   "diffCreated": "2026-11-01T21:52:00Z"
+  },
+  {
+   "id": 341282,
+   "title": "Bug 1998095 - Intermittent failure in wasm SIMD path",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1998095,
+   "modified": "2026-11-01T19:00:00Z",
+   "created": "2026-10-14T02:34:02Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-341282",
+   "diffCreated": "2026-10-29T07:51:29Z"
+  },
+  {
+   "id": 341440,
+   "title": "Bug 1998253 - Refactor model hub cache (データ損失)",
+   "status": "accepted",
+   "author": "PHID-USER-harbor",
+   "bug": 1998253,
+   "modified": "2026-10-22T19:00:00Z",
+   "created": "2026-10-22T17:00:38Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-delta",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-341440",
+   "diffCreated": "2026-11-02T01:01:24Z"
+  },
+  {
+   "id": 342300,
+   "title": "Bug 1998555 - Remove dead code from WebGPU backend",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1998555,
+   "modified": "2026-11-02T20:19:36Z",
+   "created": "2026-10-16T04:30:09Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-342300",
+   "diffCreated": "2026-11-03T10:35:15Z"
+  },
+  {
+   "id": 342372,
+   "title": "Bug 1998559 - Add telemetry to perf regression on Speedometer",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1998559,
+   "modified": "2026-10-20T12:52:24Z",
+   "created": "2026-10-04T16:59:55Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-342372",
+   "diffCreated": "2026-10-10T10:44:34Z"
+  },
+  {
+   "id": 343008,
+   "title": "Bug 1998940 - Fix memory leak in link preview",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1998940,
+   "modified": "2026-10-29T16:47:41Z",
+   "created": "2026-10-09T02:42:21Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-343008",
+   "diffCreated": "2026-10-19T09:24:18Z"
+  },
+  {
+   "id": 343704,
+   "title": "Bug 1999233 - Improve error messages for telemetry for ML",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1999233,
+   "modified": "2026-10-20T13:07:35Z",
+   "created": "2026-10-14T16:43:15Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-343704",
+   "diffCreated": "2026-10-29T01:17:18Z"
+  },
+  {
+   "id": 344169,
+   "title": "Bug 1999338 - Port to ESM: inference worker when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1999338,
+   "modified": "2026-10-19T09:48:36Z",
+   "created": "2026-09-25T00:38:48Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-344169",
+   "diffCreated": "2026-09-28T08:16:59Z"
+  },
+  {
+   "id": 344894,
+   "title": "Bug 1999413 - Handle offline mode in about:inference",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1999413,
+   "modified": "2026-10-27T04:51:51Z",
+   "created": "2026-10-19T13:11:00Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-344894",
+   "diffCreated": "2026-10-21T10:29:29Z"
+  },
+  {
+   "id": 345022,
+   "title": "Bug 1999667 - Throttle sec review follow-up",
+   "status": "needs-revision",
+   "author": "PHID-USER-harbor",
+   "bug": 1999667,
+   "modified": "2026-11-03T17:35:19Z",
+   "created": "2026-10-01T00:32:37Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-delta",
+     "status": "rejected"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-345022",
+   "diffCreated": "2026-10-09T10:33:46Z"
+  },
+  {
+   "id": 345396,
+   "title": "Bug 2000048 - Hang when closing summarizer",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2000048,
+   "modified": "2026-10-06T18:19:23Z",
+   "created": "2026-09-27T16:48:39Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-345396",
+   "diffCreated": "2026-10-24T09:10:45Z"
+  },
+  {
+   "id": 345595,
+   "title": "Bug 2000077 - Crash in prompt sanitizer",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2000077,
+   "modified": "2026-10-10T07:56:56Z",
+   "created": "2026-10-03T15:18:00Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-345595",
+   "diffCreated": "2026-10-07T05:50:02Z"
+  },
+  {
+   "id": 346061,
+   "title": "Bug 2000469 - Support Smart Window",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2000469,
+   "modified": "2026-10-31T07:55:03Z",
+   "created": "2026-10-09T19:26:25Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-ember",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-346061",
+   "diffCreated": "2026-10-22T15:52:07Z"
+  },
+  {
+   "id": 346822,
+   "title": "Bug 2000753 - Intermittent failure in translations engine",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2000753,
+   "modified": "2026-10-15T07:55:52Z",
+   "created": "2026-10-04T23:32:03Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-346822",
+   "diffCreated": "2026-10-15T05:39:28Z"
+  },
+  {
+   "id": 346903,
+   "title": "Bug 2000910 - Refactor download manager for models",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2000910,
+   "modified": "2026-10-26T12:59:07Z",
+   "created": "2026-10-25T16:25:52Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-346903",
+   "diffCreated": "2026-10-29T18:42:09Z"
+  },
+  {
+   "id": 347086,
+   "title": "Bug 2001144 - Remove dead code from ONNX runtime (データ損失)",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2001144,
+   "modified": "2026-11-02T11:39:25Z",
+   "created": "2026-10-20T10:55:47Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-347086",
+   "diffCreated": "2026-10-29T12:16:37Z"
+  },
+  {
+   "id": 347476,
+   "title": "Bug 2001438 - Add telemetry to sidebar chatbot",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2001438,
+   "modified": "2026-10-26T02:42:25Z",
+   "created": "2026-10-23T06:03:19Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-347476",
+   "diffCreated": "2026-10-31T14:08:36Z"
+  },
+  {
+   "id": 347758,
+   "title": "Bug 2001625 - Fix memory leak in PageExtractor",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2001625,
+   "modified": "2026-10-20T22:58:19Z",
+   "created": "2026-09-28T19:36:15Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-347758",
+   "diffCreated": "2026-10-19T06:09:14Z"
+  },
+  {
+   "id": 347763,
+   "title": "Bug 2001787 - Improve error messages for tab grouping suggestions when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2001787,
+   "modified": "2026-10-31T04:59:34Z",
+   "created": "2026-10-30T22:32:34Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-347763",
+   "diffCreated": "2026-10-31T11:54:23Z"
+  },
+  {
+   "id": 348613,
+   "title": "Bug 2002019 - Port to ESM: wasm SIMD path",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2002019,
+   "modified": "2026-10-15T22:09:04Z",
+   "created": "2026-10-05T15:27:20Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-348613",
+   "diffCreated": "2026-11-01T07:32:10Z"
+  },
+  {
+   "id": 348875,
+   "title": "Bug 2002419 - Handle offline mode in model hub cache",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002419,
+   "modified": "2026-10-25T08:12:58Z",
+   "created": "2026-10-13T04:33:18Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-lumen",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-348875",
+   "diffCreated": "2026-09-24T19:00:00Z",
+   "projects": [
+    "PHID-PROJ-secure-revision"
+   ]
+  },
+  {
+   "id": 348881,
+   "title": "Bug 2002472 - Throttle WebGPU backend",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002472,
+   "modified": "2026-11-03T08:48:39Z",
+   "created": "2026-11-02T09:12:28Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-348881",
+   "diffCreated": "2026-10-19T19:00:00Z"
+  },
+  {
+   "id": 348908,
+   "title": "Bug 2002636 - Hang when closing perf regression on Speedometer",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002636,
+   "modified": "2026-10-27T04:59:37Z",
+   "created": "2026-10-26T05:18:29Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-ember",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-348908",
+   "diffCreated": "2026-11-03T11:48:00Z"
+  },
+  {
+   "id": 349259,
+   "title": "Bug 2002680 - Crash in link preview",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002680,
+   "modified": "2026-10-24T06:41:43Z",
+   "created": "2026-10-05T18:38:27Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-349259",
+   "diffCreated": "2026-09-24T19:00:00Z"
+  },
+  {
+   "id": 349740,
+   "title": "Bug 2002686 - Support telemetry for ML",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002686,
+   "modified": "2026-10-27T11:07:32Z",
+   "created": "2026-10-25T03:43:46Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-349740",
+   "diffCreated": "2026-11-02T19:00:00Z"
+  },
+  {
+   "id": 350147,
+   "title": "Bug 2003008 - Intermittent failure in inference worker",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2003008,
+   "modified": "2026-11-03T17:13:50Z",
+   "created": "2026-10-31T16:07:14Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fennel",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-350147",
+   "diffCreated": "2026-11-02T19:00:00Z"
+  },
+  {
+   "id": 350321,
+   "title": "Bug 2003223 - Refactor about:inference",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2003223,
+   "modified": "2026-11-01T05:22:41Z",
+   "created": "2026-10-20T22:49:43Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-350321",
+   "diffCreated": "2026-11-03T11:48:00Z"
+  },
+  {
+   "id": 350437,
+   "title": "Bug 2003608 - Remove dead code from sec review follow-up",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2003608,
+   "modified": "2026-11-03T11:31:58Z",
+   "created": "2026-11-02T16:18:46Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-350437",
+   "diffCreated": "2026-11-02T19:00:00Z"
+  },
+  {
+   "id": 351164,
+   "title": "Bug 2003674 - Add telemetry to summarizer (データ損失)",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2003674,
+   "modified": "2026-10-27T12:52:54Z",
+   "created": "2026-10-15T07:50:15Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-cinder",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-351164",
+   "diffCreated": "2026-11-03T11:48:00Z"
+  },
+  {
+   "id": 351954,
+   "title": "Bug 2003775 - Fix memory leak in prompt sanitizer when the window is resized while a model is still downloading in a private browsing window on Windows ARM64",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2003775,
+   "modified": "2026-10-28T11:41:46Z",
+   "created": "2026-10-18T00:07:58Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-351954",
+   "diffCreated": "2026-09-24T19:00:00Z"
+  },
+  {
+   "id": 352237,
+   "title": "Bug 2003809 - Improve error messages for Smart Window",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2003809,
+   "modified": "2026-10-21T09:04:26Z",
+   "created": "2026-10-20T17:28:02Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-352237",
+   "diffCreated": "2026-10-31T02:30:29Z"
+  },
+  {
+   "id": 352266,
+   "title": "Bug 2004178 - Port to ESM: translations engine",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2004178,
+   "modified": "2026-10-31T05:29:46Z",
+   "created": "2026-10-01T13:50:48Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-352266",
+   "diffCreated": "2026-10-03T02:35:13Z"
+  },
+  {
+   "id": 352524,
+   "title": "WIP: tab grouping suggestions experiment",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": null,
+   "modified": "2026-11-02T12:39:55Z",
+   "created": "2026-10-26T13:09:02Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-delta",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-352524",
+   "diffCreated": "2026-10-27T12:04:04Z"
+  },
+  {
+   "id": 353121,
+   "title": "WIP: inference worker experiment",
+   "status": "changes-planned",
+   "author": "PHID-USER-harbor",
+   "bug": null,
+   "modified": "2026-10-31T11:42:21Z",
+   "created": "2026-10-26T10:47:52Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-353121",
+   "diffCreated": "2026-10-30T13:25:57Z"
+  },
+  {
+   "id": 353362,
+   "title": "WIP: model hub cache experiment",
+   "status": "draft",
+   "author": "PHID-USER-harbor",
+   "bug": null,
+   "modified": "2026-10-17T14:03:21Z",
+   "created": "2026-10-08T10:56:10Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-353362",
+   "diffCreated": "2026-11-01T02:19:09Z"
+  },
+  {
+   "id": 354021,
+   "title": "Bug 2005852 - Improve error messages for Smart Window",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2005852,
+   "modified": "2026-10-20T12:54:50Z",
+   "created": "2026-10-12T23:10:43Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-354021",
+   "diffCreated": "2026-10-19T14:43:53Z"
+  },
+  {
+   "id": 354870,
+   "title": "Bug 2010852 - Handle offline mode in model hub cache",
+   "status": "abandoned",
+   "author": "PHID-USER-cinder",
+   "bug": 2010852,
+   "modified": "2026-10-15T15:08:08Z",
+   "created": "2026-10-04T11:39:53Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-fjord",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-354870",
+   "diffCreated": "2026-10-31T18:21:21Z"
+  },
+  {
+   "id": 354876,
+   "title": "Bug 2010906 - Mismatched team title",
+   "status": "needs-review",
+   "author": "PHID-USER-orbit",
+   "bug": 2010906,
+   "modified": "2026-10-28T14:46:55Z",
+   "created": "2026-10-13T08:57:06Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-quill",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-354876",
+   "diffCreated": "2026-11-03T16:45:28Z"
+  },
+  {
+   "id": 355191,
+   "title": "Bug 2011255 - Support telemetry for ML",
+   "status": "published",
+   "author": "PHID-USER-birch",
+   "bug": 2011255,
+   "modified": "2026-10-24T15:21:19Z",
+   "created": "2026-10-23T12:38:56Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-355191",
+   "diffCreated": "2026-11-01T20:44:30Z"
+  },
+  {
+   "id": 355449,
+   "title": "Bug 2011634 - Refactor about:inference",
+   "status": "abandoned",
+   "author": "PHID-USER-lumen",
+   "bug": 2011634,
+   "modified": "2026-10-17T04:26:39Z",
+   "created": "2026-10-05T14:07:20Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-delta",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-355449",
+   "diffCreated": "2026-10-30T02:12:42Z"
+  },
+  {
+   "id": 356327,
+   "title": "Bug 2011830 - Mismatched team title",
+   "status": "needs-review",
+   "author": "PHID-USER-birch",
+   "bug": 2011830,
+   "modified": "2026-10-24T14:11:40Z",
+   "created": "2026-10-17T00:29:36Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-356327",
+   "diffCreated": "2026-10-19T18:10:41Z"
+  },
+  {
+   "id": 356555,
+   "title": "Bug 2012324 - Improve error messages for Smart Window",
+   "status": "published",
+   "author": "PHID-USER-gale",
+   "bug": 2012324,
+   "modified": "2026-10-29T02:32:21Z",
+   "created": "2026-10-27T12:27:04Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-356555",
+   "diffCreated": "2026-10-31T00:22:15Z"
+  },
+  {
+   "id": 357319,
+   "title": "Bug 2012543 - Handle offline mode in download manager for models",
+   "status": "needs-review",
+   "author": "PHID-USER-ember",
+   "bug": 2012543,
+   "modified": "2026-10-18T22:39:48Z",
+   "created": "2026-10-18T04:09:10Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-birch",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-357319",
+   "diffCreated": "2026-10-18T06:27:14Z"
+  },
+  {
+   "id": 357994,
+   "title": "Bug 2013069 - Mismatched team title",
+   "status": "published",
+   "author": "PHID-USER-birch",
+   "bug": 2013069,
+   "modified": "2026-10-28T16:00:57Z",
+   "created": "2026-10-22T00:29:46Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-orbit",
+     "status": "blocking"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-357994",
+   "diffCreated": "2026-10-26T19:56:11Z"
+  }
+ ],
+ "toReview": [
+  330108,
+  330982,
+  331010,
+  331390,
+  332152,
+  332530,
+  333389,
+  333805,
+  333969,
+  334191,
+  334625,
+  335464
+ ],
+ "bugRevisions": {
+  "1993326": [
+   330108
+  ],
+  "1993521": [
+   330982
+  ],
+  "1993597": [
+   331010
+  ],
+  "1993988": [
+   331390
+  ],
+  "1994159": [
+   332152
+  ],
+  "1994305": [
+   332530
+  ],
+  "1994555": [
+   333389
+  ],
+  "1994649": [
+   333805
+  ],
+  "1994729": [
+   333969
+  ],
+  "1995115": [
+   334191
+  ],
+  "1995195": [
+   336263
+  ],
+  "1995482": [
+   336841
+  ],
+  "1995716": [
+   337473
+  ],
+  "1995979": [
+   338050
+  ],
+  "1996607": [
+   338420
+  ],
+  "1996929": [
+   338703
+  ],
+  "1997195": [
+   338983
+  ],
+  "1997203": [
+   339714
+  ],
+  "1997434": [
+   340469
+  ],
+  "1997638": [
+   340829
+  ],
+  "1997981": [
+   341023
+  ],
+  "1998095": [
+   341282
+  ],
+  "1998253": [
+   341440
+  ],
+  "1998555": [
+   342300
+  ],
+  "1998559": [
+   342372
+  ],
+  "1998940": [
+   343008
+  ],
+  "1999233": [
+   343704
+  ],
+  "1999338": [
+   344169
+  ],
+  "1999413": [
+   344894
+  ],
+  "1999667": [
+   345022
+  ],
+  "2000048": [
+   345396
+  ],
+  "2000077": [
+   345595
+  ],
+  "2000469": [
+   346061
+  ],
+  "2000753": [
+   346822
+  ],
+  "2000910": [
+   346903
+  ],
+  "2001144": [
+   347086
+  ],
+  "2001438": [
+   347476
+  ],
+  "2001625": [
+   347758
+  ],
+  "2001787": [
+   347763
+  ],
+  "2002019": [
+   348613
+  ],
+  "2002419": [
+   348875
+  ],
+  "2002472": [
+   348881
+  ],
+  "2002636": [
+   348908
+  ],
+  "2002680": [
+   349259
+  ],
+  "2002686": [
+   349740
+  ],
+  "2003008": [
+   350147
+  ],
+  "2003223": [
+   350321
+  ],
+  "2003608": [
+   350437
+  ],
+  "2003674": [
+   351164
+  ],
+  "2003775": [
+   351954
+  ],
+  "2003809": [
+   352237
+  ],
+  "2004178": [
+   352266
+  ],
+  "2005852": [
+   354021
+  ],
+  "2010852": [
+   354870
+  ],
+  "2010906": [
+   354876
+  ],
+  "2011255": [
+   355191
+  ],
+  "2011634": [
+   355449
+  ],
+  "2011830": [
+   356327
+  ],
+  "2012324": [
+   356555
+  ],
+  "2012543": [
+   357319
+  ],
+  "2013069": [
+   357994
+  ]
+ },
+ "lastComments": {
+  "1990298": {
+   "author": "fennel@mozilla.com",
+   "time": "2026-11-01T04:26:39Z",
+   "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+  },
+  "1990361": {
+   "author": "lumen@mozilla.com",
+   "time": "2026-10-31T10:33:43Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1990396": {
+   "author": "gale@mozilla.com",
+   "time": "2026-10-27T19:07:06Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1990631": {
+   "author": "fjord@mozilla.com",
+   "time": "2026-10-29T14:55:28Z",
+   "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+  },
+  "1990809": {
+   "author": "gale@mozilla.com",
+   "time": "2026-11-02T07:22:05Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1991062": {
+   "author": "delta@mozilla.com",
+   "time": "2026-10-31T17:32:00Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1991319": {
+   "author": "delta@mozilla.com",
+   "time": "2026-10-28T12:26:20Z",
+   "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+  },
+  "1991696": {
+   "author": "cinder@mozilla.com",
+   "time": "2026-10-26T19:23:57Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1991935": {
+   "author": "delta@mozilla.com",
+   "time": "2026-11-02T15:03:45Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1992138": {
+   "author": "birch@mozilla.com",
+   "time": "2026-10-27T10:02:07Z",
+   "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+  },
+  "1992502": {
+   "author": "gale@mozilla.com",
+   "time": "2026-11-03T01:04:31Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1992842": {
+   "author": "lumen@mozilla.com",
+   "time": "2026-11-03T18:06:56Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  },
+  "1993034": {
+   "author": "orbit@mozilla.com",
+   "time": "2026-10-30T16:21:53Z",
+   "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+  },
+  "1993240": {
+   "author": "gale@mozilla.com",
+   "time": "2026-11-03T04:27:10Z",
+   "text": "Any update here? ¯\\_(ツ)_/¯"
+  }
+ },
+ "calls": [
+  {
+   "at": "2026-11-03T19:00:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": null,
+   "ms": 140,
+   "error": "connection reset by peer"
+  },
+  {
+   "at": "2026-11-03T18:59:00Z",
+   "method": "GET",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 80,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:58:00Z",
+   "method": "POST",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:57:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": null,
+   "ms": 140,
+   "error": "connection reset by peer"
+  },
+  {
+   "at": "2026-11-03T18:56:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": null,
+   "ms": 600,
+   "error": "connection reset by peer"
+  },
+  {
+   "at": "2026-11-03T18:55:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 500,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:54:00Z",
+   "method": "POST",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:53:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:52:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": null,
+   "ms": 140,
+   "error": "connection reset by peer"
+  },
+  {
+   "at": "2026-11-03T18:51:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:50:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 429,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:49:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:48:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 429,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:47:00Z",
+   "method": "POST",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:46:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:45:00Z",
+   "method": "POST",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:44:00Z",
+   "method": "POST",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:43:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 200,
+   "ms": 80,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:42:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 500,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:41:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 429,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:40:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:39:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:38:00Z",
+   "method": "GET",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:37:00Z",
+   "method": "POST",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:36:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:35:00Z",
+   "method": "POST",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:34:00Z",
+   "method": "POST",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 429,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:33:00Z",
+   "method": "POST",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 140,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:32:00Z",
+   "method": "GET",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:31:00Z",
+   "method": "POST",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:30:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 429,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:29:00Z",
+   "method": "GET",
+   "url": "https://mozilla-hub.atlassian.net/rest/api/3/search/jql",
+   "status": 200,
+   "ms": 80,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:28:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:27:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 500,
+   "ms": 15000,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:26:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:25:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 80,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:24:00Z",
+   "method": "GET",
+   "url": "https://treeherder.mozilla.org/api/project/try/push/",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:23:00Z",
+   "method": "POST",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:22:00Z",
+   "method": "GET",
+   "url": "https://phabricator.services.mozilla.com/api/differential.revision.search",
+   "status": 200,
+   "ms": 600,
+   "error": null
+  },
+  {
+   "at": "2026-11-03T18:21:00Z",
+   "method": "GET",
+   "url": "https://bugzilla.mozilla.org/rest/bug",
+   "status": 200,
+   "ms": 2400,
+   "error": null
+  }
+ ],
+ "tryPushes": {
+  "338420": {
+   "revision": "529f4deadbeef",
+   "pushedAt": "2026-11-01T00:30:50Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=529f4",
+   "builds": "fail",
+   "lint": "pass",
+   "tests": "none",
+   "failed": 3,
+   "running": 812
+  },
+  "338703": {
+   "revision": "52b0fdeadbeef",
+   "pushedAt": "2026-11-03T03:27:11Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=52b0f",
+   "builds": "fail",
+   "lint": "none",
+   "tests": "none",
+   "failed": 0,
+   "running": 812
+  },
+  "338983": {
+   "revision": "52c27deadbeef",
+   "pushedAt": "2026-11-03T08:57:03Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=52c27",
+   "builds": "pass",
+   "lint": "pass",
+   "tests": "running",
+   "failed": 0,
+   "running": 4
+  },
+  "339714": {
+   "revision": "52f02deadbeef",
+   "pushedAt": "2026-11-03T12:57:15Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=52f02",
+   "builds": "pass",
+   "lint": "none",
+   "tests": "running",
+   "failed": 0,
+   "running": 4
+  },
+  "340469": {
+   "revision": "531f5deadbeef",
+   "pushedAt": "2026-11-02T13:31:06Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=531f5",
+   "builds": "fail",
+   "lint": "pass",
+   "tests": "none",
+   "failed": 117,
+   "running": 812
+  },
+  "340829": {
+   "revision": "5335ddeadbeef",
+   "pushedAt": "2026-10-31T15:56:46Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=5335d",
+   "builds": "fail",
+   "lint": "none",
+   "tests": "fail",
+   "failed": 0,
+   "running": 0
+  },
+  "341023": {
+   "revision": "5341fdeadbeef",
+   "pushedAt": "2026-10-29T23:35:08Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=5341f",
+   "builds": "running",
+   "lint": "none",
+   "tests": "fail",
+   "failed": 0,
+   "running": 4
+  },
+  "341282": {
+   "revision": "53522deadbeef",
+   "pushedAt": "2026-11-03T08:13:46Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=53522",
+   "builds": "fail",
+   "lint": "pass",
+   "tests": "none",
+   "failed": 0,
+   "running": 4
+  },
+  "341440": {
+   "revision": "535c0deadbeef",
+   "pushedAt": "2026-11-03T18:00:00Z",
+   "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=535c0",
+   "builds": "pass",
+   "lint": "pass",
+   "tests": "pass",
+   "failed": 0,
+   "running": 0
+  }
+ },
+ "users": {
+  "PHID-USER-quill": "quillfox",
+  "PHID-USER-cinder": "Cindë Ålvik",
+  "PHID-USER-lumen": "林光 [:lumen]",
+  "PHID-USER-birch": "Birch Al-Fenwick (PTO until Nov 10)",
+  "PHID-USER-ember": "Ember O'Rourke",
+  "PHID-USER-delta": "Delta",
+  "PHID-USER-orbit": "Mx. Extraordinarily-Long-Hyphenated-Surname Who Reviews Everything",
+  "PHID-USER-fjord": "Fjord",
+  "PHID-USER-gale": "gale",
+  "PHID-USER-fennel": "Fennel",
+  "PHID-PROJECT-ml": "#firefox-ai-ml-reviewers",
+  "PHID-PROJ-classification": "#needs-data-classification"
+ },
+ "threads": {
+  "1998555": {
+   "total": 40,
+   "comments": [
+    {
+     "author": "gale@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "fjord@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "ember@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1998559": {
+   "total": 41,
+   "comments": [
+    {
+     "author": "ember@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1998940": {
+   "total": 42,
+   "comments": [
+    {
+     "author": "delta@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "ember@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "ember@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "fennel@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1999233": {
+   "total": 43,
+   "comments": [
+    {
+     "author": "fjord@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "fjord@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "cinder@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "gale@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1999338": {
+   "total": 44,
+   "comments": [
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "cinder@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "fennel@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "cinder@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1999413": {
+   "total": 45,
+   "comments": [
+    {
+     "author": "orbit@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "quillfox@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "lumen@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "quillfox@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  },
+  "1999667": {
+   "total": 46,
+   "comments": [
+    {
+     "author": "orbit@mozilla.com",
+     "time": "2026-10-25T19:00:00Z",
+     "text": "Filed from crash-stats."
+    },
+    {
+     "author": "cinder@mozilla.com",
+     "time": "2026-10-29T19:00:00Z",
+     "text": "I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? I dug into this a bit more. The crash only reproduces with the new allocator and when the worker is torn down before the first inference finishes. Stack:\n\n```\nmozilla::ml::InferenceWorker::Shutdown()\n  at InferenceWorker.cpp:412\nmozilla::ml::ModelHub::Evict(…)\n```\n\nCould you take a look before the merge? "
+    },
+    {
+     "author": "birch@mozilla.com",
+     "time": "2026-11-02T19:00:00Z",
+     "text": "r- because the shutdown path still races. See inline comments."
+    },
+    {
+     "author": "quillfox@mozilla.com",
+     "time": "2026-11-03T16:36:00Z",
+     "text": ""
+    }
+   ]
+  }
+ },
+ "errors": [],
+ "stale": [
+  {
+   "source": "telemetry",
+   "since": "2026-11-01T19:00:00Z"
+  }
+ ],
+ "trains": {
+  "nightly": 147,
+  "beta": 146,
+  "release": 145,
+  "esr": [
+   140,
+   115
+  ],
+  "nextMerge": "2026-11-09",
+  "nextRelease": "2026-11-10"
+ },
+ "uplift": {
+  "2000048": {
+   "patch": true,
+   "approvals": [
+    [
+     "beta",
+     "+"
+    ]
+   ],
+   "flags": [
+    {
+     "attachment": 9400000,
+     "name": "approval-mozilla-beta",
+     "status": "+"
+    }
+   ]
+  },
+  "2000077": {
+   "patch": true,
+   "approvals": [
+    [
+     "beta",
+     "+"
+    ]
+   ],
+   "flags": [
+    {
+     "attachment": 9400001,
+     "name": "approval-mozilla-beta",
+     "status": "+"
+    }
+   ]
+  },
+  "2000469": {
+   "patch": true,
+   "approvals": [
+    [
+     "beta",
+     "+"
+    ]
+   ],
+   "flags": [
+    {
+     "attachment": 9400002,
+     "name": "approval-mozilla-beta",
+     "status": "+"
+    }
+   ]
+  },
+  "2000753": {
+   "patch": true,
+   "approvals": [],
+   "flags": []
+  },
+  "2000910": {
+   "patch": true,
+   "approvals": [],
+   "flags": []
+  },
+  "2001144": {
+   "patch": true,
+   "approvals": [],
+   "flags": []
+  },
+  "2001438": {
+   "patch": true,
+   "approvals": [],
+   "flags": []
+  },
+  "2001625": {
+   "patch": true,
+   "approvals": [
+    [
+     "esr140",
+     "-"
+    ]
+   ],
+   "flags": []
+  },
+  "2001787": {
+   "patch": true,
+   "approvals": [
+    [
+     "esr140",
+     "-"
+    ]
+   ],
+   "flags": []
+  },
+  "2002019": {
+   "patch": true,
+   "approvals": [
+    [
+     "esr140",
+     "-"
+    ]
+   ],
+   "flags": []
+  },
+  "2003809": {
+   "patch": true,
+   "approvals": [
+    [
+     "beta",
+     "?"
+    ],
+    [
+     "esr140",
+     "?"
+    ]
+   ],
+   "flags": []
+  },
+  "2004178": {
+   "patch": true,
+   "approvals": [
+    [
+     "beta",
+     "?"
+    ],
+    [
+     "esr140",
+     "?"
+    ]
+   ],
+   "flags": []
+  }
+ },
+ "crashes": {
+  "1995979": {
+   "count": 37,
+   "since": "2026-10-20"
+  },
+  "1995195": {
+   "count": 6,
+   "since": "2026-10-28"
+  }
+ },
+ "groupReview": {
+  "334191": "#firefox-ai-ml-reviewers",
+  "334625": "#firefox-ai-ml-reviewers",
+  "335464": "#firefox-ai-ml-reviewers"
+ },
+ "telemetry": {
+  "fetchedAt": "2026-11-03T16:00:00Z",
+  "metrics": [
+   {
+    "name": "ml.inference_time",
+    "expires": "148",
+    "disabled": false,
+    "notificationEmails": [
+     "harbor@mozilla.com"
+    ],
+    "bugs": [
+     2005204
+    ],
+    "dataReviews": [
+     "https://bugzilla.mozilla.org/show_bug.cgi?id=1"
+    ],
+    "sourceUrl": "https://searchfox.org/metrics.yaml",
+    "definitionLastSeen": "2026-11-02 00:00:00"
+   },
+   {
+    "name": "ml.model_download_failure",
+    "expires": "146",
+    "disabled": false,
+    "notificationEmails": [
+     "harbor@mozilla.com",
+     "cinder@mozilla.com"
+    ],
+    "bugs": [
+     2005852
+    ],
+    "dataReviews": [],
+    "sourceUrl": null,
+    "definitionLastSeen": "2026-11-02 00:00:00"
+   },
+   {
+    "name": "ml.legacy_counter",
+    "expires": "never",
+    "disabled": true,
+    "notificationEmails": [
+     "harbor@mozilla.com"
+    ],
+    "bugs": [
+     1995195
+    ],
+    "dataReviews": [],
+    "sourceUrl": null,
+    "definitionLastSeen": "2026-10-02 00:00:00"
+   }
+  ]
+ },
+ "landings": {
+  "revisions": [
+   336263,
+   336841,
+   337473,
+   338050,
+   345396
+  ],
+  "repositories": [
+   {
+    "repository": "autoland",
+    "checkedAt": "2026-11-03T18:00:00Z",
+    "pushLimit": 500,
+    "scannedPushes": 500,
+    "oldestPush": "2026-10-25T19:00:00Z",
+    "error": null,
+    "matches": [
+     {
+      "revision": 336263,
+      "commit": "52187c0ffee",
+      "pushRevision": "52187c0ffee",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=52187c0ffee",
+      "pushedAt": "2026-11-02T19:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "pass",
+       "failed": 0,
+       "running": 0
+      },
+      "healthError": null
+     },
+     {
+      "revision": 336841,
+      "commit": "523c9c0ffee",
+      "pushRevision": "523c9c0ffee",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=523c9c0ffee",
+      "pushedAt": "2026-11-01T19:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "fail",
+       "failed": 1,
+       "running": 0
+      },
+      "healthError": null
+     },
+     {
+      "revision": 337473,
+      "commit": "52641c0ffee",
+      "pushRevision": "52641c0ffee",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=52641c0ffee",
+      "pushedAt": "2026-10-31T19:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "running",
+       "failed": 2,
+       "running": 0
+      },
+      "healthError": null
+     }
+    ]
+   },
+   {
+    "repository": "mozilla-central",
+    "checkedAt": "2026-11-03T18:00:00Z",
+    "pushLimit": 500,
+    "scannedPushes": 212,
+    "oldestPush": "2026-10-04T19:00:00Z",
+    "error": null,
+    "matches": [
+     {
+      "revision": 338050,
+      "commit": "52882c0ffee",
+      "pushRevision": "52882c0ffee",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=52882c0ffee",
+      "pushedAt": "2026-10-30T19:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "pass",
+       "failed": 3,
+       "running": 0
+      },
+      "healthError": null
+     },
+     {
+      "revision": 345396,
+      "commit": "54534c0ffee",
+      "pushRevision": "54534c0ffee",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=54534c0ffee",
+      "pushedAt": "2026-10-29T19:00:00Z",
+      "health": null,
+      "healthError": "Treeherder timed out"
+     }
+    ]
+   }
+  ]
+ },
+ "supplementalCache": {
+  "telemetryAttemptedAt": "2026-11-03T16:00:00Z",
+  "landingsAttemptedAt": "2026-11-03T18:00:00Z"
+ },
+ "roadmap": {
+  "parents": {
+   "AIPLAT-1403": {
+    "key": "AIPLAT-1403",
+    "summary": "Smart Window summarizer",
+    "status": "In Progress",
+    "statusCategory": "indeterminate",
+    "assignee": "cinder@mozilla.com",
+    "parent": null,
+    "type": "Epic",
+    "priority": "P1",
+    "updated": "2026-10-26T19:29:54Z",
+    "points": null,
+    "sprint": null,
+    "ideas": [
+     "AIDI-79"
+    ]
+   },
+   "AIPLAT-1406": {
+    "key": "AIPLAT-1406",
+    "summary": "Translations v2 cleanup",
+    "status": "Closed",
+    "statusCategory": "done",
+    "assignee": "gale@mozilla.com",
+    "parent": null,
+    "type": "Epic",
+    "priority": "P1",
+    "updated": "2026-10-21T11:32:04Z",
+    "points": null,
+    "sprint": null,
+    "ideas": [
+     "AIDI-81"
+    ]
+   },
+   "AIPLAT-1409": {
+    "key": "AIPLAT-1409",
+    "summary": "Link preview rollout",
+    "status": "In Progress",
+    "statusCategory": "indeterminate",
+    "assignee": "fennel@mozilla.com",
+    "parent": null,
+    "type": "Epic",
+    "priority": "P1",
+    "updated": "2026-10-30T04:50:01Z",
+    "points": null,
+    "sprint": null,
+    "ideas": [
+     "AIDI-88"
+    ]
+   },
+   "AIPLAT-1412": {
+    "key": "AIPLAT-1412",
+    "summary": "Model downloads",
+    "status": "To Do",
+    "statusCategory": "new",
+    "assignee": "birch@mozilla.com",
+    "parent": null,
+    "type": "Epic",
+    "priority": "P1",
+    "updated": "2026-10-15T12:05:03Z",
+    "points": null,
+    "sprint": null,
+    "ideas": [
+     "AIDI-90"
+    ]
+   }
+  },
+  "ideas": {
+   "AIDI-79": {
+    "key": "AIDI-79",
+    "summary": "Local summarization in Smart Window",
+    "status": "In Progress",
+    "statusCategory": "indeterminate",
+    "assignee": "delta@mozilla.com",
+    "updated": "2026-09-26T19:47:52Z",
+    "weeklyStatus": "Off track — blocked on WebGPU 🚧",
+    "target": "Q4 (Nov 30, 2026)",
+    "quarter": "Q4",
+    "theme": "AI in Firefox",
+    "priority": "P1",
+    "team": "AI Platform"
+   },
+   "AIDI-81": {
+    "key": "AIDI-81",
+    "summary": "On-device translations v2",
+    "status": "Done",
+    "statusCategory": "done",
+    "assignee": "quillfox@mozilla.com",
+    "updated": "2026-10-30T23:11:58Z",
+    "weeklyStatus": null,
+    "target": "Q3 (Sep 30, 2026)",
+    "quarter": "Q3",
+    "theme": "AI in Firefox",
+    "priority": "P1",
+    "team": "AI Platform"
+   },
+   "AIDI-88": {
+    "key": "AIDI-88",
+    "summary": "Link previews everywhere",
+    "status": "Discovery",
+    "statusCategory": "new",
+    "assignee": "delta@mozilla.com",
+    "updated": "2026-10-11T01:30:37Z",
+    "weeklyStatus": "On track",
+    "target": "Q3 (Oct 15, 2026)",
+    "quarter": "Q3",
+    "theme": "AI in Firefox",
+    "priority": "P1",
+    "team": "AI Platform"
+   },
+   "AIDI-90": {
+    "key": "AIDI-90",
+    "summary": "Model download manager",
+    "status": "In Progress",
+    "statusCategory": "indeterminate",
+    "assignee": "quillfox@mozilla.com",
+    "updated": "2026-10-30T10:33:12Z",
+    "weeklyStatus": "Off track — blocked on WebGPU 🚧",
+    "target": "Q1 (Mar 31, 2027)",
+    "quarter": "Q1",
+    "theme": "AI in Firefox",
+    "priority": "P1",
+    "team": "AI Platform"
+   }
+  }
+ },
+ "dependencies": {
+  "bugs": {},
+  "parents": {
+   "338420": [
+    "PHID-DREV-338703"
+   ]
+  },
+  "revisions": {
+   "PHID-DREV-338703": {
+    "id": 338703,
+    "title": "Bug 1996929 - Port to ESM: translations engine",
+    "status": "needs-revision",
+    "author": "PHID-USER-harbor",
+    "bug": 1996929,
+    "modified": "2026-10-28T19:00:00Z",
+    "created": "2026-11-01T05:56:43Z",
+    "reviewers": [
+     {
+      "phid": "PHID-USER-cinder",
+      "status": "accepted"
+     }
+    ],
+    "diffPHID": "PHID-DIFF-338703",
+    "diffCreated": "2026-11-03T02:29:16Z",
+    "phid": "PHID-DREV-338703"
+   }
+  }
+ }
+}

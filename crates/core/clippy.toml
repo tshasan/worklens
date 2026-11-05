@@ -1,0 +1,12 @@
+disallowed-methods = [
+  { path = "tokio::spawn", reason = "core has no async" },
+  { path = "std::fs::write", reason = "core has no I/O" },
+  { path = "std::time::SystemTime::now", reason = "take `now` as an argument so core stays testable" },
+]
+disallowed-types = [
+  { path = "std::sync::Arc", reason = "core data has one owner; use indexes" },
+  { path = "std::rc::Rc", reason = "core data has one owner; use indexes" },
+  { path = "std::cell::RefCell", reason = "no interior mutability in core" },
+  { path = "std::sync::Mutex", reason = "no shared mutable state" },
+  { path = "std::sync::RwLock", reason = "no shared mutable state" },
+]

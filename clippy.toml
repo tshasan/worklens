@@ -1,0 +1,9 @@
+disallowed-methods = [
+  { path = "tokio::spawn", reason = "no spawned tasks: the UI loop polls its one network job and child programs in select!" },
+  { path = "tokio::task::spawn", reason = "no spawned tasks: the UI loop polls its one network job and child programs in select!" },
+  { path = "std::fs::write", reason = "use worklens_store::write_atomic: buffered, and never leaves half a file" },
+]
+disallowed-types = [
+  { path = "std::sync::Mutex", reason = "no shared mutable state: send a message to the owner instead" },
+  { path = "std::sync::RwLock", reason = "no shared mutable state: send a message to the owner instead" },
+]

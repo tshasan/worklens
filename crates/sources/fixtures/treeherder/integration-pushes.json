@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "repository": "autoland"
+  },
+  "results": [
+    {
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push_timestamp": 1793747900,
+      "revisions": [
+        {
+          "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "comments": "Backed out changeset for failures\n\nDifferential Revision: https://phabricator.services.mozilla.com/D123\n",
+          "author": "test@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "cccccccccccccccccccccccccccccccccccccccc",
+      "push_timestamp": 1793747800,
+      "revisions": [
+        {
+          "revision": "dddddddddddddddddddddddddddddddddddddddd",
+          "comments": "Bug 1 - unrelated\n\nDifferential Revision: https://phabricator.services.mozilla.com/D1234\n",
+          "author": "test@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "push_timestamp": 1793747700,
+      "revisions": [
+        {
+          "revision": "ffffffffffffffffffffffffffffffffffffffff",
+          "comments": "Bug 2 - stack top\n\nDifferential Revision: https://phabricator.services.mozilla.com/D124\n",
+          "author": "test@mozilla.com"
+        },
+        {
+          "revision": "1111111111111111111111111111111111111111",
+          "comments": "Bug 2 - foundation\n\nDifferential Revision: https://phabricator.services.mozilla.com/D123\n",
+          "author": "test@mozilla.com"
+        },
+        {
+          "revision": "2222222222222222222222222222222222222222",
+          "comments": "Bug 2 - quotes\n\n> Differential Revision: https://phabricator.services.mozilla.com/D125\n",
+          "author": "test@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "3333333333333333333333333333333333333333",
+      "push_timestamp": 1793747600,
+      "revisions": [
+        {
+          "revision": "4444444444444444444444444444444444444444",
+          "comments": "Bug 2 - old landing\n\nDifferential Revision: https://phabricator.services.mozilla.com/D123\n",
+          "author": "test@mozilla.com"
+        }
+      ]
+    }
+  ]
+}

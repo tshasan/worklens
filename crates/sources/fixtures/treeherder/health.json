@@ -1,0 +1,1 @@
+[{"revision":"newer","buildFailureCount":0,"buildInProgressCount":0,"lintFailureCount":0,"lintingInProgressCount":1,"testFailureCount":2,"testInProgressCount":0,"needInvestigation":2,"status":{"completed":10,"pending":1,"running":2},"metrics":{"builds":{"result":"pass"},"linting":{"result":"unknown"},"tests":{"result":"fail"}}}]

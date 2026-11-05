@@ -1,0 +1,17 @@
+examine_globs = [
+  "crates/core/src/**/*.rs",
+  "crates/sources/src/**/*.rs",
+  "crates/store/src/**/*.rs",
+  "crates/tui/src/**/*.rs",
+]
+exclude_globs = [
+  "crates/sources/src/fetch.rs",
+  "crates/sources/src/http.rs",
+  "crates/sources/src/refetch.rs",
+]
+exclude_re = [
+  "impl Debug",
+  "impl (fmt::)?Display .* fmt -> fmt::Result with Ok\\(Default::default\\(\\)\\)",
+]
+profile = "mutants"
+timeout_multiplier = 3.0

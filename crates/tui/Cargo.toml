@@ -1,0 +1,24 @@
+[package]
+name = "worklens-tui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description.workspace = true
+repository.workspace = true
+
+[dependencies]
+jiff.workspace = true
+ratatui = { workspace = true, features = ["unstable-rendered-line-info"] }
+unicode-width = "0.2.2"
+unicode-segmentation = "1.13.3"
+worklens-core.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+proptest = "1.9.0"
+worklens-testkit = { path = "../testkit" }

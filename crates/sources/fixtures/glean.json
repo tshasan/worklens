@@ -1,0 +1,12 @@
+{
+  "example.owned": {
+    "in-source": true,
+    "history": [
+      {"dates":{"last":"2026-11-02 00:00:00"},"expires":163,"notification_emails":["me@mozilla.com"],"source_url":"https://example.org/metrics.yaml"},
+      {"dates":{"last":"2025-01-01 00:00:00"},"expires":"expired","notification_emails":["former@mozilla.com"]}
+    ]
+  },
+  "example.linked": {"in-source":true,"history":[{"dates":{"last":"2026-11-01 00:00:00"},"expires":"never","bugs":["https://bugzilla.mozilla.org/show_bug.cgi?id=42","https://example.org/42"],"data_reviews":["https://bugzilla.mozilla.org/show_bug.cgi?id=43"]}]},
+  "example.removed": {"in-source":false,"history":[{"dates":{"last":"2026-11-02 00:00:00"},"expires":162,"notification_emails":["me@mozilla.com"]}]},
+  "example.former": {"in-source":true,"history":[{"dates":{"last":"2025-01-01 00:00:00"},"expires":162,"notification_emails":["me@mozilla.com"]},{"dates":{"last":"2026-11-02 00:00:00"},"expires":170,"notification_emails":["someone@mozilla.com"]}]}
+}

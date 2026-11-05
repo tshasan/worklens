@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "fetchedAt": "2026-11-03T19:40:58.242Z",
+  "me": { "email": "me@mozilla.com", "jiraEmail": "me@mozilla.com", "phid": "PHID-USER-me" },
+  "bugs": [
+    {
+      "id": 1995008,
+      "status": "ASSIGNED",
+      "see_also": ["https://mozilla-hub.atlassian.net/browse/AIPLAT-1416"],
+      "flags": [{ "name": "needinfo", "status": "?", "requestee": "me@mozilla.com", "setter": "a@mozilla.com", "creation_date": "2026-10-30T10:00:00Z" }],
+      "summary": "Support view-source: for the PageExtractor",
+      "assigned_to": "me@mozilla.com",
+      "assigned_to_detail": { "name": "me@mozilla.com", "nick": "me" },
+      "priority": "P3",
+      "last_change_time": "2026-04-28T20:47:01Z",
+      "resolution": "",
+      "whiteboard": "[aiplatform]",
+      "severity": "--",
+      "keywords": [],
+      "component": "Machine Learning: On Device",
+      "depends_on": [],
+      "product": "Core",
+      "via": ["assigned", "needinfo"]
+    },
+    {
+      "id": 2000001,
+      "status": "NEW",
+      "see_also": [],
+      "summary": "A team bug from an old cache without flags",
+      "assigned_to": "someone@mozilla.com",
+      "priority": "--",
+      "last_change_time": "2026-10-01T00:00:00Z",
+      "resolution": "",
+      "whiteboard": "[aiplatform]",
+      "severity": "S3",
+      "keywords": ["regression"],
+      "component": "General",
+      "product": "Firefox",
+      "via": ["team"]
+    }
+  ],
+  "issues": {
+    "AIPLAT-1416": {
+      "key": "AIPLAT-1416",
+      "summary": "Example task: ship text extraction",
+      "status": "ENG REVIEW",
+      "statusCategory": "indeterminate",
+      "assignee": "me@mozilla.com",
+      "parent": "AIPLAT-1040",
+      "type": "Task",
+      "priority": "P1",
+      "updated": "2026-11-02T19:30:47.363-0500",
+      "points": 3,
+      "sprint": { "id": 26339, "name": "162 Core Nov 2 - Nov 16", "state": "active", "endDate": "2026-11-16T18:00:27.000Z" }
+    }
+  },
+  "revisions": [
+    {
+      "id": 321987,
+      "title": "Bug 1995008 - Support view-source:",
+      "status": "needs-review",
+      "author": "PHID-USER-me",
+      "bug": 1995008,
+      "modified": "2026-10-23T01:00:00.000Z",
+      "diffPHID": "PHID-DIFF-abc",
+      "reviewers": [{ "phid": "PHID-USER-rev", "status": "blocking" }],
+      "diffCreated": "2026-10-23T00:50:00.000Z"
+    }
+  ],
+  "users": { "PHID-USER-rev": "quillfox" },
+  "tryPushes": {
+    "321987": {
+      "revision": "749dd7c3ba72b6b360c58b7d3d14827494096190",
+      "pushedAt": "2026-10-23T01:33:26.000Z",
+      "url": "https://treeherder.mozilla.org/jobs?repo=try&revision=749dd7c3ba72b6b360c58b7d3d14827494096190",
+      "builds": "pass",
+      "lint": "pass",
+      "tests": "fail",
+      "failed": 1,
+      "running": 0
+    }
+  },
+  "toReview": [],
+  "bugRevisions": { "1995008": [321987] },
+  "lastComments": { "1995008": { "author": "a@mozilla.com", "time": "2026-10-30T10:00:00Z", "text": "Can you look at this?" } },
+  "threads": { "1995008": { "total": 3, "comments": [{ "author": "a@mozilla.com", "time": "2026-10-30T10:00:00Z", "text": "Can you look at this?", "count": 2 }] } },
+  "errors": [],
+  "trains": { "nightly": 161, "beta": 160, "release": 159, "esr": [153, 115], "nextMerge": "2026-11-05", "nextRelease": "2026-11-06" },
+  "calls": [{ "at": "2026-11-03T19:40:58.242Z", "method": "GET", "url": "https://bugzilla.mozilla.org/rest/bug", "status": 200, "ms": 203 }]
+}
