@@ -229,7 +229,11 @@ pub fn config(cases: u32) -> ProptestConfig {
     }
 }
 
-pub const CACHES: &[&str] = &["crates/store/fixtures/raw.json", "crates/store/fixtures/busy.json"];
+pub const CACHES: &[&str] = &[
+    "crates/store/fixtures/raw.json",
+    "crates/store/fixtures/busy.json",
+    "crates/store/fixtures/bugzilla_only.json",
+];
 
 pub const WHITEBOARD: &str = "[aiplatform]";
 
@@ -240,4 +244,52 @@ pub fn caches() -> &'static [Value] {
 
 pub fn cache() -> impl Strategy<Value = &'static Value> {
     (0..CACHES.len()).prop_map(|i| &caches()[i])
+}
+
+pub const FAILURE_CLAIMS: &[&str] = &["couldn't be read", "wasn't read"];
+
+pub fn screen_problems(screen: &str, off: &[&str], failed: bool) -> Vec<String> {
+    let mut problems = Vec::new();
+    if !failed {
+        for claim in FAILURE_CLAIMS.iter().filter(|c| screen.contains(*c)) {
+            problems.push(format!("says {claim:?} though nothing failed"));
+        }
+    }
+    for paragraph in paragraphs(screen) {
+        for source in off {
+            let named = paragraph.replace(&format!("auth set {source}"), "");
+            if named.contains(source) && !named.contains("set up") {
+                problems.push(format!("names {source}, which isn't set up: {}", paragraph.trim()));
+            }
+        }
+    }
+    problems
+}
+
+fn paragraphs(screen: &str) -> Vec<String> {
+    let mut done = Vec::new();
+    let mut open: Vec<String> = Vec::new();
+    for line in screen.lines() {
+        let lower = line.to_lowercase();
+        if !lower.contains('│') {
+            done.append(&mut open);
+            done.push(lower);
+            continue;
+        }
+        let cells: Vec<&str> = lower.split('│').map(str::trim).collect();
+        open.resize(open.len().max(cells.len()), String::new());
+        for (i, cell) in cells.iter().enumerate() {
+            let ended = open[i].is_empty() || open[i].ends_with(['.', '…', ':', '?', '!']);
+            if cell.is_empty() || ended {
+                done.push(std::mem::take(&mut open[i]));
+            }
+            if !open[i].is_empty() {
+                open[i].push(' ');
+            }
+            open[i].push_str(cell);
+        }
+    }
+    done.append(&mut open);
+    done.retain(|p| !p.is_empty());
+    done
 }

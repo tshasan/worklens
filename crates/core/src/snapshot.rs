@@ -8,7 +8,9 @@ use crate::drift::{Drift, DriftInput, JiraStatuses, Level, drift_of};
 use crate::ideas::{Work, idea_of};
 use crate::ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, RevId, RevIdx};
 use crate::marks::MarkState;
-use crate::raw::{Bug, Comment, Flag, Idea, Issue, Raw, RevStatus, ReviewerStatus, Revision, StatusCategory, TryPush, TryResult, Via};
+use crate::raw::{
+    Bug, Comment, Flag, Idea, Issue, Raw, RevStatus, ReviewerStatus, Revision, SourceState, StatusCategory, TryPush, TryResult, Via,
+};
 use crate::rules::{Ctx, FIND_ANOTHER_REVIEWER, NEW_COMMENT_DAYS, NextStep, PING_REVIEWER, Placement, Reason, STALE_DAYS, place};
 use crate::section::Section;
 
@@ -116,10 +118,6 @@ pub struct Snapshot {
     has_whiteboard: bool,
 }
 
-pub fn jira_read(raw: &Raw) -> bool {
-    !raw.errors.iter().any(|e| e.source == "jira")
-}
-
 pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
     let me = &raw.me;
     let phid = me.phid.as_deref();
@@ -151,7 +149,7 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
     let issue_at = |key: &str| raw.issues.get_index_of(key).map(IssueIdx::new);
     let idea_at = |i: Option<IssueIdx>| i.and_then(|i| raw.issues.get_index(i.get())).and_then(|(_, x)| idea_of(&raw, x));
 
-    let with_jira = jira_read(&raw);
+    let with_jira = raw.state("jira") == SourceState::Read;
     let active_sprint = raw.issues.values().find_map(|i| i.sprint.as_ref()).map(|sp| sp.name.as_str());
     let mut entries: Vec<Entry> = Vec::with_capacity(raw.bugs.len() + raw.revisions.len());
     let mut claimed: HashSet<&str> = HashSet::with_capacity(raw.issues.len());
@@ -439,23 +437,31 @@ fn sections_of(raw: &Raw, entries: &[Entry], mine: usize, sprint: Option<&Sprint
 
 impl Snapshot {
     pub fn not_checked(&self, section: Section) -> Option<&'static str> {
-        let unset = |source: &str| self.raw.errors.iter().find(|e| e.source == source).map(|e| e.unset);
         match section {
-            Section::Land | Section::Returned | Section::Others => match unset("phabricator") {
-                Some(true) => Some("Off: Phabricator isn't set up. `worklens auth set phabricator` turns it on."),
-                Some(false) => Some("Not checked: Phabricator couldn't be read."),
-                None => None,
+            Section::Land | Section::Returned | Section::Others => match self.raw.state("phabricator") {
+                SourceState::Off => Some("Off: Phabricator isn't set up. `worklens auth set phabricator` turns it on."),
+                SourceState::Failed => Some("Not checked: Phabricator couldn't be read."),
+                SourceState::Read => None,
             },
-            Section::Sprint | Section::Ideas | Section::Drift | Section::Team => match unset("jira") {
-                Some(true) => Some("Off: Jira isn't set up. `worklens auth set jira` turns it on."),
-                Some(false) => Some("Not checked: Jira couldn't be read."),
-                None if section == Section::Team && !self.has_whiteboard => {
+            Section::Sprint | Section::Ideas | Section::Drift | Section::Team => match self.raw.state("jira") {
+                SourceState::Off => Some("Off: Jira isn't set up. `worklens auth set jira` turns it on."),
+                SourceState::Failed => Some("Not checked: Jira couldn't be read."),
+                SourceState::Read if section == Section::Team && !self.has_whiteboard => {
                     Some("Off: set your team's whiteboard tag in `worklens setup` to turn this on.")
                 }
-                None => None,
+                SourceState::Read => None,
             },
             _ => None,
         }
+    }
+
+    pub fn off(&self, section: Section) -> bool {
+        let source = match section {
+            Section::Land | Section::Returned | Section::Others => "phabricator",
+            Section::Sprint | Section::Ideas | Section::Drift | Section::Team => "jira",
+            _ => return false,
+        };
+        self.raw.state(source) == SourceState::Off
     }
 
     pub fn empty_text(&self, section: Section) -> &'static str {
@@ -661,6 +667,29 @@ impl Snapshot {
                 })
             })
             .map(EntryIdx::new)
+    }
+
+    pub fn unread_source(&self, reference: &str) -> Option<&'static str> {
+        let r = reference_in(reference).as_bytes();
+        let digits = |b: &[u8]| !b.is_empty() && b.iter().all(u8::is_ascii_digit);
+        let revision = r.first().is_some_and(|b| b.eq_ignore_ascii_case(&b'D')) && digits(&r[1..]);
+        let ticket = r
+            .iter()
+            .position(|&b| b == b'-')
+            .is_some_and(|dash| dash > 0 && r[..dash].iter().all(u8::is_ascii_alphabetic) && digits(&r[dash + 1..]));
+        match (revision, ticket) {
+            (true, _) => match self.raw.state("phabricator") {
+                SourceState::Off => Some("Phabricator isn't set up. `worklens auth set phabricator` turns it on."),
+                SourceState::Failed => Some("Phabricator couldn't be read; `worklens doctor` says why."),
+                SourceState::Read => None,
+            },
+            (_, true) => match self.raw.state("jira") {
+                SourceState::Off => Some("Jira isn't set up. `worklens auth set jira` turns it on."),
+                SourceState::Failed => Some("Jira couldn't be read; `worklens doctor` says why."),
+                SourceState::Read => None,
+            },
+            _ => None,
+        }
     }
 }
 

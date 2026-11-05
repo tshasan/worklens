@@ -74,13 +74,21 @@ pub struct Secret {
     pub origin: Origin,
 }
 
-pub fn keychain_name() -> &'static str {
+fn keychain_name() -> &'static str {
     if cfg!(target_os = "macos") {
         "macOS Keychain"
     } else if cfg!(windows) {
         "Windows Credential Manager"
     } else {
         "the Secret Service keyring"
+    }
+}
+
+pub fn key_store() -> &'static str {
+    if keychain_enabled() {
+        keychain_name()
+    } else {
+        "~/.config/worklens/credentials.json"
     }
 }
 

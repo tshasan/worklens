@@ -16,6 +16,10 @@ pub struct Dependency {
     pub blocked: Option<bool>,
 }
 
+pub fn shown(s: &Snapshot, e: &Entry) -> Vec<Dependency> {
+    of(s, e).into_iter().filter(|d| !d.id.ends_with(" stack")).collect()
+}
+
 pub fn failed(raw: &Raw, source: &str) -> bool {
     raw.errors
         .iter()

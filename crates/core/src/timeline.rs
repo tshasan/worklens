@@ -133,7 +133,10 @@ pub fn since(s: &Snapshot) -> Since {
                 continue;
             }
             counted.push(i);
-            let id = s.id(e);
+            let id = match e.id {
+                crate::snapshot::ItemId::Bug(bug) => format!("Bug {bug}"),
+                _ => s.id(e).to_string(),
+            };
             match e.changes.first() {
                 Some(change) => {
                     out.changed += 1;

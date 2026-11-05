@@ -243,3 +243,16 @@ pub fn links(s: &Snapshot, e: &Entry) -> Vec<Link> {
     }
     out
 }
+
+pub fn ago(t: Timestamp, now: Timestamp) -> String {
+    let m = ((now.as_millisecond() - t.as_millisecond()) as f64 / 60_000.0).round();
+    if m < 1.0 {
+        "just now".into()
+    } else if m < 60.0 {
+        format!("{m}m ago")
+    } else if m < 1440.0 {
+        format!("{}h ago", (m / 60.0).round())
+    } else {
+        format!("{}d ago", (m / 1440.0).round())
+    }
+}

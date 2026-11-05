@@ -218,7 +218,11 @@ pub fn workflow(s: &Snapshot, e: &Entry) -> Workflow {
     for error in &s.raw.errors {
         if matches!(error.source.as_str(), "bugzilla" | "phabricator" | "product-details" | "probeinfo") {
             limitations.push(format!("{}: {}; evidence may be incomplete", error.source, error.message));
-            unknown.push(format!("{} (fetch failed)", error.source));
+            unknown.push(format!(
+                "{} ({})",
+                error.source,
+                if error.unset { "not set up" } else { "fetch failed" }
+            ));
         }
     }
     Workflow {
@@ -378,6 +382,20 @@ pub fn lines(s: &Snapshot, e: &Entry) -> Vec<String> {
     let mut lines: Vec<String> = all(&w).map(line).collect();
     lines.extend(w.limitations);
     lines.extend(data_reviews(s, e));
+    lines
+}
+
+pub fn show_lines(s: &Snapshot, e: &Entry) -> Vec<String> {
+    let w = workflow(s, e);
+    let every = decides(e);
+    let (shown, quiet): (Vec<&Evidence>, Vec<&Evidence>) = all(&w).partition(|v| every || v.is_known());
+    let mut lines: Vec<String> = shown.iter().map(|v| format!("{}: {}", v.label, v.summary)).collect();
+    if !quiet.is_empty() {
+        let labels: Vec<&str> = quiet.iter().map(|v| v.label.as_str()).collect();
+        lines.push(format!("Nothing seen yet for {}", labels.join(", ")));
+    }
+    lines.extend(data_reviews(s, e));
+    lines.extend(w.limitations);
     lines
 }
 

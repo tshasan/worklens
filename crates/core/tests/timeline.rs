@@ -108,7 +108,7 @@ fn since_counts_my_changed_and_new_items_once() {
     apply(&mut after, &marks, at("2026-11-03T20:00:00Z"));
     let got = since(&after);
     assert_eq!((got.changed, got.new), (1, 0), "{got:?}");
-    assert!(got.highlights[0].starts_with("1995008 "), "{got:?}");
+    assert!(got.highlights[0].starts_with("Bug 1995008 "), "{got:?}");
     assert!(got.highlights[0].contains("accepted"), "{got:?}");
 
     let mut quiet = snapshot(fixture());

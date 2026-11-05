@@ -1,0 +1,28 @@
+{
+  "bugs": [
+    {
+      "id": 2057035,
+      "summary": "Extract Google Docs content",
+      "status": "NEW",
+      "resolution": "",
+      "assigned_to": "me@mozilla.com",
+      "severity": "N/A",
+      "priority": "P3",
+      "keywords": [
+        "perf"
+      ],
+      "whiteboard": "[aiplatform]",
+      "see_also": [
+        "https://mozilla-hub.atlassian.net/browse/AIPLAT-1185"
+      ],
+      "last_change_time": "2026-10-19T22:25:17Z",
+      "flags": [],
+      "depends_on": [
+        1
+      ],
+      "product": "Core",
+      "component": "Machine Learning: On Device"
+    }
+  ],
+  "faults": []
+}

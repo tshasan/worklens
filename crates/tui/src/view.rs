@@ -11,7 +11,7 @@ use unicode_width::UnicodeWidthStr;
 use worklens_core::bugs::{State, days_between};
 use worklens_core::drift::Level;
 use worklens_core::marks::Hidden;
-use worklens_core::present::{self, LinkKind, Segment, Signal};
+use worklens_core::present::{self, LinkKind, Segment, Signal, ago};
 use worklens_core::raw::RevStatus;
 use worklens_core::release;
 use worklens_core::rules::{Reason, Tier};
@@ -174,19 +174,6 @@ fn input_tail(text: &str, cells: usize) -> String {
     format!("…{}", &text[start..])
 }
 
-pub fn ago(t: Timestamp, now: Timestamp) -> String {
-    let m = ((now.as_millisecond() - t.as_millisecond()) as f64 / 60_000.0).round();
-    if m < 1.0 {
-        "just now".into()
-    } else if m < 60.0 {
-        format!("{m}m ago")
-    } else if m < 1440.0 {
-        format!("{}h ago", (m / 60.0).round())
-    } else {
-        format!("{}d ago", (m / 1440.0).round())
-    }
-}
-
 fn short_email(email: &str) -> &str {
     email
         .strip_suffix("@mozilla.com")
@@ -342,7 +329,7 @@ fn sprint_gauge(t: Theme, s: &Snapshot, full: bool, now: Timestamp) -> Line<'sta
     spans.push(points);
     let mut tail = String::new();
     if sp.done > 0.0 {
-        tail.push_str(&format!(" · {} done", sp.done));
+        tail.push_str(&format!(" · {} pts done", sp.done));
     }
     if let Some(end) = s.issue(sp.first).sprint.as_ref().and_then(|x| x.end_date) {
         let days = (-days_between(Some(end), now)).ceil();
@@ -636,7 +623,7 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
             lines.push(Line::raw("Couldn't fetch your work."));
             lines.push(Line::styled(e.clone(), fg(t.error)));
         } else if let Some(step) = &app.busy {
-            lines.push(Line::raw("Fetching your work from Bugzilla, Jira and Phabricator…"));
+            lines.push(Line::raw("Fetching your work…"));
             if step != "Refreshing" {
                 lines.push(Line::from(t.quiet(step.clone())));
             }
@@ -704,7 +691,7 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
         .map(|i| s.id(s.entry(*i)).to_string().width())
         .max()
         .unwrap_or(7)
-        .clamp(7, 10);
+        .clamp(7, 16);
     let lines: Vec<Line<'_>> = app.rows[top..app.rows.len().min(top + height)]
         .iter()
         .enumerate()
@@ -891,7 +878,7 @@ fn lands_in(s: &Snapshot, nightly: u32, days: i64) -> String {
         .raw
         .trains
         .as_ref()
-        .map(|t| t.next_merge.strftime("%b %d").to_string())
+        .map(|t| t.next_merge.strftime("%b %-d").to_string())
         .unwrap_or_default();
     let when = match days {
         0 => "today".to_owned(),
@@ -1152,7 +1139,7 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
             format!("{where_}{}{}", if p.stale { "Waited: " } else { "" }, s.reason(e)),
             if p.stale { fg(t.warn) } else { Style::new() },
         ));
-        if let (Section::Land, Some((nightly, days))) = (p.section, s.merge().filter(|(_, d)| *d >= 0)) {
+        if let (Reason::Accepted(_), Some((nightly, days))) = (p.reason, s.merge().filter(|(_, d)| *d >= 0)) {
             out.push(Line::styled(
                 lands_in(s, nightly, days),
                 fg(if days <= 2 { t.warn } else { t.quiet }),
@@ -1162,10 +1149,7 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
     if let Some(step) = s.next_step(e) {
         out.push(Line::styled(format!("Next: {step}"), fg(t.accent).add_modifier(Modifier::BOLD)));
     }
-    for d in worklens_core::dependencies::of(s, e)
-        .into_iter()
-        .filter(|d| !d.id.ends_with(" stack"))
-    {
+    for d in worklens_core::dependencies::shown(s, e) {
         let owner = d.owner.as_deref().unwrap_or("owner unknown");
         out.push(Line::raw(format!("Depends: {} · {} · {owner}", d.id, d.status)));
         if let Some(title) = d.title {
@@ -1365,9 +1349,17 @@ fn idea_rows(out: &mut Vec<Line<'_>>, t: Theme, s: &Snapshot, i: worklens_core::
     if let Some(w) = &idea.weekly_status {
         row("Weekly", w, Style::new());
     }
-    let when: Vec<String> = [&idea.target, &idea.quarter].into_iter().flatten().cloned().collect();
+    let quarter = idea
+        .quarter
+        .as_ref()
+        .filter(|q| !idea.target.as_ref().is_some_and(|t| t.contains(q.as_str())));
+    let when: Vec<&String> = idea.target.iter().chain(quarter).collect();
     if !when.is_empty() {
-        row("Target", &when.join(" · "), Style::new());
+        row(
+            "Target",
+            &when.iter().map(|w| w.as_str()).collect::<Vec<_>>().join(" · "),
+            Style::new(),
+        );
     }
     if let Some(theme) = &idea.theme {
         row("Theme", theme, Style::new());
@@ -1712,7 +1704,7 @@ fn draw_setup(app: &App, f: &mut Frame<'_>, area: Rect) {
     let current = usize::from(app.page == Page::Settings);
     draw_box_tabs(t, f, &["Sources", "Settings"], current, area);
     match app.page {
-        Page::Sources => draw_scrollable(t, source_lines(app), app.pane_scroll, f, body),
+        Page::Sources => draw_scrollable(t, source_lines(app, body.width as usize), app.pane_scroll, f, body),
         Page::Settings => {
             draw_scrollable(t, setting_lines(app, body.width as usize), app.pane_scroll, f, body);
             if let Some(toast) = &app.toast {
@@ -1728,9 +1720,10 @@ fn draw_setup(app: &App, f: &mut Frame<'_>, area: Rect) {
 }
 
 pub fn sources_scroll_max(app: &App) -> u16 {
-    Paragraph::new(source_lines(app))
+    let width = app.size.0.saturating_sub(4);
+    Paragraph::new(source_lines(app, width as usize))
         .wrap(Wrap { trim: false })
-        .line_count(app.size.0.saturating_sub(4))
+        .line_count(width)
         .saturating_sub(app.size.1.saturating_sub(6) as usize)
         .min(u16::MAX as usize) as u16
 }
@@ -1806,7 +1799,23 @@ fn setting_lines(app: &App, width: usize) -> Vec<Line<'static>> {
     lines
 }
 
-fn source_lines(app: &App) -> Vec<Line<'_>> {
+fn hanging(head: &[Span<'static>], indent: usize, text: &str, style: Style, width: usize) -> Vec<Line<'static>> {
+    wrap(text, width.saturating_sub(indent).max(8))
+        .into_iter()
+        .enumerate()
+        .map(|(i, part)| {
+            let mut spans = if i == 0 {
+                head.to_vec()
+            } else {
+                vec![Span::raw(" ".repeat(indent))]
+            };
+            spans.push(Span::styled(part, style));
+            Line::from(spans)
+        })
+        .collect()
+}
+
+fn source_lines(app: &App, width: usize) -> Vec<Line<'static>> {
     let t = Theme::of(app.tone);
     let mut lines = Vec::new();
     if let Some(e) = &app.action_error {
@@ -1817,13 +1826,8 @@ fn source_lines(app: &App) -> Vec<Line<'_>> {
         lines.push(Line::raw(""));
     }
     if let Some(s) = &app.snapshot {
-        for error in &s.raw.errors {
-            let line = format!("{}: {}", error.source, error.message);
-            lines.push(if error.unset {
-                Line::from(t.quiet(line))
-            } else {
-                Line::styled(format!("! {line}"), fg(t.error))
-            });
+        for error in s.raw.failures() {
+            lines.push(Line::styled(format!("! {}: {}", error.source, error.message), fg(t.error)));
         }
     }
     match &app.checks {
@@ -1832,25 +1836,25 @@ fn source_lines(app: &App) -> Vec<Line<'_>> {
             t.quiet("Reading your sources and tokens…"),
         ])),
         Some(checks) => {
-            let spinner = SPINNER[app.frame % SPINNER.len()].to_string();
+            let spinner = SPINNER[app.frame % SPINNER.len()];
+            let name_width = checks.iter().map(|c| c.name.width()).max().unwrap_or(0) + 1;
+            let indent = 2 + name_width;
             for c in checks {
                 let (mark, color) = match (c.pending, c.ok, c.required) {
-                    (true, _, _) => (spinner.as_str(), t.accent),
-                    (false, true, _) => ("✓", t.ok),
-                    (false, false, true) => ("✗", t.error),
-                    (false, false, false) => ("~", t.warn),
+                    (true, _, _) => (spinner.to_string(), t.accent),
+                    (false, true, _) => ("✓".to_owned(), t.ok),
+                    (false, false, true) => ("✗".to_owned(), t.error),
+                    (false, false, false) => ("~".to_owned(), t.warn),
                 };
-                lines.push(Line::from(vec![
+                let head = vec![
                     Span::styled(format!("{mark} "), fg(color)),
-                    Span::raw(fit(&c.name, 12)),
-                    if c.pending {
-                        t.quiet(c.detail.clone())
-                    } else {
-                        Span::raw(c.detail.clone())
-                    },
-                ]));
+                    Span::raw(format!("{:<name_width$}", c.name)),
+                ];
+                let style = if c.pending { t.quiet("").style } else { Style::default() };
+                lines.extend(hanging(&head, indent, &c.detail, style, width));
                 if let (false, false, Some(fix)) = (c.pending, c.ok, &c.fix) {
-                    lines.push(Line::styled(format!("{:14}fix: {fix}", ""), fg(t.accent)));
+                    let head = vec![Span::raw(" ".repeat(indent))];
+                    lines.extend(hanging(&head, indent, &format!("fix: {fix}"), fg(t.accent), width));
                 }
             }
             lines.push(Line::raw(""));
