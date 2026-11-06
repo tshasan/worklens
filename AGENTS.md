@@ -76,7 +76,8 @@ so it must be a [Conventional Commit](https://www.conventionalcommits.org):
 `type(scope): lowercase subject, no period`. Types: feat fix perf refactor test
 docs build ci chore revert. Scopes are crate names (`core`, `tui`, ...). Add `!`
 when `--json`, `--compact` or MCP output breaks. The PR body becomes the commit
-body.
+body. There are no releases or tags (a ruleset blocks them); users build from
+`main`, so `main` must always build and pass.
 
 Review comments use [Conventional Comments](https://conventionalcomments.org):
 `label (decorations): subject`, labels praise nitpick suggestion issue todo
