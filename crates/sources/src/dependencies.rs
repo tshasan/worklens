@@ -63,6 +63,7 @@ pub(crate) async fn refresh(http: &Http, cfg: &Config, raw: &mut Raw) {
             source: "bugzilla-dependencies".into(),
             message: e.summary(),
             unset: false,
+            retry_at: e.retry_at(),
         }),
     }
     match phab {
@@ -81,6 +82,7 @@ pub(crate) async fn refresh(http: &Http, cfg: &Config, raw: &mut Raw) {
             source: "phabricator-dependencies".into(),
             message: e.summary(),
             unset: false,
+            retry_at: e.retry_at(),
         }),
     }
     raw.dependencies = dependencies;

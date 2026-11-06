@@ -47,6 +47,7 @@ fn soft<T>(errors: &mut Vec<SourceError>, source: &str, r: Result<T>, fallback: 
             source: source.to_owned(),
             message: e.summary(),
             unset: false,
+            retry_at: e.retry_at(),
         });
         fallback
     })
@@ -76,6 +77,9 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
     if cfg.email.is_none() && cfg.jira.is_none() && cfg.phab.is_none() {
         return Err(identity_error());
     }
+    if let Some(raw) = &previous {
+        http.restore_cooldowns(raw);
+    }
     let mut errors: Vec<SourceError> = Vec::new();
     let th = &Treeherder { http };
     let jira = match &cfg.jira {
@@ -85,6 +89,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
                 source: "jira".into(),
                 message: "not set up, so Sprint, Ideas and Drift are off; `worklens auth set jira` turns them on".into(),
                 unset: true,
+                retry_at: None,
             });
             None
         }
@@ -99,6 +104,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
             source: "phabricator".into(),
             message: "not set up, so revisions are off; `worklens auth set phabricator` turns them on".into(),
             unset: true,
+            retry_at: None,
         });
     }
 
@@ -345,6 +351,24 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
             Some(p) if !phids.is_empty() => soft(&mut errors, "phabricator", p.names(&phids).await, HashMap::new()),
             _ => HashMap::new(),
         };
+        let mut waiting_on: Vec<&str> = my_revs
+            .iter()
+            .filter(|r| r.status == worklens_core::raw::RevStatus::NeedsReview)
+            .flat_map(|r| r.reviewers.iter())
+            .filter(|x| x.phid.starts_with("PHID-USER-") && x.status.owes_review())
+            .map(|x| x.phid.as_str())
+            .collect();
+        waiting_on.sort_unstable();
+        waiting_on.dedup();
+        let away = match &phab {
+            Some(p) if !waiting_on.is_empty() => soft(
+                &mut errors,
+                "phabricator-availability",
+                p.availability(&waiting_on).await,
+                HashMap::new(),
+            ),
+            _ => HashMap::new(),
+        };
         (
             bugs,
             issue_by_key,
@@ -357,12 +381,13 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
             crashes,
             roadmap,
             errors,
+            away,
         )
     };
 
     let (
         (try_pushes, diff_dates, try_errors),
-        (bugs, issues, mut revisions, to_review, bug_revisions, comments, users, uplift, crashes, roadmap, rest_errors),
+        (bugs, issues, mut revisions, to_review, bug_revisions, comments, users, uplift, crashes, roadmap, rest_errors, away),
     ) = futures::join!(try_status, the_rest);
     errors.extend(rest_errors);
     errors.extend(try_errors);
@@ -420,6 +445,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         supplemental_cache: Default::default(),
         roadmap,
         dependencies: Default::default(),
+        away,
     };
     crate::supplemental::restore(&mut raw, previous.as_ref());
     crate::supplemental::refresh(http, cfg, &mut raw, &[], log, Timestamp::now()).await;

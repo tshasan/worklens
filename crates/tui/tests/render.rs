@@ -373,7 +373,7 @@ fn tabs_hide_empty_sections_and_underline_the_current_one() {
         "\n{tabs}\n{border}"
     );
     assert_eq!(border.matches('━').count(), width, "{border}");
-    press(&mut a, KeyCode::Char('0'));
+    press(&mut a, KeyCode::Char('9'));
     let tabs = screen(&a).lines().nth(1).unwrap().to_owned();
     assert!(tabs.contains("Team drift 0"), "{tabs}");
 }
@@ -576,6 +576,7 @@ fn source_health_and_cache_age_survive_refresh_and_errors_are_readable() {
         source: "Bugzilla".into(),
         message: format!("{} END-OF-ERROR", "Connection failed; check credentials. ".repeat(35)),
         unset: false,
+        retry_at: None,
     });
     update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
     press(&mut a, KeyCode::Char('r'));
@@ -703,6 +704,7 @@ fn concurrent_failures_do_not_push_freshness_or_busy_state_out_of_the_header() {
             source: source.into(),
             message: "Offline".into(),
             unset: false,
+            retry_at: None,
         });
     }
     update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
@@ -762,7 +764,7 @@ fn the_drift_title_shows_the_trend_and_a_fetch_records_today() {
     let today = now().to_zoned(jiff::tz::TimeZone::system()).date();
     let five_days_ago = today.checked_sub(jiff::Span::new().days(5)).unwrap();
     a.drift_log.record(five_days_ago, 3, 0);
-    press(&mut a, KeyCode::Char('8'));
+    press(&mut a, KeyCode::Char('7'));
     let s = screen(&a);
     let on = five_days_ago.strftime("%b %d").to_string();
     let title = s.lines().find(|l| l.contains("down from")).unwrap_or_default();
@@ -914,7 +916,7 @@ fn settings_is_a_tab_beside_sources_and_fits_80x24() {
     assert!(line_with(&s, "Drift window").contains("30 days"), "{s}");
     assert!(!s.contains("changed"), "defaults are not marked:\n{s}");
     assert!(
-        s.contains("1–18 of 39 lines · PgUp PgDn scroll"),
+        s.contains(&format!("1–18 of {} lines · PgUp PgDn scroll", 28 + Section::COUNT)),
         "the rest is below the fold and says so:\n{s}"
     );
     assert!(
@@ -1036,7 +1038,7 @@ fn app_with_idea(w: u16, h: u16) -> App {
 fn the_ideas_tab_shows_the_idea_and_the_work_under_it_at_80x24() {
     let mut a = app_with_idea(80, 24);
     assert!(!line_with(&screen(&a), "Waiting on you").contains("AIDI"), "the idea is not a turn");
-    press(&mut a, KeyCode::Char('7'));
+    press(&mut a, KeyCode::Char('6'));
     let s = screen(&a);
     assert!(line_with(&s, "Waiting on you").contains("Ideas 1"), "{s}");
     assert!(line_with(&s, "AIDI-79").contains("Example idea: page extraction"), "{s}");
@@ -1054,7 +1056,7 @@ fn work_names_its_epic_and_idea_and_the_idea_names_its_work() {
     let s = screen(&a);
     assert!(line_with(&s, "Epic ").contains("AIPLAT-1040 Example epic: text extraction"), "{s}");
     assert!(line_with(&s, "Idea ").contains("AIDI-79 Example idea: page extraction"), "{s}");
-    press(&mut a, KeyCode::Char('7'));
+    press(&mut a, KeyCode::Char('6'));
     let s = screen(&a);
     assert!(s.contains("Your work under it"), "{s}");
     assert!(line_with(&s, "1995008").contains("Support view-source"), "{s}");
@@ -1087,7 +1089,7 @@ fn the_timeline_tab_lists_dated_events_and_where_the_fix_ships() {
         update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
         assert!(screen(&a).contains("Timeline"), "{}", screen(&a));
         assert!(
-            screen(&a).contains("Fixed in Nightly 161"),
+            screen(&a).contains("Bugzilla marks Firefox 161 fixed"),
             "Overview says where it ships:\n{}",
             screen(&a)
         );
@@ -1095,7 +1097,11 @@ fn the_timeline_tab_lists_dated_events_and_where_the_fix_ships() {
         let s = screen(&a);
         assert!(s.contains("Oct 1") && s.contains("Bug 1995008 filed"), "{s}");
         assert!(s.contains("D321987 pushed to try"), "{s}");
-        assert!(s.contains("Ships") && s.contains("becomes Beta"), "{s}");
+        assert!(
+            s.contains("Release") && s.contains("scheduled Beta") && s.contains("merge Nov 5"),
+            "{s}"
+        );
+        assert!(s.contains("build inclusion") && s.contains("unverified"), "{s}");
         assert!(s.lines().all(|l| l.chars().count() <= w as usize), "{s}");
     }
 }
@@ -1421,7 +1427,10 @@ fn open_section(app: &mut App, tab: &str) {
         let tabs: Vec<char> = s.lines().nth(1).unwrap_or_default().chars().collect();
         let border: Vec<char> = s.lines().nth(2).unwrap_or_default().chars().collect();
         let name: Vec<char> = tab.chars().collect();
-        let at = tabs.windows(name.len()).position(|w| w == name.as_slice());
+        let at = tabs
+            .windows(name.len())
+            .enumerate()
+            .find_map(|(at, w)| (w == name.as_slice() && tabs.get(at + name.len()).is_none_or(|c| c.is_whitespace())).then_some(at));
         if at.is_some_and(|c| border.get(c) == Some(&'━')) {
             return;
         }
@@ -1438,9 +1447,9 @@ fn an_approved_uplift_does_not_promise_a_nightly_it_already_shipped_in() {
         filter_to(&mut a, "2000469");
         let s = screen(&a);
         assert!(s.contains("uplift to Beta 146 approved"), "{s}");
-        assert!(s.contains("Fixed in Nightly 147"), "{s}");
+        assert!(s.contains("Bugzilla marks Firefox 147 fixed"), "{s}");
         assert!(
-            !s.contains("Lands in 147"),
+            !s.contains("Expected Firefox 147"),
             "the fix is already in Nightly 147 and the step is a Beta uplift:\n{s}"
         );
         let mut a = overloaded(w, h);
@@ -1448,7 +1457,7 @@ fn an_approved_uplift_does_not_promise_a_nightly_it_already_shipped_in() {
         filter_to(&mut a, "1998253");
         let s = screen(&a);
         assert!(
-            s.contains("Lands in 147 if it lands by Nov 9 "),
+            s.contains("Expected Firefox 147 if landed by Nov 8 "),
             "an accepted revision still gets the countdown:\n{s}"
         );
     }
@@ -1499,4 +1508,228 @@ fn a_sprint_with_nothing_done_says_nothing_about_done() {
     let header = line_with(&s, "of 10 pts");
     assert!(header.contains("3 of 10 pts"), "{header}");
     assert!(!header.contains("done"), "{header}");
+}
+
+#[test]
+fn a_rate_limited_source_says_so_instead_of_unavailable() {
+    let mut a = app(100, 24);
+    let mut raw = a.snapshot.take().unwrap().raw;
+    for (source, retry_at) in [("bugzilla", Some("2026-11-03T20:30:00Z".parse().unwrap())), ("jira", None)] {
+        raw.errors.push(worklens_core::raw::SourceError {
+            source: source.into(),
+            message: "rate limited, try again after 20:30".into(),
+            unset: false,
+            retry_at,
+        });
+    }
+    update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
+    let s = screen(&a);
+    let header = s.lines().next().unwrap();
+    assert!(header.contains("bugzilla rate limited"), "{header}");
+    assert!(header.contains("jira unavailable"), "{header}");
+    assert!(!header.contains("bugzilla, jira"), "{header}");
+}
+
+#[test]
+fn a_long_backout_cause_wraps_in_the_detail_and_stays_inside_80_columns() {
+    let cause = "causing bc failures in browser_ml_prefetch.js and browser_ml_idle.js on Windows 11 x64 asan opt and Linux 18.04 x64 tsan opt. CLOSED TREE";
+    for (w, h) in [(80, 24), (160, 40)] {
+        let mut a = overloaded_with(w, h, |raw| {
+            let auto = &mut raw["landings"]["repositories"][0];
+            let backout = auto["backouts"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|b| b["bugs"][0] == 2010001)
+                .unwrap();
+            backout["cause"] = serde_json::json!(cause);
+        });
+        filter_to(&mut a, "2010001");
+        let s = screen(&a);
+        assert!(s.contains(" bo "), "the tag is in the list:\n{s}");
+        assert!(s.contains("backed out of autoland 3h after"), "{s}");
+        assert!(s.contains("CLOSED TREE"), "the whole cause is readable:\n{s}");
+        assert!(s.lines().all(|l| unicode_width::UnicodeWidthStr::width(l) <= w as usize), "{s}");
+        assert!(s.contains("Open the backout of bug 2010001"), "{s}");
+    }
+}
+
+#[test]
+fn the_landed_tab_says_where_each_fix_is_and_shows_its_release_table() {
+    for (w, h) in [(80, 40), (160, 40)] {
+        let mut a = overloaded(w, h);
+        open_section(&mut a, "Landed");
+        filter_to(&mut a, "2010102");
+        let s = screen(&a);
+        assert!(s.contains(" ld "), "{s}");
+        assert!(s.contains("Bugzilla marks Firefox 146 fixed;"), "{s}");
+        assert!(s.contains("Release 145"), "the release table is shown:\n{s}");
+        assert!(s.contains("Open bug 2010102 in Bugzilla"), "{s}");
+        assert!(s.lines().all(|l| unicode_width::UnicodeWidthStr::width(l) <= w as usize), "{s}");
+    }
+}
+
+#[test]
+fn backlog_items_remain_reachable_in_other_without_a_separate_destination() {
+    let mut a = overloaded(80, 24);
+    assert!(!a.tab_shown(Section::Backlog.index()));
+    open_section(&mut a, "Other");
+    let ids: Vec<String> = a
+        .rows
+        .iter()
+        .map(|i| a.snapshot.as_ref().unwrap().id(a.snapshot.as_ref().unwrap().entry(*i)).to_string())
+        .collect();
+    let expected: Vec<String> = a
+        .snapshot
+        .as_ref()
+        .unwrap()
+        .section(Section::Backlog, false)
+        .map(|i| a.snapshot.as_ref().unwrap().id(a.snapshot.as_ref().unwrap().entry(i)).to_string())
+        .collect();
+    assert!(!expected.is_empty());
+    assert!(expected.iter().all(|id| ids.contains(id)));
+    filter_to(&mut a, &expected[0]);
+    let s = screen(&a);
+    assert!(s.contains("not started"), "{s}");
+    update(&mut a, Msg::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)), now());
+    let s = screen(&a);
+    assert!(s.contains("Open"), "{s}");
+}
+
+#[test]
+fn completed_work_keeps_its_facts_without_attention_colors() {
+    use ratatui::style::Color;
+    for tone in [worklens_tui::Tone::Dark, worklens_tui::Tone::Light, worklens_tui::Tone::NoColor] {
+        let mut a = overloaded_with(80, 40, |raw| {
+            let bug = raw["bugs"].as_array_mut().unwrap().iter_mut().find(|b| b["id"] == 2010102).unwrap();
+            bug["severity"] = serde_json::json!("S1");
+            bug["release_flags"]["cf_tracking_firefox146"] = serde_json::json!("+");
+        });
+        a.tone = tone;
+        open_section(&mut a, "Landed");
+        filter_to(&mut a, "2010102");
+        let text = screen(&a);
+        assert!(text.contains("Bugzilla marks Firefox 146 fixed"), "{text}");
+        assert!(text.contains("S1") && text.contains("Tracked"), "the facts remain visible:\n{text}");
+        assert!(!text.contains("!ld") && !text.contains("*ld"), "{text}");
+        let mut terminal = Terminal::new(TestBackend::new(80, 40)).unwrap();
+        terminal.draw(|f| view(&a, f)).unwrap();
+        for y in 1..39 {
+            for x in 0..80 {
+                let cell = &terminal.backend().buffer()[(x, y)];
+                assert!(
+                    !matches!(cell.fg, Color::Red | Color::Yellow),
+                    "completed work is reference material: {tone:?} at {x},{y}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn only_hidden_destinations_with_items_are_signposted() {
+    let mut empty = app(80, 24);
+    let mut prefs = empty.prefs.clone();
+    prefs.sections[Section::Landed.index()] = worklens_tui::Show::Hidden;
+    empty.set_prefs(prefs);
+    assert_eq!(empty.counts[Section::Landed.index()], 0);
+    assert!(!empty.hidden_with_work().contains(&Section::Landed.index()));
+    let mut busy = overloaded(80, 24);
+    let mut prefs = busy.prefs.clone();
+    prefs.sections[Section::Other.index()] = worklens_tui::Show::Hidden;
+    prefs.sections[Section::Backlog.index()] = worklens_tui::Show::Hidden;
+    busy.set_prefs(prefs);
+    assert!(busy.hidden_with_work().contains(&Section::Other.index()));
+    assert!(!busy.hidden_with_work().contains(&Section::Backlog.index()));
+}
+
+#[test]
+fn the_release_estimate_keeps_the_existing_two_day_color_boundary() {
+    use ratatui::style::Color;
+    for (merge, release, expected) in [
+        ("2026-11-06", "2026-11-07", Color::Yellow),
+        ("2026-11-07", "2026-11-08", Color::Indexed(246)),
+    ] {
+        let mut a = overloaded_with(80, 40, |raw| {
+            raw["trains"]["nextMerge"] = serde_json::json!(merge);
+            raw["trains"]["nextRelease"] = serde_json::json!(release);
+        });
+        a.tone = worklens_tui::Tone::Dark;
+        open_section(&mut a, "Land 4");
+        filter_to(&mut a, "1998253");
+        let mut terminal = Terminal::new(TestBackend::new(80, 40)).unwrap();
+        terminal.draw(|f| view(&a, f)).unwrap();
+        let buf = terminal.backend().buffer();
+        let y = (0..40)
+            .find(|y| {
+                (0..80)
+                    .map(|x| buf[(x, *y)].symbol())
+                    .collect::<String>()
+                    .contains("Expected Firefox")
+            })
+            .unwrap();
+        assert_eq!(buf[(2, y)].fg, expected, "{merge}\n{}", screen(&a));
+    }
+}
+
+fn app_with_stack(w: u16, h: u16) -> App {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../store/fixtures/raw.json");
+    let mut raw: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let rev = |id: u32| {
+        serde_json::json!({
+            "id": id, "phid": format!("PHID-DREV-{id}"), "title": format!("Captcha patch {id}"), "status": "needs-review",
+            "author": "PHID-USER-me", "bug": null, "modified": "2026-11-02T12:00:00Z", "reviewers": [],
+        })
+    };
+    let revisions = raw["revisions"].as_array_mut().unwrap();
+    revisions.extend([rev(338973), rev(338971), rev(338972)]);
+    raw["dependencies"] = serde_json::json!({ "parents": {
+        "338972": ["PHID-DREV-338971"], "338973": ["PHID-DREV-338972"],
+    }});
+    let raw: Raw = serde_json::from_value(raw).unwrap();
+    let opts = Options {
+        cache_minutes: None,
+        agent: None,
+        dir: PathBuf::from("/tmp"),
+        keys: Vec::new(),
+    };
+    let mut app = App::new(CoreConfig::default(), opts, Some(raw), Marks::default(), now());
+    update(&mut app, Msg::Resize(w, h), now());
+    app
+}
+
+#[test]
+fn a_stack_is_a_tree_under_one_header_in_landing_order() {
+    let mut a = app_with_stack(120, 30);
+    press(&mut a, KeyCode::Char('4'));
+    let s = screen(&a);
+    let lines: Vec<&str> = s.lines().collect();
+    let head = lines
+        .iter()
+        .position(|l| l.contains("┌ Stack of 3 · bottom D338971 needs-review"))
+        .unwrap_or_else(|| panic!("{s}"));
+    assert!(lines[head + 1].contains("├ D338971"), "{s}");
+    assert!(lines[head + 2].contains("├ D338972"), "{s}");
+    assert!(lines[head + 3].contains("└ D338973"), "{s}");
+    assert!(
+        lines[head + 1].starts_with("│>"),
+        "the cursor starts on the bottom patch, not the header: {s}"
+    );
+
+    press(&mut a, KeyCode::Down);
+    let s = screen(&a);
+    assert!(line_with(&s, "├ D338972").starts_with("│>"), "one Down moves past no header: {s}");
+    assert!(s.contains("Stack: 2 of 3"), "{s}");
+}
+
+#[test]
+fn the_stack_header_fits_80x24_and_the_count_ignores_it() {
+    let mut a = app_with_stack(80, 24);
+    press(&mut a, KeyCode::Char('4'));
+    let s = screen(&a);
+    assert!(s.lines().all(|l| l.chars().count() <= 80), "{s}");
+    assert!(
+        line_with(&s, "Waiting on others").contains("Waiting on others 3"),
+        "the header is not counted: {s}"
+    );
 }

@@ -17,6 +17,7 @@ pub struct ItemRef {
 }
 
 pub async fn refetch_items(http: &Http, cfg: &Config, mut raw: Raw, items: &[ItemRef]) -> Result<Raw> {
+    http.restore_cooldowns(&raw);
     let release_fields = crate::bugzilla::release_fields(raw.trains.as_ref());
     let bz = Bugzilla {
         http,

@@ -98,9 +98,11 @@ fn every_keypress_redraws_within_a_frame() {
 #[ignore = "timing; run with --profile hunt -- --ignored"]
 fn a_refresh_lands_within_a_frame() {
     let mut a = app(160, 48);
+    let mut terminal = Terminal::new(TestBackend::new(160, 48)).unwrap();
     let start = Instant::now();
     update(&mut a, Msg::Fetched(Ok(Box::new(big()))), now());
+    terminal.draw(|f| view(&a, f)).unwrap();
     let took = start.elapsed();
     println!("refresh with {ITEMS} items took {took:?}");
-    assert!(took < BUDGET * 4, "applying a fetch took {took:?}");
+    assert!(took < BUDGET, "applying a fetch took {took:?}");
 }

@@ -76,7 +76,11 @@ fn observed_commit_and_health_are_distinct_from_current_presence_and_shipment() 
     let w = workflow(&s, &s.entries[0]);
     assert_eq!(w.landings[0].state, "observed_landing_passed");
     assert!(w.landings[0].summary.contains("1111111111111111111111111111111111111111"));
-    assert!(w.landings[0].summary.contains("later backouts and shipped builds unverified"));
+    assert!(
+        w.landings[0]
+            .summary
+            .contains("no attributed later backout in the scanned pushes; bug-number candidates and unscanned pushes remain unverified; shipped builds unverified")
+    );
     assert!(w.approvals.iter().any(|v| v.summary.contains("integration-push observations")));
 }
 

@@ -16,6 +16,8 @@ pub struct SourceHealth {
     pub error: Option<String>,
     pub stale_since: Option<Timestamp>,
     pub key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rate_limited_until: Option<Timestamp>,
 }
 
 struct Source {
@@ -35,7 +37,7 @@ const SOURCES: [Source; 7] = [
     Source {
         name: "Phabricator",
         hosts: &["phabricator.services.mozilla.com"],
-        errors: &["phabricator", "phabricator-dependencies"],
+        errors: &["phabricator", "phabricator-dependencies", "phabricator-availability"],
         key: Some(Service::Phabricator),
     },
     Source {
@@ -89,10 +91,13 @@ pub fn from_cache(raw: &Raw, cfg: &Config) -> Vec<SourceHealth> {
                 .filter(|c| src.hosts.iter().any(|h| host_matches(host(&c.url), h)))
                 .collect();
             let failed_requests = calls.iter().filter(|c| c.status.is_none_or(|s| s >= 400)).count();
-            let error = raw
+            let failure = raw.failures().find(|e| src.errors.contains(&e.source.as_str()));
+            let error = failure.map(|e| e.message.clone());
+            let rate_limited_until = raw
                 .failures()
-                .find(|e| src.errors.contains(&e.source.as_str()))
-                .map(|e| e.message.clone());
+                .filter(|e| src.errors.contains(&e.source.as_str()))
+                .filter_map(|e| e.retry_at)
+                .max();
             let stale_since = raw.stale.iter().find(|s| src.errors.contains(&s.source.as_str())).map(|s| s.since);
             let credential = src.key.and_then(|service| cfg.credentials.iter().find(|c| c.service == service));
             let key = credential.and_then(|c| c.origin.as_ref()).map(ToString::to_string);
@@ -113,6 +118,7 @@ pub fn from_cache(raw: &Raw, cfg: &Config) -> Vec<SourceHealth> {
                 error,
                 stale_since,
                 key,
+                rate_limited_until,
             }
         })
         .collect()
@@ -147,6 +153,9 @@ fn plural(n: usize, word: &str) -> String {
 }
 
 pub fn fix(h: &SourceHealth) -> Option<String> {
+    if let Some(until) = h.rate_limited_until.filter(|_| matches!(h.state, "stale" | "failed")) {
+        return Some(format!("the service is rate-limiting; refresh after {}", clock(until)));
+    }
     match h.state {
         "stale" | "failed" => Some(match h.error.as_deref() {
             Some(e) if e.starts_with("401") || e.starts_with("403") => {
@@ -184,6 +193,7 @@ mod tests {
             error: Some("503 for https://api.atlassian.com/…".into()),
             stale_since: Some("2026-11-03T22:02:00Z".parse().unwrap()),
             key: Some("macOS Keychain".into()),
+            rate_limited_until: None,
         };
         let line = describe(&h);
         assert!(line.starts_with("503"), "{line}");
@@ -204,6 +214,7 @@ mod tests {
             error: Some("401 for https://phabricator.services.mozilla.com/api/".into()),
             stale_since: None,
             key: None,
+            rate_limited_until: None,
         };
         assert_eq!(fix(&h).unwrap(), "the key was refused; `worklens auth set phabricator`");
     }

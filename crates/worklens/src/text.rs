@@ -121,8 +121,13 @@ pub fn section_block(st: Style, s: &Snapshot, section: Section, limit: usize) ->
         let _ = write!(out, "\n  {}", st.dim(s.empty_text(section)));
         return out;
     }
+    let mut stack = None;
     for &i in &shown[..shown.len() - cut] {
         let e = s.entry(i);
+        if let Some(k) = e.stack.filter(|k| stack != Some(*k)) {
+            let _ = write!(out, "\n{:11}{}", "", st.dim(format!("┌ {}", worklens_core::stack::header(s, k))));
+        }
+        stack = e.stack;
         let days = days_between(present::age_since(s, e), s.now).floor();
         let age = if days.is_finite() {
             format!("{:>4}", format!("{}d", days.max(0.0)))

@@ -1,6 +1,6 @@
 # worklens
 
-Rust workspace. CI runs all three; they must pass:
+Rust workspace. There is no CI; run all three locally before committing. They must pass:
 
 ```sh
 cargo fmt --all
@@ -33,7 +33,7 @@ keys, wrong types) for proptest. `tests/robust.rs` in core, sources, store,
 tui and worklens feed it to every parser, `build_snapshot`, the cache round
 trip, random key/resize/fetch sequences drawn after each step, the MCP server,
 and the CLI with a damaged config or cache. They run in `cargo test`; go
-deeper locally or in the nightly `hunt` workflow:
+deeper locally when a change is risky:
 
 ```sh
 PROPTEST_CASES=20000 cargo test --profile hunt --workspace --test robust

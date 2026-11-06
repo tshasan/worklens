@@ -3,8 +3,8 @@ use std::collections::{BTreeMap, HashSet};
 use futures::{StreamExt, stream};
 use jiff::Timestamp;
 use serde::Deserialize;
-use worklens_core::RevId;
-use worklens_core::raw::{Landing, Landings, PushHealth, RepositoryLandings};
+use worklens_core::raw::{Backout, Landing, Landings, PushHealth, RepositoryLandings};
+use worklens_core::{BugId, RevId};
 
 use crate::MAX_IN_FLIGHT;
 use crate::http::{Error, Http, Result, parse};
@@ -42,9 +42,64 @@ fn hash(value: &str) -> bool {
     value.len() == 40 && value.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
+fn is_backout(subject: &str) -> bool {
+    let subject = subject.trim_start().to_ascii_lowercase();
+    subject.starts_with("backed out") || subject.starts_with("backout") || subject.starts_with("revert")
+}
+
+fn bugs_named(subject: &str) -> Vec<BugId> {
+    let lower = subject.to_ascii_lowercase();
+    let mut bugs = Vec::new();
+    let mut rest = lower.as_str();
+    while let Some(at) = rest.find("bug") {
+        rest = &rest[at + 3..];
+        let after = rest.strip_prefix('s').unwrap_or(rest).trim_start_matches([' ', '#']);
+        let digits: String = after.chars().take_while(char::is_ascii_digit).collect();
+        if let Ok(id) = digits.parse::<u32>()
+            && id > 0
+            && !bugs.contains(&BugId(id))
+        {
+            bugs.push(BugId(id));
+        }
+    }
+    bugs
+}
+
+fn cause_of(subject: &str) -> Option<String> {
+    let (_, cause) = subject.split_once(" for ")?;
+    let cause = cause.trim();
+    (!cause.is_empty()).then(|| cause.to_owned())
+}
+
+fn backout(message: &str) -> Option<(Vec<BugId>, Option<String>)> {
+    let subject = message.lines().next()?;
+    if !is_backout(subject) {
+        return None;
+    }
+    let bugs = bugs_named(subject);
+    (!bugs.is_empty() || !targets(message).is_empty()).then(|| (bugs, cause_of(subject)))
+}
+
+fn targets(message: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    for line in message.lines() {
+        let text = line.trim();
+        let candidate = text
+            .strip_prefix("This reverts commit ")
+            .or_else(|| text.strip_prefix("Backed out changeset "))
+            .or_else(|| text.strip_prefix("Backout changeset "));
+        if let Some(candidate) = candidate {
+            let value: String = candidate.chars().take_while(char::is_ascii_hexdigit).collect();
+            if (12..=40).contains(&value.len()) {
+                targets.push(value.to_ascii_lowercase());
+            }
+        }
+    }
+    targets
+}
+
 fn trailer(message: &str) -> Option<RevId> {
-    let subject = message.lines().next()?.to_ascii_lowercase();
-    if subject.starts_with("backed out") || subject.starts_with("backout") || subject.starts_with("revert ") {
+    if is_backout(message.lines().next()?) {
         return None;
     }
     let mut ids = message.lines().filter_map(|line| {
@@ -77,19 +132,34 @@ pub fn parse_scan(bytes: &[u8], repository: &str, wanted: &[RevId], now: Timesta
         .map_err(|e| Error::Api(format!("Treeherder push timestamp: {e}")))?;
     let wanted: HashSet<RevId> = wanted.iter().copied().collect();
     let mut matches = BTreeMap::new();
+    let mut backouts = Vec::new();
     for push in page.results {
         if !hash(&push.revision) {
             return Err(Error::Api("Treeherder push has no full commit hash".into()));
         }
         let pushed_at = Timestamp::from_second(push.push_timestamp).map_err(|e| Error::Api(format!("Treeherder push timestamp: {e}")))?;
         for commit in push.revisions {
+            if let Some((bugs, cause)) = backout(&commit.comments)
+                && hash(&commit.revision)
+            {
+                backouts.push(Backout {
+                    bugs,
+                    targets: targets(&commit.comments),
+                    cause,
+                    commit: commit.revision,
+                    push_revision: push.revision.clone(),
+                    url: push_url(repository, &push.revision),
+                    pushed_at,
+                });
+                continue;
+            }
             let Some(id) = trailer(&commit.comments).filter(|id| wanted.contains(id)) else {
                 continue;
             };
             if !hash(&commit.revision) {
                 return Err(Error::Api("Treeherder matched commit has no full hash".into()));
             }
-            matches.entry(id).or_insert_with(|| Landing {
+            matches.entry((id, commit.revision.clone())).or_insert_with(|| Landing {
                 revision: id,
                 commit: commit.revision,
                 push_revision: push.revision.clone(),
@@ -101,6 +171,7 @@ pub fn parse_scan(bytes: &[u8], repository: &str, wanted: &[RevId], now: Timesta
         }
     }
     Ok(RepositoryLandings {
+        retry_at: None,
         repository: repository.into(),
         checked_at: now,
         push_limit: PUSH_LIMIT,
@@ -108,6 +179,7 @@ pub fn parse_scan(bytes: &[u8], repository: &str, wanted: &[RevId], now: Timesta
         oldest_push,
         error: None,
         matches: matches.into_values().collect(),
+        backouts,
     })
 }
 
@@ -121,6 +193,7 @@ async fn scan(http: &Http, repository: &str, wanted: &[RevId]) -> RepositoryLand
     }
     .await;
     response.unwrap_or_else(|error| RepositoryLandings {
+        retry_at: error.retry_at(),
         repository: repository.into(),
         checked_at: Timestamp::now(),
         push_limit: PUSH_LIMIT,
@@ -128,6 +201,7 @@ async fn scan(http: &Http, repository: &str, wanted: &[RevId]) -> RepositoryLand
         oldest_push: None,
         error: Some(error.summary()),
         matches: Vec::new(),
+        backouts: Vec::new(),
     })
 }
 
@@ -215,11 +289,63 @@ mod tests {
     }
 
     #[test]
+    fn an_explicit_reverted_commit_can_identify_a_patch_without_a_bug_in_the_subject() {
+        let commit = "1".repeat(40);
+        let backout = "2".repeat(40);
+        let page = serde_json::json!({"meta":{"repository":"autoland"},"results":[
+            {"revision": backout, "push_timestamp":1793710800, "revisions":[{"revision":backout,
+                "comments":format!("Revert a changeset for failures\n\nThis reverts commit {commit}.\n")}]},
+            {"revision":commit,"push_timestamp":1793700000,"revisions":[{"revision":commit,
+                "comments":"Bug 1995008 - A patch\n\nDifferential Revision: https://phabricator.services.mozilla.com/D321987\n"}]}
+        ]});
+        let scan = parse_scan(&serde_json::to_vec(&page).unwrap(), "autoland", &[RevId(321987)], now()).unwrap();
+        assert_eq!(scan.backouts.len(), 1);
+        assert!(scan.backouts[0].bugs.is_empty());
+        assert_eq!(scan.backouts[0].targets, [commit]);
+        let mut raw: worklens_core::Raw = serde_json::from_str(include_str!("../../store/fixtures/raw.json")).unwrap();
+        raw.revisions[0].status = worklens_core::raw::RevStatus::Published;
+        raw.landings = Some(Landings {
+            revisions: vec![RevId(321987)],
+            repositories: vec![scan],
+        });
+        let s = worklens_core::build_snapshot(raw, &worklens_core::CoreConfig::default(), now());
+        assert!(s.entries.iter().any(|e| {
+            e.placement
+                .is_some_and(|p| p.reason == worklens_core::rules::Reason::BackedOut(BugId(1995008)))
+        }));
+    }
+
+    #[test]
+    fn a_zero_bug_number_is_not_a_backout_candidate() {
+        let mut response: serde_json::Value =
+            serde_json::from_slice(include_bytes!("../fixtures/treeherder/revert-recorded.json")).unwrap();
+        response["results"][0]["revisions"][0]["comments"] = serde_json::json!("Backout bug 0");
+        let scan = parse_scan(&serde_json::to_vec(&response).unwrap(), "autoland", &[], now()).unwrap();
+        assert!(scan.backouts.is_empty());
+    }
+
+    #[test]
+    fn recorded_revert_names_the_affected_commit() {
+        let scan = parse_scan(
+            include_bytes!("../fixtures/treeherder/revert-recorded.json"),
+            "autoland",
+            &[],
+            now(),
+        )
+        .unwrap();
+        assert_eq!(scan.backouts.len(), 1);
+        assert_eq!(scan.backouts[0].targets, ["dad5f0c681918eb9ca90dd155c1cdcdbdb4bfeb6"]);
+        assert!(scan.matches.is_empty());
+    }
+
+    #[test]
     fn exact_trailers_find_stack_commits_without_using_the_push_tip() {
         let bytes = include_bytes!("../fixtures/treeherder/integration-pushes.json");
         let scan = parse_scan(bytes, "autoland", &[RevId(123), RevId(124), RevId(125)], now()).unwrap();
         assert_eq!(scan.scanned_pushes, 4);
-        assert_eq!(scan.matches.len(), 2, "backout, quoted and prefix-only matches must not count");
+        assert_eq!(scan.matches.len(), 3, "both commits of D123 and the stack top remain available");
+        assert_eq!(scan.matches.iter().filter(|m| m.revision == RevId(123)).count(), 2);
+        assert!(!scan.matches.iter().any(|m| m.revision == RevId(125)));
         let found = scan.matches.iter().find(|m| m.revision == RevId(123)).unwrap();
         assert_eq!(found.commit, "1".repeat(40));
         assert_eq!(found.push_revision, "e".repeat(40));
@@ -247,6 +373,36 @@ mod tests {
         assert!(parse_push_health(&bytes, "mozilla-central", "newer").is_err());
         assert!(parse_push_health(&bytes, "autoland", "another-push").is_err());
         assert!(parse_push_health(b"[]", "autoland", "newer").unwrap().is_none());
+    }
+
+    #[test]
+    fn backouts_are_kept_with_the_bugs_and_cause_their_subject_names() {
+        let bytes = include_bytes!("../fixtures/treeherder/integration-backouts.json");
+        let scan = parse_scan(bytes, "autoland", &[RevId(321987)], now()).unwrap();
+        let found: Vec<(Vec<u32>, Option<&str>, i64)> = scan
+            .backouts
+            .iter()
+            .map(|b| (b.bugs.iter().map(|x| x.0).collect(), b.cause.as_deref(), b.pushed_at.as_second()))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                (vec![1995012], None, 1793736000),
+                (vec![1995010, 1995011], Some("causing build bustages. CLOSED TREE"), 1793732400),
+                (vec![1995020], Some("breaking the build"), 1793728800),
+                (vec![1995008], Some("causing bc failures in browser_viewsource.js"), 1793710800),
+            ],
+            "a message needs a bug candidate or an explicitly affected commit"
+        );
+        let backout = &scan.backouts[3];
+        assert_eq!(backout.commit, "21".repeat(20));
+        assert_eq!(backout.url, push_url("autoland", &"2".repeat(40)));
+        assert_eq!(scan.matches.len(), 2, "both landings remain available for commit attribution");
+        assert_eq!(
+            scan.matches.iter().map(|m| m.pushed_at.as_second()).max().unwrap(),
+            1793718000,
+            "the newest landing, the re-land, is kept"
+        );
     }
 
     #[test]

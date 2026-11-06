@@ -2960,6 +2960,212 @@
    "via": [
     "team"
    ]
+  },
+  {
+   "id": 2010001,
+   "summary": "Prefetch model weights when the browser is idle",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-03T15:05:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "sheriff@mozilla.com",
+     "creation_date": "2026-11-03T15:02:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010101,
+   "summary": "Cache tokenizer vocabularies per model",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-02T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "wontfix"
+   },
+   "cf_last_resolved": "2026-11-02T10:00:00Z"
+  },
+  {
+   "id": 2010102,
+   "summary": "Free inference sessions on tab close",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-29T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "release_flags": {
+    "cf_status_firefox147": "fixed",
+    "cf_status_firefox146": "fixed"
+   },
+   "cf_last_resolved": "2026-10-29T10:00:00Z"
+  },
+  {
+   "id": 2010103,
+   "summary": "Guard against empty model manifests",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-12T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "release_flags": {
+    "cf_status_firefox145": "fixed",
+    "cf_status_firefox146": "fixed",
+    "cf_status_firefox147": "fixed"
+   },
+   "cf_last_resolved": "2026-10-12T10:00:00Z"
+  },
+  {
+   "id": 2010104,
+   "summary": "Log the model hub response time",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-31T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "release_flags": {},
+   "cf_last_resolved": "2026-10-31T10:00:00Z"
+  },
+  {
+   "id": 2010106,
+   "summary": "Old fix that has aged out of the list",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-02T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "landed"
+   ],
+   "release_flags": {
+    "cf_status_firefox146": "fixed"
+   },
+   "cf_last_resolved": "2026-10-02T10:00:00Z"
+  },
+  {
+   "id": 2010105,
+   "summary": "Show model download progress in the sidebar",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-03T09:30:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
+  },
+  {
+   "id": 2010201,
+   "summary": "Move the inference cache to the profile directory",
+   "status": "ASSIGNED",
+   "resolution": "",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-12T10:00:00Z",
+   "creation_time": "2026-10-20T09:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: On Device",
+   "via": [
+    "assigned"
+   ]
   }
  ],
  "issues": {
@@ -4724,6 +4930,52 @@
    ],
    "diffPHID": "PHID-DIFF-357994",
    "diffCreated": "2026-10-26T19:56:11Z"
+  },
+  {
+   "id": 360001,
+   "title": "Bug 2010001 - Prefetch model weights when idle r=gale",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2010001,
+   "modified": "2026-11-03T12:00:00Z",
+   "created": "2026-10-28T09:00:00Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-360001",
+   "diffCreated": "2026-10-30T09:00:00Z"
+  },
+  {
+   "id": 360105,
+   "title": "Bug 2010105 - Show model download progress r=gale",
+   "status": "published",
+   "author": "PHID-USER-harbor",
+   "bug": 2010105,
+   "modified": "2026-11-03T09:00:00Z",
+   "created": "2026-10-28T09:00:00Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-gale",
+     "status": "accepted"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-360105",
+   "diffCreated": "2026-10-30T09:00:00Z"
+  },
+  {
+   "id": 360201,
+   "title": "Bug 2010201 - Move the inference cache r=gale",
+   "status": "changes-planned",
+   "author": "PHID-USER-harbor",
+   "bug": 2010201,
+   "modified": "2026-10-12T10:00:00Z",
+   "created": "2026-10-28T09:00:00Z",
+   "reviewers": [],
+   "diffPHID": "PHID-DIFF-360201",
+   "diffCreated": "2026-10-30T09:00:00Z"
   }
  ],
  "toReview": [
@@ -4923,6 +5175,15 @@
   ],
   "2013069": [
    357994
+  ],
+  "2010001": [
+   360001
+  ],
+  "2010105": [
+   360105
+  ],
+  "2010201": [
+   360201
   ]
  },
  "lastComments": {
@@ -5819,7 +6080,9 @@
    336841,
    337473,
    338050,
-   345396
+   345396,
+   360001,
+   360105
   ],
   "repositories": [
    {
@@ -5874,6 +6137,51 @@
        "running": 0
       },
       "healthError": null
+     },
+     {
+      "revision": 360001,
+      "commit": "360001abcdef0000000000000000000000000000",
+      "pushRevision": "360001fedcba0000000000000000000000000000",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=360001fedcba0000000000000000000000000000",
+      "pushedAt": "2026-11-03T12:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "fail",
+       "failed": 6,
+       "running": 0
+      },
+      "healthError": null
+     },
+     {
+      "revision": 360105,
+      "commit": "360105abcdef2222222222222222222222222222",
+      "pushRevision": "360105abcdef2222222222222222222222222222",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=360105abcdef2222222222222222222222222222",
+      "pushedAt": "2026-11-03T09:00:00Z",
+      "health": {
+       "builds": "pass",
+       "lint": "pass",
+       "tests": "pass",
+       "failed": 0,
+       "running": 0
+      },
+      "healthError": null
+     }
+    ],
+    "backouts": [
+     {
+      "bugs": [
+       2010001
+      ],
+      "cause": "causing bc failures in browser_ml_prefetch.js",
+      "commit": "b0b0b0b0b0b01111111111111111111111111111",
+      "pushRevision": "b0b0b0b0b0b01111111111111111111111111111",
+      "url": "https://treeherder.mozilla.org/jobs?repo=autoland&revision=b0b0b0b0b0b01111111111111111111111111111",
+      "pushedAt": "2026-11-03T15:00:00Z",
+      "targets": [
+       "360001abcdef0000000000000000000000000000"
+      ]
      }
     ]
    },
@@ -6070,5 +6378,8 @@
     "phid": "PHID-DREV-338703"
    }
   }
+ },
+ "away": {
+  "PHID-USER-quill": "2026-11-18T12:00:00Z"
  }
 }

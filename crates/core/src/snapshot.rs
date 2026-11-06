@@ -67,6 +67,7 @@ pub struct Entry {
     pub placement: Option<Placement>,
     pub marks: MarkState,
     pub changes: Vec<String>,
+    pub stack: Option<crate::ids::StackIdx>,
 }
 
 impl Entry {
@@ -84,6 +85,7 @@ impl Entry {
             placement: None,
             marks: MarkState::NONE,
             changes: Vec::new(),
+            stack: None,
         }
     }
 
@@ -114,6 +116,7 @@ pub struct Snapshot {
     pub now: Timestamp,
     pub entries: Vec<Entry>,
     sections: [Vec<EntryIdx>; Section::COUNT],
+    pub stacks: Vec<crate::stack::Stack>,
     pub sprint: Option<SprintSummary>,
     has_whiteboard: bool,
 }
@@ -322,12 +325,18 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
     }
 
     let sprint = sprint_of(&raw, cfg);
-    let sections = sections_of(&raw, &entries, mine, sprint.as_ref());
+    let stacks = crate::stack::find(&raw, &entries[..mine]);
+    crate::stack::assign(&stacks, &mut entries);
+    let mut sections = sections_of(&raw, &entries, mine, sprint.as_ref());
+    for list in &mut sections {
+        crate::stack::group(list, &entries, &stacks);
+    }
     Snapshot {
         raw,
         now,
         entries,
         sections,
+        stacks,
         sprint,
         has_whiteboard: cfg.whiteboard().is_some(),
     }
@@ -412,18 +421,24 @@ fn sections_of(raw: &Raw, entries: &[Entry], mine: usize, sprint: Option<&Sprint
             sections[Section::Drift.index()].push(idx);
         }
     }
-    for s in [
-        Section::Waiting,
-        Section::Land,
-        Section::Returned,
-        Section::Uplift,
-        Section::Others,
-        Section::Other,
-    ] {
-        let last = |i: &EntryIdx| entries[i.get()].placement.is_some_and(|p| p.reason.facets().sorts_last);
-        sections[s.index()].sort_by_key(|i| (entries[i.get()].placement.map(|p| p.tier), last(i), since(i)));
+    for s in [Section::Waiting, Section::Land, Section::Returned, Section::Others, Section::Other] {
+        let facet = |i: &EntryIdx| entries[i.get()].placement.map(|p| p.reason.facets());
+        let first = |i: &EntryIdx| facet(i).is_some_and(|f| f.sorts_first);
+        let last = |i: &EntryIdx| facet(i).is_some_and(|f| f.sorts_last);
+        sections[s.index()].sort_by_key(|i| (!first(i), entries[i.get()].placement.map(|p| p.tier), last(i), since(i)));
     }
     sections[Section::Sprint.index()].sort_by_key(since);
+    sections[Section::Landed.index()].sort_by_key(|i| std::cmp::Reverse(since(i)));
+    let priority = |i: &EntryIdx| {
+        let e = &entries[i.get()];
+        let text = match (e.bug, e.issue) {
+            (Some(b), _) => Some(raw.bugs[b.get()].priority.as_str()),
+            (None, Some(x)) => raw.issues.get_index(x.get()).and_then(|(_, x)| x.priority.as_deref()),
+            (None, None) => None,
+        };
+        crate::rules::priority_rank(text)
+    };
+    sections[Section::Backlog.index()].sort_by_key(|i| (priority(i), since(i).is_none(), since(i)));
     sections[Section::Ideas.index()].sort_by_key(|i| entries[i.get()].drift.is_empty());
     sections[Section::Drift.index()].sort_by_key(|i| (!entries[i.get()].has_error_drift(), since(i)));
     let mut team: Vec<EntryIdx> = (mine..entries.len()).map(EntryIdx::new).collect();
@@ -470,6 +485,10 @@ impl Snapshot {
 
     pub fn me(&self) -> &str {
         &self.raw.me.email
+    }
+
+    pub fn stack(&self, k: crate::ids::StackIdx) -> &crate::stack::Stack {
+        &self.stacks[k.get()]
     }
 
     pub fn entry(&self, i: EntryIdx) -> &Entry {
@@ -600,6 +619,16 @@ impl Snapshot {
         Some((t.nightly, i64::from(days)))
     }
 
+    pub fn lands_in(&self, e: &Entry) -> Option<crate::train::LandsIn> {
+        let accepted = e.placement.is_some_and(|p| matches!(p.reason, Reason::Accepted(_)));
+        let t = self
+            .raw
+            .trains
+            .as_ref()
+            .filter(|_| accepted && crate::train::trusted(&self.raw, self.now))?;
+        crate::train::lands_in(t, self.now.to_zoned(jiff::tz::TimeZone::UTC).date())
+    }
+
     pub fn revision_of(&self, e: &Entry) -> Option<RevIdx> {
         e.review
             .or_else(|| crate::present::live_revisions(self, e).next())
@@ -608,6 +637,11 @@ impl Snapshot {
 
     pub fn next_step(&self, e: &Entry) -> Option<NextStep> {
         let p = e.placement?;
+        if let Reason::InReview(r) = p.reason
+            && !crate::present::away(self, self.rev(r)).is_empty()
+        {
+            return Some(NextStep::AddReviewer(self.rev(r).id));
+        }
         if let Some(step) = p.reason.next_step(&self.raw, p.stale, !e.drift.is_empty()) {
             return Some(step);
         }
@@ -735,7 +769,27 @@ impl fmt::Display for ReasonText<'_> {
         let (s, e) = (self.snap, self.entry);
         let Some(p) = e.placement else { return Ok(()) };
         let days = HumanDays(days_between(p.since, s.now));
+        let ago = if days.0 < 1.0 { "today".to_owned() } else { format!("{days} ago") };
+        let review_event = |r| {
+            if s.rev(r).diff_created.is_some() {
+                "latest diff posted"
+            } else {
+                "revision last modified"
+            }
+        };
         match p.reason {
+            Reason::BackedOut(b) => {
+                let Some(found) = crate::backout::of(&s.raw, b) else {
+                    return f.write_str("backed out");
+                };
+                let gap = crate::backout::Gap(found.backout.pushed_at.as_second() - found.landing.pushed_at.as_second());
+                let cause = found.backout.cause.as_deref().unwrap_or("cause not stated");
+                write!(
+                    f,
+                    "{} backed out of {} {gap} after landing: {cause}",
+                    found.landing.revision, found.repository
+                )
+            }
             Reason::Needinfo => {
                 let from = s.needinfo(e).map_or("someone", |flag| flag.setter.as_str());
                 write!(f, "needinfo from {from}, {days}")
@@ -746,16 +800,12 @@ impl fmt::Display for ReasonText<'_> {
                 if let Some(author) = s.raw.users.get(&rev.author) {
                     write!(f, " by {author}")?;
                 }
-                write!(f, ", {days}")
+                write!(f, "; {} {ago}", review_event(r))
             }
             Reason::Accepted(r) => {
                 write!(f, "{} accepted by ", s.rev(r).id)?;
                 write_reviewers(f, s, r, |x| x == ReviewerStatus::Accepted, "a reviewer")?;
-                if p.stale {
-                    write!(f, ", not landed for {days}")?
-                } else {
-                    write!(f, ", {days}")?
-                }
+                write!(f, "; revision last modified {ago}")?;
                 match s.try_state(r) {
                     TryState::Unknown => Ok(()),
                     state => write!(f, "; {}", TryText(state)),
@@ -768,7 +818,18 @@ impl fmt::Display for ReasonText<'_> {
             Reason::ChangesRequested(r) => {
                 write!(f, "changes requested on {} by ", s.rev(r).id)?;
                 write_reviewers(f, s, r, |x| x == ReviewerStatus::Rejected, "a reviewer")?;
-                write!(f, ", {days}")
+                write!(f, "; revision last modified {ago}")
+            }
+            Reason::InReview(r) if !crate::present::away(s, s.rev(r)).is_empty() => {
+                write!(f, "{} waiting on ", s.rev(r).id)?;
+                for (n, (who, until)) in crate::present::away(s, s.rev(r)).into_iter().enumerate() {
+                    if n > 0 {
+                        f.write_str("; ")?;
+                    }
+                    let date = until.to_zoned(jiff::tz::TimeZone::UTC).date();
+                    write!(f, "{}, away until {}", s.name(who), crate::train::day(date))?;
+                }
+                Ok(())
             }
             Reason::InReview(r) => {
                 write!(f, "{} waiting on ", s.rev(r).id)?;
@@ -779,11 +840,7 @@ impl fmt::Display for ReasonText<'_> {
                     |x| matches!(x, ReviewerStatus::Added | ReviewerStatus::Blocking),
                     "reviewers",
                 )?;
-                if p.stale {
-                    write!(f, ", no activity for {days}")
-                } else {
-                    write!(f, ", {days}")
-                }
+                write!(f, "; {} {ago}", review_event(r))
             }
             Reason::Sprint(i) => {
                 let issue = s.issue(i);
@@ -799,14 +856,7 @@ impl fmt::Display for ReasonText<'_> {
                 if let Some(author) = s.raw.users.get(&rev.author) {
                     write!(f, " by {author}")?;
                 }
-                write!(f, ", {days}")
-            }
-            Reason::BetaStatusUnset(v) => {
-                let nightly = s.raw.trains.as_ref().map_or(0, |t| t.nightly);
-                write!(
-                    f,
-                    "fixed in {nightly}; the Beta {v} status isn't set, so nobody can tell if it needs an uplift"
-                )
+                write!(f, "; {} {ago}", review_event(r))
             }
             Reason::StillCrashing => {
                 let c = e.bug.and_then(|b| s.raw.crashes.get(&s.bug(b).id));
@@ -826,25 +876,6 @@ impl fmt::Display for ReasonText<'_> {
                 }
             }
             Reason::UpliftRequested(c) => write!(f, "uplift to {c} requested, waiting on release management, {days}"),
-            Reason::NeedsUplift => {
-                let (Some(b), Some(t)) = (e.bug.map(|b| s.bug(b)), s.raw.trains.as_ref()) else {
-                    return Ok(());
-                };
-                let up = s.raw.uplift.get(&b.id);
-                let affected: Vec<String> = crate::rules::Channel::all(t)
-                    .filter(|c| {
-                        b.status_for(&c.status_name()) == Some("affected") && up.and_then(|u| u.approval(&c.approval_name())).is_none()
-                    })
-                    .map(|c| c.to_string())
-                    .collect();
-                let verb = if affected.len() == 1 { "is" } else { "are" };
-                write!(
-                    f,
-                    "fixed in {}; {} {verb} affected and no uplift was requested",
-                    t.nightly,
-                    affected.join(" and ")
-                )
-            }
             Reason::Idea(i) => {
                 let idea = s.idea(i);
                 f.write_str(&idea.status)?;
@@ -859,6 +890,20 @@ impl fmt::Display for ReasonText<'_> {
                     n => write!(f, "; {n} of your items roll up to it"),
                 }
             }
+            Reason::Landed(_) => {
+                let Some(bug) = e.bug.map(|b| s.bug(b)) else { return Ok(()) };
+                match crate::train::fixed_in(bug) {
+                    Some(v) => write!(f, "Bugzilla marks Firefox {v} fixed; build inclusion unverified"),
+                    None if crate::train::on_autoland(&s.raw, bug).is_some() => {
+                        f.write_str("Landing observed on autoland; Nightly inclusion unverified")
+                    }
+                    None => f.write_str("Resolved FIXED; no Firefox status flag set; build inclusion unverified"),
+                }
+            }
+            Reason::Backlog(_) => match p.since {
+                Some(_) => write!(f, "Filed {} ago, not started", HumanDays(days_between(p.since, s.now))),
+                None => f.write_str("Assigned to you, not started"),
+            },
             Reason::Other => match (e.bug, e.issue) {
                 (Some(b), _) => write!(f, "bug is {}", State(s.bug(b))),
                 (None, Some(i)) => write!(f, "{} is {}", s.issue(i).key, s.issue(i).status),

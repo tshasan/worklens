@@ -32,6 +32,7 @@ fn a_real_failure_beside_the_unset_note_is_still_a_failure() {
         source: "jira".into(),
         message: "timed out".into(),
         unset: false,
+        retry_at: None,
     });
     assert_eq!(s.raw.state("jira"), SourceState::Failed);
     assert!(s.not_checked(Section::Sprint).unwrap().contains("couldn't be read"));

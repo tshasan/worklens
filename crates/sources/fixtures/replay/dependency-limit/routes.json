@@ -1,0 +1,18 @@
+[
+  [
+    "GET https://bugzilla.mozilla.org/rest/bug?id=1",
+    "../cooldown/limited.json",
+    {
+      "status": 429,
+      "retryAfter": "Fri, 01 Jan 2100 00:00:00 GMT"
+    }
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/edge.search",
+    "../cooldown/limited.json",
+    {
+      "status": 429,
+      "retryAfter": "Fri, 01 Jan 2100 00:00:00 GMT"
+    }
+  ]
+]

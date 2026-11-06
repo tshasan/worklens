@@ -30,6 +30,7 @@ impl Tier {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reason {
+    BackedOut(crate::ids::BugId),
     Needinfo,
     ReviewRequested(RevIdx),
     Accepted(RevIdx),
@@ -38,15 +39,21 @@ pub enum Reason {
     InReview(RevIdx),
     Sprint(IssueIdx),
     UpliftApproved(Channel),
-    NeedsUplift,
     UpliftRequested(Channel),
     RegressionOf(crate::ids::BugId),
     Asked(u32),
     StillCrashing,
-    BetaStatusUnset(u32),
     GroupReview(RevIdx),
     Idea(IdeaIdx),
+    Landed(crate::ids::BugId),
+    Backlog(Unstarted),
     Other,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Unstarted {
+    Bug(crate::ids::BugId),
+    Ticket(IssueIdx),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,6 +61,7 @@ pub struct Facets {
     pub tag: &'static str,
     pub gloss: &'static str,
     pub kept_when_landed: bool,
+    pub sorts_first: bool,
     pub sorts_last: bool,
 }
 
@@ -62,6 +70,7 @@ const fn facets(tag: &'static str, gloss: &'static str) -> Facets {
         tag,
         gloss,
         kept_when_landed: false,
+        sorts_first: false,
         sorts_last: false,
     }
 }
@@ -73,6 +82,10 @@ const fn kept_when_landed(tag: &'static str, gloss: &'static str) -> Facets {
     }
 }
 
+pub const BACKED_OUT: Facets = Facets {
+    sorts_first: true,
+    ..kept_when_landed("bo", "backed out")
+};
 pub const NEEDINFO: Facets = facets("ni?", "asked of you");
 pub const ASKED: Facets = facets("ni>", "you asked");
 pub const REVIEW: Facets = facets("r?", "review");
@@ -85,13 +98,14 @@ pub const LANDING_BLOCKED: Facets = facets("chk", "check landing");
 pub const CHANGES_REQUESTED: Facets = facets("r-", "needs changes");
 pub const REGRESSION: Facets = facets("reg", "regression");
 pub const STILL_CRASHING: Facets = kept_when_landed("cr", "crashing");
-pub const NEEDS_UPLIFT: Facets = kept_when_landed("up", "needs uplift");
 pub const UPLIFT_APPROVED: Facets = kept_when_landed("up+", "approved");
 pub const UPLIFT_REQUESTED: Facets = kept_when_landed("up?", "asked");
-pub const BETA_STATUS_UNSET: Facets = kept_when_landed("st?", "no Beta status");
+pub const LANDED: Facets = kept_when_landed("ld", "landed");
+pub const BACKLOG: Facets = facets("bl", "not started");
 pub const UNTAGGED: Facets = facets("", "");
 
 pub const TAGS: &[Facets] = &[
+    BACKED_OUT,
     NEEDINFO,
     ASKED,
     REVIEW,
@@ -101,15 +115,16 @@ pub const TAGS: &[Facets] = &[
     CHANGES_REQUESTED,
     REGRESSION,
     STILL_CRASHING,
-    NEEDS_UPLIFT,
     UPLIFT_APPROVED,
     UPLIFT_REQUESTED,
-    BETA_STATUS_UNSET,
+    LANDED,
+    BACKLOG,
 ];
 
 impl Reason {
     pub const fn facets(self) -> Facets {
         match self {
+            Self::BackedOut(_) => BACKED_OUT,
             Self::Needinfo => NEEDINFO,
             Self::Asked(_) => ASKED,
             Self::ReviewRequested(_) | Self::InReview(_) => REVIEW,
@@ -119,10 +134,10 @@ impl Reason {
             Self::ChangesRequested(_) => CHANGES_REQUESTED,
             Self::RegressionOf(_) => REGRESSION,
             Self::StillCrashing => STILL_CRASHING,
-            Self::NeedsUplift => NEEDS_UPLIFT,
             Self::UpliftApproved(_) => UPLIFT_APPROVED,
             Self::UpliftRequested(_) => UPLIFT_REQUESTED,
-            Self::BetaStatusUnset(_) => BETA_STATUS_UNSET,
+            Self::Landed(_) => LANDED,
+            Self::Backlog(_) => BACKLOG,
             Self::Sprint(_) | Self::Idea(_) | Self::Other => UNTAGGED,
         }
     }
@@ -134,18 +149,22 @@ impl Reason {
     pub fn next_step(self, raw: &Raw, stale: bool, has_drift: bool) -> Option<NextStep> {
         let rev = |r: RevIdx| raw.revisions[r.get()].id;
         match self {
+            Self::BackedOut(b) => {
+                crate::backout::of(raw, b)?;
+                Some(NextStep::OpenBackout(b))
+            }
             Self::Needinfo => Some(NextStep::AnswerNeedinfo),
             Self::ReviewRequested(r) | Self::GroupReview(r) => Some(NextStep::Review(rev(r))),
             Self::Accepted(r) => Some(NextStep::Land(rev(r))),
             Self::LandingBlocked(r) => crate::guidance::landing_issue(raw, r).map(|i| i.next_step()),
             Self::ChangesRequested(r) => Some(NextStep::AddressFeedback(rev(r))),
             Self::UpliftApproved(c) => Some(NextStep::LandUplift(c)),
-            Self::NeedsUplift => Some(NextStep::RequestUplift),
             Self::RegressionOf(b) => Some(NextStep::LookAtRegression(b)),
             Self::Asked(_) if stale => Some(NextStep::FollowUp),
             Self::StillCrashing => Some(NextStep::CheckCrashes),
-            Self::BetaStatusUnset(v) => Some(NextStep::SetBetaStatus(v)),
             Self::Idea(_) if has_drift => Some(NextStep::TellIdeaOwner),
+            Self::Landed(b) | Self::Backlog(Unstarted::Bug(b)) => Some(NextStep::OpenBug(b)),
+            Self::Backlog(Unstarted::Ticket(i)) => Some(NextStep::OpenTicket(i)),
             Self::InReview(_) | Self::Sprint(_) | Self::Other | Self::UpliftRequested(_) | Self::Asked(_) | Self::Idea(_) => None,
         }
     }
@@ -222,6 +241,7 @@ pub struct Rule {
 
 #[rustfmt::skip]
 pub const RULES: &[Rule] = &[
+    Rule { id: "backedOut",        section: Section::Waiting,  test: backed_out },
     Rule { id: "needinfo",         section: Section::Waiting,  test: needinfo },
     Rule { id: "review",           section: Section::Waiting,  test: review },
     Rule { id: "regression",       section: Section::Waiting,  test: regression },
@@ -230,13 +250,13 @@ pub const RULES: &[Rule] = &[
     Rule { id: "accepted",         section: Section::Land,     test: accepted },
     Rule { id: "upliftApproved",   section: Section::Land,     test: uplift_approved },
     Rule { id: "changesRequested", section: Section::Returned, test: changes_requested },
-    Rule { id: "needsUplift",      section: Section::Uplift,   test: needs_uplift },
-    Rule { id: "betaStatusUnset",  section: Section::Uplift,   test: beta_status_unset },
     Rule { id: "inReview",         section: Section::Others,   test: in_review },
     Rule { id: "upliftRequested",  section: Section::Others,   test: uplift_requested },
     Rule { id: "asked",            section: Section::Others,   test: asked },
     Rule { id: "sprint",           section: Section::Sprint,   test: sprint },
     Rule { id: "idea",             section: Section::Ideas,    test: idea },
+    Rule { id: "landed",           section: Section::Landed,   test: landed },
+    Rule { id: "backlog",          section: Section::Backlog,  test: backlog },
 ];
 
 pub fn place(ctx: &Ctx<'_>, e: &Entry) -> Placement {
@@ -278,6 +298,16 @@ fn tier_of(raw: &Raw, e: &Entry) -> Tier {
     } else {
         Tier::Other
     }
+}
+
+fn backed_out(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
+    let bug = ctx.raw.bugs[e.bug?.get()].id;
+    let found = crate::backout::of(ctx.raw, bug)?;
+    Some(Hit {
+        reason: Reason::BackedOut(bug),
+        since: Some(found.backout.pushed_at),
+        stale: false,
+    })
 }
 
 fn needinfo(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
@@ -356,7 +386,8 @@ fn sprint(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
     let i = e.issue?;
     let (_, issue) = ctx.raw.issues.get_index(i.get())?;
     let mine = issue.assignee.is_some() && issue.assignee == ctx.raw.me.jira_email;
-    (mine && issue.sprint.is_some() && issue.status_category != StatusCategory::Done).then_some(Hit {
+    let open = issue.sprint.as_ref().is_some_and(|s| s.state != "closed");
+    (mine && open && issue.status_category != StatusCategory::Done).then_some(Hit {
         reason: Reason::Sprint(i),
         since: Some(issue.updated),
         stale: false,
@@ -371,6 +402,59 @@ fn idea(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
         since: Some(idea.updated),
         stale: false,
     })
+}
+
+pub const LANDED_DAYS: f64 = 30.0;
+
+fn landed(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
+    let bug = &ctx.raw.bugs[e.bug?.get()];
+    let since = if let Some(at) = crate::train::on_autoland(ctx.raw, bug) {
+        at
+    } else {
+        let fixed = bug.via.contains(&crate::raw::Via::Landed) && crate::bugs::is_closed(bug) && bug.resolution == "FIXED";
+        let at = bug.cf_last_resolved.unwrap_or(bug.last_change_time);
+        (fixed && days_between(Some(at), ctx.now) <= LANDED_DAYS).then_some(at)?
+    };
+    Some(Hit {
+        reason: Reason::Landed(bug.id),
+        since: Some(since),
+        stale: false,
+    })
+}
+
+fn backlog(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
+    let raw = ctx.raw;
+    let ticket = e.issue.and_then(|i| raw.issues.get_index(i.get()).map(|(_, x)| (i, x)));
+    if let Some(b) = e.bug {
+        let bug = &raw.bugs[b.get()];
+        let started = !e.revisions.is_empty()
+            || e.review.is_some()
+            || ticket.is_some_and(|(_, x)| x.status_category == StatusCategory::Indeterminate);
+        return (bug.assigned_to == raw.me.email && !crate::bugs::is_closed(bug) && !started).then_some(Hit {
+            reason: Reason::Backlog(Unstarted::Bug(bug.id)),
+            since: bug.creation_time,
+            stale: false,
+        });
+    }
+    let (i, issue) = ticket?;
+    let mine = issue.assignee.is_some() && issue.assignee == raw.me.jira_email;
+    let in_open_sprint = issue.sprint.as_ref().is_some_and(|s| s.state != "closed");
+    (mine && issue.status_category == StatusCategory::New && !in_open_sprint).then_some(Hit {
+        reason: Reason::Backlog(Unstarted::Ticket(i)),
+        since: issue.created,
+        stale: false,
+    })
+}
+
+pub fn priority_rank(priority: Option<&str>) -> u8 {
+    match priority.map(str::trim) {
+        Some("P1" | "Highest" | "Blocker") => 1,
+        Some("P2" | "High" | "Critical") => 2,
+        Some("P3" | "Medium") => 3,
+        Some("P4" | "Low") => 4,
+        Some("P5" | "Lowest" | "Trivial") => 5,
+        _ => 9,
+    }
 }
 
 fn uplift_parts<'a>(ctx: &Ctx<'a>, e: &Entry) -> Option<(&'a Bug, &'a crate::raw::Uplift, &'a crate::raw::Trains)> {
@@ -432,42 +516,6 @@ fn uplift_approved(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
     })
 }
 
-fn needs_uplift(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
-    let (bug, up, trains) = uplift_parts(ctx, e)?;
-    let fixed = is_fixed(bug.status_for(&trains.nightly.to_string()));
-    let skipped = bug.whiteboard.contains("[checkin-needed-beta]") || assignee_asked(bug) || has_open_regression(ctx.raw, bug);
-    let affected =
-        Channel::all(trains).any(|c| bug.status_for(&c.status_name()) == Some("affected") && up.approval(&c.approval_name()).is_none());
-    (fixed && up.patch && !skipped && affected).then_some(Hit {
-        reason: Reason::NeedsUplift,
-        since: Some(bug.last_change_time),
-        stale: false,
-    })
-}
-
-fn assignee_asked(bug: &Bug) -> bool {
-    bug.flags
-        .iter()
-        .any(|f| f.name == "needinfo" && f.status == "?" && f.requestee.as_deref() == Some(bug.assigned_to.as_str()))
-}
-
-fn has_open_regression(raw: &Raw, bug: &Bug) -> bool {
-    raw.bugs
-        .iter()
-        .any(|b| b.regressed_by.contains(&bug.id) && !crate::bugs::is_closed(b))
-}
-
-fn beta_status_unset(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
-    let (bug, up, trains) = uplift_parts(ctx, e)?;
-    let fixed = is_fixed(bug.status_for(&trains.nightly.to_string()));
-    let unset = matches!(bug.status_for(&trains.beta.to_string()), Some("---") | None);
-    (fixed && up.patch && unset).then_some(Hit {
-        reason: Reason::BetaStatusUnset(trains.beta),
-        since: Some(bug.last_change_time),
-        stale: false,
-    })
-}
-
 fn uplift_requested(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
     let (bug, up, trains) = uplift_parts(ctx, e)?;
     let channel = Channel::all(trains).find(|c| up.approval(&c.approval_name()) == Some("?"))?;
@@ -488,6 +536,7 @@ fn other_since(raw: &Raw, e: &Entry) -> Option<Timestamp> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NextStep {
+    OpenBackout(crate::ids::BugId),
     AnswerNeedinfo,
     Review(crate::ids::RevId),
     Land(crate::ids::RevId),
@@ -503,12 +552,13 @@ pub enum NextStep {
     LookAtRegression(crate::ids::BugId),
     FollowUp,
     CheckCrashes,
-    SetBetaStatus(u32),
     LandUplift(Channel),
-    RequestUplift,
     SprintUpdate,
     FixDrift,
     TellIdeaOwner,
+    OpenBug(crate::ids::BugId),
+    OpenTicket(IssueIdx),
+    AddReviewer(crate::ids::RevId),
 }
 
 pub const NEW_COMMENT_DAYS: f64 = 14.0;
@@ -516,6 +566,7 @@ pub const NEW_COMMENT_DAYS: f64 = 14.0;
 impl std::fmt::Display for NextStep {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::OpenBackout(b) => write!(f, "Open the backout of bug {b} in Treeherder"),
             Self::AnswerNeedinfo => f.write_str("Answer the needinfo"),
             Self::Review(r) => write!(f, "Review {r}"),
             Self::Land(r) => write!(f, "Land {r}"),
@@ -531,12 +582,13 @@ impl std::fmt::Display for NextStep {
             Self::LookAtRegression(b) => write!(f, "Look at the regression from your fix in bug {b}"),
             Self::FollowUp => f.write_str("Follow up on your question, or ask someone else"),
             Self::CheckCrashes => f.write_str("Check whether the fix worked: look at the crashes on crash-stats"),
-            Self::SetBetaStatus(v) => write!(f, "Set status-firefox{v} to affected or unaffected"),
             Self::LandUplift(c) => write!(f, "Land the uplift to {c}"),
-            Self::RequestUplift => f.write_str("Request an uplift in Lando, or set the status flags if it isn't needed"),
             Self::SprintUpdate => f.write_str("Post a status update or move it out of the sprint"),
             Self::FixDrift => f.write_str("Fix the Jira/Bugzilla mismatch"),
             Self::TellIdeaOwner => f.write_str("Tell the idea's owner where your work stands"),
+            Self::OpenBug(b) => write!(f, "Open bug {b} in Bugzilla"),
+            Self::AddReviewer(r) => write!(f, "Consider another reviewer for {r} in Phabricator"),
+            Self::OpenTicket(_) => f.write_str("Open the ticket in Jira to start it or unassign yourself"),
         }
     }
 }

@@ -154,6 +154,17 @@ impl Phab<'_> {
         Ok(out)
     }
 
+    pub async fn availability(&self, phids: &[&str]) -> Result<HashMap<String, Timestamp>> {
+        let mut out = HashMap::new();
+        for part in phids.chunks(100) {
+            let mut params = list("phids", part);
+            params.push(("attachments[availability]".into(), "1".into()));
+            let page: UserPage = self.call("user.search", &params).await?;
+            out.extend(away_of(page));
+        }
+        Ok(out)
+    }
+
     pub async fn by_ids(&self, ids: &[RevId]) -> Result<Vec<Revision>> {
         let mut out = Vec::with_capacity(ids.len());
         for part in ids.chunks(100) {
@@ -190,6 +201,42 @@ impl Phab<'_> {
         }
         Ok(out)
     }
+}
+
+#[derive(Deserialize)]
+pub struct UserPage {
+    data: Vec<User>,
+}
+
+#[derive(Deserialize)]
+struct User {
+    phid: String,
+    #[serde(default)]
+    attachments: UserAttachments,
+}
+
+#[derive(Deserialize, Default)]
+struct UserAttachments {
+    availability: Option<Availability>,
+}
+
+#[derive(Deserialize)]
+struct Availability {
+    value: Option<String>,
+    until: Option<i64>,
+}
+
+fn away_of(page: UserPage) -> impl Iterator<Item = (String, Timestamp)> {
+    page.data.into_iter().filter_map(|u| {
+        let a = u.attachments.availability?;
+        let until = Timestamp::from_second(a.until?).ok()?;
+        (a.value.as_deref() == Some("away")).then_some((u.phid, until))
+    })
+}
+
+pub fn parse_availability(bytes: &[u8]) -> Result<HashMap<String, Timestamp>> {
+    let page: UserPage = conduit_result("user.search", bytes)?;
+    Ok(away_of(page).collect())
 }
 
 #[derive(Deserialize)]
@@ -367,6 +414,20 @@ mod tests {
 
     fn fixture(name: &str) -> Vec<u8> {
         std::fs::read(format!("{}/fixtures/phabricator/{name}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    #[test]
+    fn recorded_availability_and_source_derived_away_states_parse() {
+        let bytes = include_bytes!("../fixtures/phabricator/availability-recorded.json");
+        assert!(parse_availability(bytes).unwrap().is_empty());
+        let mut response: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+        response["result"]["data"][0]["attachments"]["availability"]["value"] = serde_json::json!("away");
+        response["result"]["data"][0]["attachments"]["availability"]["until"] = serde_json::json!(1795003200i64);
+        let parsed = parse_availability(&serde_json::to_vec(&response).unwrap()).unwrap();
+        assert_eq!(parsed["PHID-USER-fixture"].as_second(), 1795003200);
+        response["result"]["data"][0]["attachments"]["availability"]["value"] = serde_json::json!("busy");
+        assert!(parse_availability(&serde_json::to_vec(&response).unwrap()).unwrap().is_empty());
+        assert!(parse_availability(br#"{"error_code":"ERR-INVALID-AUTH","error_info":"failed","result":null}"#).is_err());
     }
 
     #[test]

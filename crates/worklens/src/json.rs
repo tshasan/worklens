@@ -53,6 +53,66 @@ pub struct Item<'a> {
     timeline: Vec<worklens_core::timeline::Event>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ships: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    backout: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fixed_in: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    train: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lands_in: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    quiet_days: Option<u32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    reviewer_away: Vec<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stack: Option<worklens_core::stack::Place>,
+}
+
+fn reviewer_away(s: &Snapshot, e: &Entry) -> Vec<Value> {
+    let Some(worklens_core::rules::Reason::InReview(r)) = e.placement.map(|p| p.reason) else {
+        return Vec::new();
+    };
+    present::away(s, s.rev(r))
+        .into_iter()
+        .map(|(who, until)| json!({"who": s.name(who), "until": until}))
+        .collect()
+}
+
+fn quiet_days(s: &Snapshot, e: &Entry) -> Option<u32> {
+    let p = e.placement.filter(|p| p.stale)?;
+    let days = worklens_core::bugs::days_between(p.since, s.now);
+    days.is_finite().then(|| days.floor().max(0.0) as u32)
+}
+
+fn lands_in(s: &Snapshot, e: &Entry) -> Option<Value> {
+    let l = s.lands_in(e)?;
+    Some(json!({ "version": l.version, "ifBy": l.if_by, "after": l.after }))
+}
+
+fn fixed_in(s: &Snapshot, e: &Entry) -> Option<u32> {
+    worklens_core::train::fixed_in(s.bug(e.bug?))
+}
+
+fn train(s: &Snapshot, e: &Entry) -> Option<&'static str> {
+    if !worklens_core::train::trusted(&s.raw, s.now) {
+        return None;
+    }
+    let today = s.now.to_zoned(jiff::tz::TimeZone::UTC).date();
+    worklens_core::train::of_landed(&s.raw, s.bug(e.bug?), today).map(|t| t.id())
+}
+
+fn backout(s: &Snapshot, e: &Entry) -> Option<Value> {
+    let found = worklens_core::backout::of(&s.raw, s.bug(e.bug?).id)?;
+    Some(json!({
+        "repository": found.repository,
+        "revision": found.landing.revision,
+        "landedCommit": found.landing.commit,
+        "url": found.backout.url,
+        "cause": found.backout.cause,
+        "landedAt": found.landing.pushed_at,
+        "backedOutAt": found.backout.pushed_at,
+    }))
 }
 
 #[derive(Serialize)]
@@ -347,6 +407,13 @@ pub fn item<'a>(s: &'a Snapshot, e: &'a Entry) -> Item<'a> {
         dependencies: worklens_core::dependencies::of(s, e),
         timeline: worklens_core::timeline::events(s, e),
         ships: worklens_core::timeline::ships(s, e),
+        backout: backout(s, e),
+        fixed_in: fixed_in(s, e),
+        train: train(s, e),
+        lands_in: lands_in(s, e),
+        quiet_days: quiet_days(s, e),
+        reviewer_away: reviewer_away(s, e),
+        stack: worklens_core::stack::place(s, e),
     }
 }
 
@@ -413,6 +480,13 @@ pub fn compact(s: &Snapshot, e: &Entry) -> Value {
         "changes": e.changes,
         "timeline": worklens_core::timeline::events(s, e),
         "ships": worklens_core::timeline::ships(s, e),
+        "backout": backout(s, e),
+        "fixedIn": fixed_in(s, e),
+        "train": train(s, e),
+        "landsIn": lands_in(s, e),
+        "quietDays": quiet_days(s, e),
+        "reviewerAway": reviewer_away(s, e),
+        "stack": worklens_core::stack::place(s, e),
     })
 }
 

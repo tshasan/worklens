@@ -30,7 +30,7 @@ use crate::text::Style;
     version,
     about = "Your Bugzilla, Jira and Phabricator work, by whose turn it is",
     after_help = "With no command, worklens opens the interactive UI.\n\
-                  Also: waiting, land, returned, uplift, others, other, health, log, agent-instructions.\n\
+                  Also: waiting, land, returned, uplift, others, other, landed, backlog, health, log, agent-instructions.\n\
                   `worklens help <command>` explains any of them."
 )]
 struct Cli {
@@ -52,7 +52,7 @@ enum Command {
     Ui,
     #[command(
         about = "What needs you, critical first",
-        long_about = "What needs you, critical first.\n\nWaiting on you, ready to land, returned to you, needs uplift, and waiting on others. Within each, critical items (S1, sec-critical or tracked) come first, then important (S2, sec-high), then the rest; oldest first within each, group reviews last."
+        long_about = "What needs you, critical first.\n\nWaiting on you, ready to land, returned to you, and waiting on others. Within each, backed-out landings first, then critical items (S1, sec-critical or tracked) come first, then important (S2, sec-high), then the rest; oldest first within each, group reviews last. A Phabricator stack stays together, bottom first, where its first member would sort."
     )]
     Next {
         #[arg(long, help = "Every item, not just the first 10")]
@@ -68,12 +68,20 @@ enum Command {
     Land,
     #[command(hide = true, about = "Changes requested on your revisions")]
     Returned,
-    #[command(hide = true, about = "Your fixes that still need to go to Beta or ESR")]
-    Uplift,
     #[command(hide = true, about = "Your revisions in review")]
     Others,
     #[command(hide = true, about = "Everything else assigned to you")]
     Other,
+    #[command(
+        about = "Recent fixes assigned to you, with fixed status and expected train",
+        long_about = "Recent fixes assigned to you, with fixed status and expected train.\n\nThe fixed version comes from Bugzilla status flags. Train position is expected from the calendar; build inclusion and who resolved a bug are unverified."
+    )]
+    Landed,
+    #[command(
+        about = "What's assigned to you that you haven't started",
+        long_about = "What's assigned to you that you haven't started.\n\nJira tickets in To Do outside an open sprint, and open bugs with no revision and no ticket in progress; highest priority first, then oldest."
+    )]
+    Backlog,
     #[command(about = "Sprint points and tickets")]
     Sprint,
     #[command(about = "Where Bugzilla, Phabricator and Jira disagree")]
@@ -423,7 +431,7 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
 
     match cli.command.as_ref().unwrap_or(&Command::Next { all: false, limit: 10 }) {
         Command::Next { all, limit } => {
-            const TURNS: [Section; 5] = [Section::Waiting, Section::Land, Section::Returned, Section::Uplift, Section::Others];
+            const TURNS: [Section; 4] = [Section::Waiting, Section::Land, Section::Returned, Section::Others];
             let limit = if *all { usize::MAX } else { *limit };
             let every: Vec<EntryIdx> = TURNS.iter().flat_map(|t| s.section(*t, false)).collect();
             let more = every.len().saturating_sub(limit);
@@ -492,12 +500,13 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                 },
             )
         }
-        Command::Waiting | Command::Land | Command::Returned | Command::Uplift | Command::Others | Command::Other => {
+        Command::Waiting | Command::Land | Command::Returned | Command::Others | Command::Other | Command::Landed | Command::Backlog => {
             let section = match cli.command {
+                Some(Command::Landed) => Section::Landed,
+                Some(Command::Backlog) => Section::Backlog,
                 Some(Command::Waiting) => Section::Waiting,
                 Some(Command::Land) => Section::Land,
                 Some(Command::Returned) => Section::Returned,
-                Some(Command::Uplift) => Section::Uplift,
                 Some(Command::Others) => Section::Others,
                 _ => Section::Other,
             };

@@ -224,10 +224,14 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
     });
     let t = Theme::of(app.tone);
     let left = Line::from(Span::styled("worklens", bold()));
-    let mut down: Vec<&str> = app
-        .snapshot
-        .as_ref()
-        .map_or_else(Vec::new, |s| s.raw.failures().map(|e| e.source.as_str()).collect());
+    let failures = || app.snapshot.as_ref().into_iter().flat_map(|s| s.raw.failures());
+    let mut limited: Vec<&str> = failures().filter(|e| e.retry_at.is_some()).map(|e| e.source.as_str()).collect();
+    limited.sort_unstable();
+    limited.dedup();
+    let mut down: Vec<&str> = failures()
+        .map(|e| e.source.as_str())
+        .filter(|source| !limited.contains(source))
+        .collect();
     down.sort_unstable();
     down.dedup();
     let age = app
@@ -245,6 +249,9 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
     }
     if app.action_error.is_some() {
         warnings.push("Action failed".to_owned());
+    }
+    if !limited.is_empty() {
+        warnings.push(format!("{} rate limited", limited.join(", ")));
     }
     if !down.is_empty() {
         warnings.push(format!("{} unavailable", down.join(", ")));
@@ -676,9 +683,30 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
     }
     let height = inner.height as usize;
     let cursor = app.cursor();
-    let top = cursor.saturating_sub(height / 2).min(app.rows.len().saturating_sub(height));
-    if app.rows.len() > height {
-        let text = format!(" {}–{} of {} ", top + 1, (top + height).min(app.rows.len()), app.rows.len());
+    let stack_of = |n: usize| s.entry(app.rows[n]).stack;
+    let mut shown: Vec<Shown> = Vec::with_capacity(app.rows.len());
+    let mut at = 0;
+    for n in 0..app.rows.len() {
+        if let Some(k) = stack_of(n).filter(|k| n == 0 || stack_of(n - 1) != Some(*k)) {
+            shown.push(Shown::Head(k));
+        }
+        if n == cursor {
+            at = shown.len();
+        }
+        let branch = stack_of(n).map(|k| n + 1 == app.rows.len() || stack_of(n + 1) != Some(k));
+        shown.push(Shown::Row(n, branch));
+    }
+    let top = at.saturating_sub(height / 2).min(shown.len().saturating_sub(height));
+    let visible = &shown[top..shown.len().min(top + height)];
+    if shown.len() > height {
+        let numbers = || {
+            visible
+                .iter()
+                .filter_map(|x| if let Shown::Row(n, _) = x { Some(*n + 1) } else { None })
+        };
+        let first = numbers().next().unwrap_or(0);
+        let last = numbers().next_back().unwrap_or(0);
+        let text = format!(" {first}–{last} of {} ", app.rows.len());
         let w = (text.width() as u16).min(area.width.saturating_sub(2));
         f.render_widget(
             Paragraph::new(t.quiet(text)),
@@ -692,12 +720,31 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
         .max()
         .unwrap_or(7)
         .clamp(7, 16);
-    let lines: Vec<Line<'_>> = app.rows[top..app.rows.len().min(top + height)]
+    let width = inner.width as usize;
+    let lines: Vec<Line<'_>> = visible
         .iter()
-        .enumerate()
-        .map(|(n, i)| row(app, t, s, s.entry(*i), top + n == cursor, inner.width as usize, id_width))
+        .map(|x| match *x {
+            Shown::Head(k) => {
+                let text = worklens_core::stack::header(s, k);
+                let lead = " ".repeat(STACK_INDENT);
+                Line::from(vec![
+                    Span::raw(lead),
+                    Span::styled("┌ ", fg(t.rule)),
+                    t.quiet(fit(&text, width.saturating_sub(STACK_INDENT + 2)).trim_end().to_owned()),
+                ])
+            }
+            Shown::Row(n, branch) => row(app, t, s, s.entry(app.rows[n]), n == cursor, (width, id_width), branch),
+        })
         .collect();
     f.render_widget(Paragraph::new(lines), inner);
+}
+
+const STACK_INDENT: usize = 16;
+
+#[derive(Clone, Copy)]
+enum Shown {
+    Head(worklens_core::StackIdx),
+    Row(usize, Option<bool>),
 }
 
 fn try_mark(t: Theme, s: &Snapshot, e: &Entry) -> Span<'static> {
@@ -711,7 +758,15 @@ fn try_mark(t: Theme, s: &Snapshot, e: &Entry) -> Span<'static> {
     }
 }
 
-fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, selected: bool, width: usize, id_width: usize) -> Line<'a> {
+fn row<'a>(
+    app: &App,
+    t: Theme,
+    s: &'a Snapshot,
+    e: &'a Entry,
+    selected: bool,
+    (width, id_width): (usize, usize),
+    branch: Option<bool>,
+) -> Line<'a> {
     let p = e.placement;
     let lead = if selected {
         Span::styled(t.cursor(), fg(t.accent).add_modifier(Modifier::BOLD))
@@ -736,7 +791,8 @@ fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, selected: bool, w
         (None, Some(Reason::Sprint(_))) => Cow::Owned(s.tag(e).to_string()),
         (None, reason) => Cow::Borrowed(reason.map_or("", Reason::tag)),
     };
-    let tag_color = match p.map(|p| p.tier) {
+    let tier = p.filter(|p| !matches!(p.reason, Reason::Landed(_))).map(|p| p.tier);
+    let tag_color = match tier {
         Some(Tier::Critical) => t.error,
         Some(Tier::Important) => t.warn,
         _ => t.quiet,
@@ -746,7 +802,7 @@ fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, selected: bool, w
     } else {
         Span::styled("⚑", fg(if e.has_error_drift() { t.error } else { t.warn }))
     };
-    let used = 1 + 5 + 6 + 2 + 2 + id_width + 1;
+    let used = STACK_INDENT + id_width + 1 + if branch.is_some() { 2 } else { 0 };
     let dim_title = !selected && (app.section() == Section::Other || e.marks.hidden.is_some());
     let mut title = Style::new();
     if selected {
@@ -764,7 +820,7 @@ fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, selected: bool, w
         Span::styled(
             format!(
                 "{}{} ",
-                match p.map(|p| p.tier) {
+                match tier {
                     Some(Tier::Critical) => "!",
                     Some(Tier::Important) => "*",
                     _ => " ",
@@ -777,6 +833,14 @@ fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, selected: bool, w
         Span::raw(" "),
         drift,
         Span::raw(" "),
+        Span::styled(
+            match branch {
+                Some(true) => "└ ",
+                Some(false) => "├ ",
+                None => "",
+            },
+            fg(t.rule),
+        ),
         Span::styled(fit(&s.id(e).to_string(), id_width), fg(t.quiet)),
         Span::raw(" "),
         Span::styled(fit(s.title(e), width.saturating_sub(used)), title),
@@ -873,19 +937,19 @@ fn draw_detail(app: &App, f: &mut Frame<'_>, area: Rect) {
     }
 }
 
-fn lands_in(s: &Snapshot, nightly: u32, days: i64) -> String {
-    let by = s
-        .raw
-        .trains
-        .as_ref()
-        .map(|t| t.next_merge.strftime("%b %-d").to_string())
-        .unwrap_or_default();
+fn lands_in(l: worklens_core::train::LandsIn, now: Timestamp) -> Option<(String, i64)> {
+    let (by, after) = (l.if_by?, l.after?);
+    let days = i64::from(now.to_zoned(jiff::tz::TimeZone::UTC).date().until(by).ok()?.get_days());
     let when = match days {
         0 => "today".to_owned(),
         1 => "tomorrow".to_owned(),
         n => format!("in {n} days"),
     };
-    format!("Lands in {nightly} if it lands by {by} ({when}); after that, {}.", nightly + 1)
+    let by = by.strftime("%b %-d");
+    Some((
+        format!("Expected Firefox {} if landed by {by} ({when}); after that, {after}.", l.version),
+        days,
+    ))
 }
 
 fn is_set(v: &str) -> bool {
@@ -1139,15 +1203,17 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
             format!("{where_}{}{}", if p.stale { "Waited: " } else { "" }, s.reason(e)),
             if p.stale { fg(t.warn) } else { Style::new() },
         ));
-        if let (Reason::Accepted(_), Some((nightly, days))) = (p.reason, s.merge().filter(|(_, d)| *d >= 0)) {
-            out.push(Line::styled(
-                lands_in(s, nightly, days),
-                fg(if days <= 2 { t.warn } else { t.quiet }),
-            ));
+        if let Some((text, days)) = s.lands_in(e).and_then(|l| lands_in(l, s.now)) {
+            out.push(Line::styled(text, fg(if days <= 2 { t.warn } else { t.quiet })));
+        } else if matches!(p.reason, Reason::Accepted(_)) {
+            out.push(Line::from("Release estimate unavailable: calendar missing or stale"));
         }
     }
     if let Some(step) = s.next_step(e) {
         out.push(Line::styled(format!("Next: {step}"), fg(t.accent).add_modifier(Modifier::BOLD)));
+    }
+    if let Some(place) = worklens_core::stack::position(s, e) {
+        out.push(Line::raw(place));
     }
     for d in worklens_core::dependencies::shown(s, e) {
         let owner = d.owner.as_deref().unwrap_or("owner unknown");
@@ -1181,7 +1247,16 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
     let tracked = s.tracked_for(e);
     if !tracked.is_empty() {
         let text = format!("{}: release management is watching it", tracked.join(", "));
-        row(&mut out, "Tracked", &text, fg(t.warn));
+        row(
+            &mut out,
+            "Tracked",
+            &text,
+            if e.placement.is_some_and(|p| matches!(p.reason, Reason::Landed(_))) {
+                Style::new()
+            } else {
+                fg(t.warn)
+            },
+        );
     }
     if let Some(b) = e.bug.map(|b| s.bug(b)) {
         let mut parts = vec![b.id.to_string(), State(b).to_string()];
@@ -1189,7 +1264,7 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         parts.push(format!("{} :: {}", b.product, b.component));
         row(&mut out, "Bugzilla", &parts.join(" · "), Style::new());
         if let Some(text) = timeline::ships(s, e) {
-            row(&mut out, "Ships", &text, Style::new());
+            row(&mut out, "Release", &text, Style::new());
         }
     }
     if let Some(i) = e.issue.map(|i| s.issue(i)) {
@@ -1331,7 +1406,7 @@ fn timeline_lines<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) ->
         out.extend(table_row(&label, fg(t.quiet), label_width, &ev.text, Style::new(), width));
     }
     if let Some(text) = timeline::ships(s, e) {
-        out.extend(table_row("Ships", fg(t.quiet), label_width, &text, fg(t.accent), width));
+        out.extend(table_row("Release", fg(t.quiet), label_width, &text, Style::new(), width));
     }
     out.push(Line::raw(""));
     out.push(Line::from(t.quiet(

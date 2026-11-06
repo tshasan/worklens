@@ -53,6 +53,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn recorded_current_release_does_not_require_consecutive_train_versions() {
+        let t = parse_trains(include_bytes!("../fixtures/product-details-recorded.json")).unwrap();
+        assert_eq!((t.nightly, t.beta, t.release), (162, 160, 159));
+        assert_eq!(t.next_merge.to_string(), "2026-11-19");
+        assert_eq!(t.next_release.to_string(), "2026-11-20");
+    }
+
+    #[test]
     fn versions_and_dates() {
         let bytes = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/product-details.json")).unwrap();
         let t = parse_trains(&bytes).unwrap();

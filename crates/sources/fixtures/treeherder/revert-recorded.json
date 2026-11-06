@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "repository": "autoland"
+  },
+  "results": [
+    {
+      "revision": "5939f8f1cf2e93f09afb4f49e455ca221589d71a",
+      "push_timestamp": 1793917356,
+      "revisions": [
+        {
+          "revision": "5939f8f1cf2e93f09afb4f49e455ca221589d71a",
+          "comments": "Revert \"Bug 2084958 - Update the \"account card\" on the global Settings screen when there is no authenticated account r=fixture-reviewers\" for causing fenix-debug failures\n\nThis reverts commit dad5f0c681918eb9ca90dd155c1cdcdbdb4bfeb6.\n"
+        }
+      ]
+    }
+  ]
+}

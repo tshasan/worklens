@@ -1,0 +1,1 @@
+[["POST https://phabricator.services.mozilla.com/api/user.search", "available.json", {"body": "attachments[availability]=1"}]]

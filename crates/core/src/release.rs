@@ -32,7 +32,8 @@ pub fn shown(s: &Snapshot, e: &Entry) -> bool {
                     .any(|repo| repo.matches.iter().any(|m| m.revision == rev.id))
             })
     });
-    e.bug.is_some() && s.raw.trains.is_some() && (decides(e) || landed)
+    let listed = e.placement.is_some_and(|p| matches!(p.reason, crate::rules::Reason::Landed(_)));
+    e.bug.is_some() && s.raw.trains.is_some() && (decides(e) || landed || listed)
 }
 
 pub fn matrix(s: &Snapshot, e: &Entry) -> Option<Vec<Channel>> {

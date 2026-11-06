@@ -14,6 +14,7 @@ fn screens_that_shipped_with_a_lie_are_still_caught() {
         "│ ~ jira      no token          │\n│ Linking Jira tickets to bugs  │",
         "phabricator: not set up\nLinking Jira tickets to bugs",
         "│ list │ Off: Jira isn't set up. │\n│ D123 │ Phabricator revision    │",
+        "│ 3h  bo  2010001 Prefetch │ Backed out of autoland 3h after landing: causing bc │\n│                          │ failures. Reopen the revision in Phabricator.       │",
     ];
     for screen in lies {
         assert!(
@@ -31,6 +32,7 @@ fn honest_screens_pass() {
         "│ Off: Phabricator isn't set up.          │\n│ `worklens auth set phabricator` turns it on. │",
         "│ 1995008 Support view-source │ Off: Jira isn't set up. `worklens │\n│ 2044168 Improve logging     │ auth set jira` turns it on.        │",
         "Waiting on you 1\n   7d  ni?  2086888     Remove metrics",
+        "│ 3h  bo  2010001 Prefetch │ Backed out of autoland 3h after landing: causing bc │\n│                          │ failures in browser_ml_prefetch.js. CLOSED TREE     │",
     ];
     for screen in honest {
         assert_eq!(

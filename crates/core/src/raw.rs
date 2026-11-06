@@ -49,6 +49,8 @@ pub struct Raw {
     pub roadmap: Roadmap,
     #[serde(default)]
     pub dependencies: Dependencies,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub away: HashMap<String, Timestamp>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -136,6 +138,8 @@ pub struct Landings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoryLandings {
+    #[serde(default)]
+    pub retry_at: Option<Timestamp>,
     pub repository: String,
     pub checked_at: Timestamp,
     pub push_limit: usize,
@@ -143,6 +147,21 @@ pub struct RepositoryLandings {
     pub oldest_push: Option<Timestamp>,
     pub error: Option<String>,
     pub matches: Vec<Landing>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub backouts: Vec<Backout>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backout {
+    #[serde(default)]
+    pub targets: Vec<String>,
+    pub bugs: Vec<BugId>,
+    pub cause: Option<String>,
+    pub commit: String,
+    pub push_revision: String,
+    pub url: String,
+    pub pushed_at: Timestamp,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -476,6 +495,8 @@ pub struct Call {
     pub ms: u32,
     #[serde(default)]
     pub error: Option<String>,
+    #[serde(default, rename = "waitMs")]
+    pub wait_ms: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -491,6 +512,8 @@ pub struct SourceError {
     pub message: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub unset: bool,
+    #[serde(default, rename = "retryAt", skip_serializing_if = "Option::is_none")]
+    pub retry_at: Option<Timestamp>,
 }
 
 #[cfg(test)]
