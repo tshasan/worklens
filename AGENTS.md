@@ -68,6 +68,20 @@ A failing case is saved to `crates/*/tests/robust.regressions`; commit it with t
 fix so it replays forever. `hunt` keeps overflow checks on; plain `--release`
 hides them. Each update plus redraw must fit a 16 ms frame with 1500 items.
 
+## Git
+
+`main` is protected: no direct pushes, force pushes or merge commits. Every
+change lands as one squashed PR, and the PR title becomes the commit on `main`,
+so it must be a [Conventional Commit](https://www.conventionalcommits.org):
+`type(scope): lowercase subject, no period`. Types: feat fix perf refactor test
+docs build ci chore revert. Scopes are crate names (`core`, `tui`, ...). Add `!`
+when `--json`, `--compact` or MCP output breaks. The PR body becomes the commit
+body.
+
+Review comments use [Conventional Comments](https://conventionalcomments.org):
+`label (decorations): subject`, labels praise nitpick suggestion issue todo
+question thought chore note, decorations `blocking` or `non-blocking`.
+
 ## Rules
 
 - Section and reason: in `core/src/rules.rs` add a `Reason` variant, a row in
