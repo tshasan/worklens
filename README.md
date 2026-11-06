@@ -7,7 +7,7 @@ it. It only reads from them. GitHub is not supported yet.
 
 ## Install
 
-Build it from a clone:
+There are no releases. Build it from `main`:
 
 ```sh
 git clone https://github.com/tshasan/worklens
