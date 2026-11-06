@@ -1,0 +1,33 @@
+{
+  "result": {
+    "data": [
+      {
+        "id": 990002,
+        "fields": {
+          "title": "Fixture review",
+          "authorPHID": "PHID-USER-me",
+          "status": {
+            "value": "needs-review"
+          },
+          "dateModified": 1793700000
+        },
+        "attachments": {
+          "reviewers": {
+            "reviewers": [
+              {
+                "reviewerPHID": "PHID-USER-fixture",
+                "status": "added",
+                "isBlocking": false
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "cursor": {
+      "after": null
+    }
+  },
+  "error_code": null,
+  "error_info": null
+}

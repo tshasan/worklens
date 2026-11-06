@@ -1,0 +1,1 @@
+[["GET https://bugzilla.mozilla.org/rest/bug?id=1", "body.json", {"status": 429, "retryAfter": "20", "times": 2}], ["GET https://bugzilla.mozilla.org/rest/bug?id=1", "body.json"]]

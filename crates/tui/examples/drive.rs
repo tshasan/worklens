@@ -28,6 +28,8 @@ Options:
   --whiteboard TAG team whiteboard tag, as if set in Settings
   --section ID     start on this section (waiting, land, returned, uplift,
                    others, sprint, ideas, drift, other, team)
+  --no-cache       start without cached work
+  --tone NAME      dark, light or nocolor
   --last           print only the final frame
 
 Steps: up down left right enter esc tab backtab pgup pgdn home end space
@@ -160,6 +162,8 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let (mut cache, mut dims, mut seed, mut whiteboard, mut last) = ("raw.json".to_owned(), (80, 24), None, None, false);
     let mut section: Option<String> = None;
+    let mut no_cache = false;
+    let mut tone = worklens_tui::Tone::Dark;
     let mut steps = Vec::new();
     while let Some(arg) = args.next() {
         let mut value = || args.next().unwrap_or_else(|| panic!("{arg} needs a value"));
@@ -170,6 +174,15 @@ fn main() {
             "--whiteboard" => whiteboard = Some(value()),
             "--section" => section = Some(value()),
             "--last" => last = true,
+            "--no-cache" => no_cache = true,
+            "--tone" => {
+                tone = match value().as_str() {
+                    "dark" => worklens_tui::Tone::Dark,
+                    "light" => worklens_tui::Tone::Light,
+                    "nocolor" => worklens_tui::Tone::NoColor,
+                    other => panic!("unknown tone {other}"),
+                }
+            }
             "-h" | "--help" => {
                 println!("{USAGE}");
                 return;
@@ -191,7 +204,8 @@ fn main() {
         whiteboard: whiteboard.clone(),
         ..CoreConfig::default()
     };
-    let mut app = App::new(cfg, opts, Some(raw), Marks::default(), now());
+    let mut app = App::new(cfg, opts, (!no_cache).then_some(raw), Marks::default(), now());
+    app.tone = tone;
     if let Some(tag) = whiteboard {
         let mut prefs = app.prefs.clone();
         prefs.whiteboard = tag;

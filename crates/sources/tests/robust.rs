@@ -16,6 +16,8 @@ const FIXTURES: &[&str] = &[
     "phabricator/revision.search.json",
     "phabricator/edge.search.json",
     "phabricator/phid.query.json",
+    "phabricator/availability-recorded.json",
+    "treeherder/revert-recorded.json",
     "treeherder/pushes.json",
     "treeherder/health.json",
     "treeherder/integration-pushes.json",
@@ -48,6 +50,7 @@ fn every_parser(bytes: &[u8]) {
     let _ = jira::parse_search(bytes, &cfg());
     let _ = jira::parse_fields(bytes);
     let _ = phab::parse_revisions(bytes);
+    let _ = phab::parse_availability(bytes);
     let _ = phab::parse_parents(bytes, &["PHID-DREV-1".into()]);
     let _ = telemetry::parse_metrics(bytes, "me@mozilla.com", &[BugId(1), BugId(1995008)]);
     let _ = trains::parse_trains(bytes);

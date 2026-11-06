@@ -4100,7 +4100,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "worklens"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -4124,7 +4124,7 @@ dependencies = [
 
 [[package]]
 name = "worklens-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "indexmap",
  "jiff",
@@ -4136,7 +4136,7 @@ dependencies = [
 
 [[package]]
 name = "worklens-sources"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures",
  "indexmap",
@@ -4153,7 +4153,7 @@ dependencies = [
 
 [[package]]
 name = "worklens-store"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde",
@@ -4165,7 +4165,7 @@ dependencies = [
 
 [[package]]
 name = "worklens-testkit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serde_json",
@@ -4173,7 +4173,7 @@ dependencies = [
 
 [[package]]
 name = "worklens-tui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jiff",
  "proptest",

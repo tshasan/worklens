@@ -37,6 +37,7 @@ pub(crate) fn restore(raw: &mut Raw, previous: Option<&Raw>) {
                 source: e.source.clone(),
                 message: e.message.clone(),
                 unset: e.unset,
+                retry_at: e.retry_at,
             }),
     );
 }
@@ -79,6 +80,7 @@ fn apply_landings(raw: &mut Raw, mut report: Landings) {
                 source: "treeherder-landings".into(),
                 message: format!("{}: {error}", repository.repository),
                 unset: false,
+                retry_at: repository.retry_at,
             });
             if let Some(old) = raw
                 .landings
@@ -86,6 +88,7 @@ fn apply_landings(raw: &mut Raw, mut report: Landings) {
                 .and_then(|r| r.repositories.iter().find(|r| r.repository == repository.repository))
             {
                 repository.matches.clone_from(&old.matches);
+                repository.backouts.clone_from(&old.backouts);
                 repository.checked_at = old.checked_at;
                 repository.scanned_pushes = old.scanned_pushes;
                 repository.oldest_push = old.oldest_push;
@@ -116,6 +119,7 @@ pub(crate) async fn refresh(http: &Http, cfg: &Config, raw: &mut Raw, touched: &
                 source: "probeinfo".into(),
                 message: error.summary(),
                 unset: false,
+                retry_at: error.retry_at(),
             }),
         }
     }
@@ -185,11 +189,13 @@ mod tests {
             source: "probeinfo".into(),
             message: "503 unavailable".into(),
             unset: false,
+            retry_at: None,
         });
         raw.errors.push(SourceError {
             source: "treeherder-landings".into(),
             message: "429 throttled".into(),
             unset: false,
+            retry_at: None,
         });
         assert!(!telemetry_due(&raw, Timestamp::from_second(now().as_second() + 299).unwrap()));
         assert!(telemetry_due(&raw, Timestamp::from_second(now().as_second() + 300).unwrap()));
@@ -257,6 +263,7 @@ mod tests {
             repositories: vec![repo],
         });
         let repo = RepositoryLandings {
+            retry_at: None,
             repository: "autoland".into(),
             checked_at: now(),
             push_limit: 100,
@@ -264,6 +271,7 @@ mod tests {
             oldest_push: None,
             error: Some("429 throttled".into()),
             matches: Vec::new(),
+            backouts: Vec::new(),
         };
         apply_landings(
             &mut raw,

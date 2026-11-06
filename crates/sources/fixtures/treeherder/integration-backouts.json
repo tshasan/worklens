@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "repository": "autoland"
+  },
+  "results": [
+    {
+      "revision": "7777777777777777777777777777777777777777",
+      "push_timestamp": 1793736000,
+      "revisions": [
+        {
+          "revision": "7171717171717171717171717171717171717171",
+          "comments": "Backout bug 1995012\n",
+          "author": "sheriff@mozilla.com"
+        },
+        {
+          "revision": "7272727272727272727272727272727272727272",
+          "comments": "Backed out changeset for failures\n",
+          "author": "sheriff@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "6666666666666666666666666666666666666666",
+      "push_timestamp": 1793732400,
+      "revisions": [
+        {
+          "revision": "6161616161616161616161616161616161616161",
+          "comments": "Backed out 2 changesets (bug 1995010, Bug 1995011) for causing build bustages. CLOSED TREE\n\nBacked out changeset 0a0a0a0a0a0a (bug 1995011)\nBacked out changeset 0b0b0b0b0b0b (bug 1995010)\n",
+          "author": "sheriff@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "5555555555555555555555555555555555555555",
+      "push_timestamp": 1793728800,
+      "revisions": [
+        {
+          "revision": "5151515151515151515151515151515151515151",
+          "comments": "Revert \"Bug 1995020 - Tidy the extractor\" for breaking the build\n\nThis reverts commit 0c0c0c0c0c0c.\n",
+          "author": "sheriff@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "3333333333333333333333333333333333333333",
+      "push_timestamp": 1793718000,
+      "revisions": [
+        {
+          "revision": "3131313131313131313131313131313131313131",
+          "comments": "Bug 1995008 - Support view-source: in the extractor, again r=quillfox\n\nDifferential Revision: https://phabricator.services.mozilla.com/D321987\n",
+          "author": "me@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "2222222222222222222222222222222222222222",
+      "push_timestamp": 1793710800,
+      "revisions": [
+        {
+          "revision": "2121212121212121212121212121212121212121",
+          "comments": "Backed out changeset 111111111111 (Bug 1995008) for causing bc failures in browser_viewsource.js\n",
+          "author": "sheriff@mozilla.com"
+        }
+      ]
+    },
+    {
+      "revision": "1111111111111111111111111111111111111111",
+      "push_timestamp": 1793700000,
+      "revisions": [
+        {
+          "revision": "1111111111111111111111111111111111111111",
+          "comments": "Bug 1995008 - Support view-source: in the extractor r=quillfox\n\nDifferential Revision: https://phabricator.services.mozilla.com/D321987\n",
+          "author": "me@mozilla.com"
+        }
+      ]
+    }
+  ]
+}

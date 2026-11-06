@@ -49,7 +49,10 @@ fn a_comment_does_not_restart_the_review_clock() {
     let mine = rows.iter().find(|r| r.0 == "D1").expect("my revision is listed");
     assert!(mine.2, "my revision waited on a week of business days: {mine:?}");
     let theirs = rows.iter().find(|r| r.0 == "D2").expect("the review asked of me is listed");
-    assert!(theirs.1.contains("4 days"), "age from the diff, not the comment: {theirs:?}");
+    assert!(
+        theirs.1.contains("latest diff posted 4 days ago"),
+        "age from the diff, not the comment: {theirs:?}"
+    );
 }
 
 #[test]
@@ -58,4 +61,37 @@ fn without_a_diff_date_the_age_falls_back_to_last_activity() {
     let rows = listed(&s);
     assert_eq!(rows.len(), 1);
     assert!(!rows[0].2, "an hour of activity isn't stale: {rows:?}");
+    assert!(rows[0].1.ends_with("revision last modified today"), "{rows:?}");
+}
+
+#[test]
+fn accepted_age_names_modification_without_claiming_when_acceptance_happened() {
+    let mut r = revision(1, "PHID-ME", "PHID-THEM", Some("2026-10-01T12:00:00Z"));
+    r["status"] = json!("accepted");
+    r["modified"] = json!("2026-10-26T12:00:00Z");
+    r["reviewers"][0]["status"] = json!("accepted");
+    let s = snapshot(&json!([r]), &json!([]));
+    let rows = listed(&s);
+    assert!(rows[0].2, "the existing seven-day stale mechanism remains");
+    assert!(rows[0].1.starts_with("D1 accepted by them;"), "{rows:?}");
+    assert!(rows[0].1.contains("revision last modified 8 days ago"), "{rows:?}");
+    assert!(!rows[0].1.contains("not landed for"), "{rows:?}");
+}
+
+#[test]
+fn changed_revision_age_keeps_the_rejecting_reviewer_and_names_modification_time() {
+    let mut r = revision(1, "PHID-ME", "PHID-THEM", None);
+    r["status"] = json!("needs-revision");
+    r["reviewers"][0]["status"] = json!("rejected");
+    let s = snapshot(&json!([r]), &json!([]));
+    let rows = listed(&s);
+    assert_eq!(rows[0].1, "changes requested on D1 by them; revision last modified today");
+}
+
+#[test]
+fn a_complete_day_is_not_reported_as_today() {
+    let mut r = revision(1, "PHID-ME", "PHID-THEM", None);
+    r["modified"] = json!("2026-11-02T12:00:00Z");
+    let s = snapshot(&json!([r]), &json!([]));
+    assert_eq!(listed(&s)[0].1, "D1 waiting on them; revision last modified 1 day ago");
 }

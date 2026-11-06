@@ -37,6 +37,39 @@ pub fn owner<'a>(s: &'a Snapshot, e: &Entry) -> Option<&'a str> {
         .or_else(|| e.issue.and_then(|i| s.issue(i).assignee.as_deref()))
 }
 
+pub fn away<'a>(s: &'a Snapshot, rev: &'a Revision) -> Vec<(&'a str, Timestamp)> {
+    if s.raw
+        .errors
+        .iter()
+        .any(|e| e.source == "phabricator-availability" || e.source == "phabricator")
+    {
+        return Vec::new();
+    }
+    let owing: Vec<&Reviewer> = reviewers(rev)
+        .filter(|v| matches!(v.status, ReviewerStatus::Added | ReviewerStatus::Blocking))
+        .collect();
+    let blocking = owing.iter().any(|v| v.status == ReviewerStatus::Blocking);
+    let owing: Vec<_> = owing
+        .into_iter()
+        .filter(|v| !blocking || v.status == ReviewerStatus::Blocking)
+        .collect();
+    let away: Vec<(&str, Timestamp)> = owing
+        .iter()
+        .filter_map(|v| {
+            s.raw
+                .away
+                .get(&v.phid)
+                .filter(|until| **until > s.now)
+                .map(|until| (v.phid.as_str(), *until))
+        })
+        .collect();
+    if away.is_empty() || away.len() < owing.len() {
+        Vec::new()
+    } else {
+        away
+    }
+}
+
 pub fn reviewers(rev: &Revision) -> impl Iterator<Item = &Reviewer> {
     rev.reviewers.iter().filter(|v| v.status != ReviewerStatus::Resigned)
 }

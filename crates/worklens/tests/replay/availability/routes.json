@@ -1,0 +1,44 @@
+[
+  [
+    "GET https://product-details.mozilla.org/1.0/firefox_versions.json",
+    "../../../../sources/fixtures/product-details-recorded.json"
+  ],
+  [
+    "GET https://bugzilla.mozilla.org/rest/bug",
+    "bugs.json"
+  ],
+  [
+    "GET https://treeherder.mozilla.org/api/project/try/push/",
+    "try.json"
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/user.whoami",
+    "me.json"
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/project.search",
+    "empty-search.json"
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/differential.revision.search",
+    "mine.json",
+    {
+      "body": "constraints[authorPHIDs][0]=PHID-USER-me"
+    }
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/differential.revision.search",
+    "empty-search.json"
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/phid.query",
+    "names.json"
+  ],
+  [
+    "POST https://phabricator.services.mozilla.com/api/user.search",
+    "available.json",
+    {
+      "body": "attachments[availability]=1"
+    }
+  ]
+]

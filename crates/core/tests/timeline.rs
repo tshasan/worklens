@@ -83,15 +83,15 @@ fn ship_text(flags: Value) -> Option<String> {
 fn ships_says_which_release_from_the_lowest_fixed_version() {
     assert_eq!(
         ship_text(json!({"cf_status_firefox161":"fixed","cf_status_firefox_esr153":"fixed"})).as_deref(),
-        Some("Fixed in Nightly 161; it becomes Beta on Nov 5 (Bugzilla status)")
+        Some("Bugzilla marks Firefox 161 fixed; expected in Nightly; scheduled Beta merge Nov 5; build inclusion unverified")
     );
     assert_eq!(
         ship_text(json!({"cf_status_firefox161":"fixed","cf_status_firefox160":"fixed"})).as_deref(),
-        Some("Fixed in Beta 160; Firefox 160 releases Nov 6 (Bugzilla status)")
+        Some("Bugzilla marks Firefox 160 fixed; expected in Beta; scheduled release Nov 6; build inclusion unverified")
     );
     assert_eq!(
         ship_text(json!({"cf_status_firefox159":"verified"})).as_deref(),
-        Some("Firefox 159 has the fix and is released (Bugzilla status)")
+        Some("Bugzilla marks Firefox 159 fixed; expected in a released train; build inclusion unverified")
     );
     assert_eq!(ship_text(json!({"cf_status_firefox161":"affected"})), None);
 }

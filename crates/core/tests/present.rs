@@ -276,7 +276,7 @@ fn sections_say_why_they_were_not_checked() {
     assert!(s.empty_text(Section::Drift).starts_with("Off: Jira isn't set up"));
     assert!(s.empty_text(Section::Team).starts_with("Off: Jira isn't set up"));
     assert!(s.empty_text(Section::Land).starts_with("Not checked: Phabricator"));
-    assert_eq!(s.empty_text(Section::Uplift), Section::Uplift.empty());
+    assert_eq!(s.empty_text(Section::Other), Section::Other.empty());
     assert_eq!(s.raw.failures().count(), 1);
 
     let s = snapshot(&json!([]), &json!({}), &json!([]));

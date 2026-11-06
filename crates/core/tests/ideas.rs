@@ -65,14 +65,7 @@ fn ids(s: &Snapshot, section: Section) -> Vec<String> {
 fn an_idea_is_one_row_in_its_own_tab_and_never_a_turn() {
     let s = snapshot();
     assert_eq!(ids(&s, Section::Ideas), ["AIDI-79"]);
-    for turn in [
-        Section::Waiting,
-        Section::Land,
-        Section::Returned,
-        Section::Uplift,
-        Section::Others,
-        Section::Other,
-    ] {
+    for turn in [Section::Waiting, Section::Land, Section::Returned, Section::Others, Section::Other] {
         assert!(!ids(&s, turn).contains(&"AIDI-79".to_owned()), "{turn:?}");
     }
     let idea = s.entry(s.find("AIDI-79").unwrap());

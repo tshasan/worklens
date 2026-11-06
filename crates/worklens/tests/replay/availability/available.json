@@ -1,0 +1,19 @@
+{
+  "result": {
+    "data": [
+      {
+        "phid": "PHID-USER-fixture",
+        "attachments": {
+          "availability": {
+            "value": "available",
+            "until": null,
+            "name": "Available",
+            "color": "green"
+          }
+        }
+      }
+    ]
+  },
+  "error_code": null,
+  "error_info": null
+}

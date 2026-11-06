@@ -31,9 +31,17 @@ fn snapshot(bugs: &[Value], uplift: &Value) -> Snapshot {
     build_snapshot(raw, &CoreConfig::default(), "2026-11-02T12:00:00Z".parse::<Timestamp>().unwrap())
 }
 
+fn landed(s: &Snapshot) -> Vec<(String, String)> {
+    s.section(Section::Landed, true)
+        .map(|i| s.entry(i))
+        .map(|e| (s.id(e).to_string(), s.reason(e).to_string()))
+        .collect()
+}
+
 fn listed(s: &Snapshot) -> Vec<(String, String, String, String, String)> {
     s.entries
         .iter()
+        .filter(|e| e.placement.is_none_or(|p| p.section != Section::Landed))
         .map(|e| {
             let section = e.placement.map_or("", |p| p.section.id()).to_owned();
             let next = s.next_step(e).map(|n| n.to_string()).unwrap_or_default();
@@ -43,7 +51,7 @@ fn listed(s: &Snapshot) -> Vec<(String, String, String, String, String)> {
 }
 
 #[test]
-fn each_uplift_state_is_one_turn() {
+fn only_an_approved_or_requested_uplift_is_a_turn() {
     let patch = |approvals: Value| json!({ "patch": true, "approvals": approvals });
     let s = snapshot(
         &[
@@ -52,8 +60,7 @@ fn each_uplift_state_is_one_turn() {
             fixed(12, &json!({ "161": "fixed", "160": "affected" }), ""),
             fixed(13, &json!({ "161": "fixed", "160": "fixed" }), ""),
             fixed(14, &json!({ "161": "fixed", "160": "affected", "_esr153": "affected" }), ""),
-            fixed(15, &json!({ "161": "fixed", "160": "affected" }), "[checkin-needed-beta]"),
-            fixed(16, &json!({ "161": "fixed", "160": "affected" }), ""),
+            fixed(16, &json!({ "161": "fixed", "160": "---" }), ""),
         ],
         &json!({
             "10": patch(json!([])),
@@ -61,23 +68,14 @@ fn each_uplift_state_is_one_turn() {
             "12": patch(json!([["beta", "?"]])),
             "13": patch(json!([])),
             "14": patch(json!([])),
-            "15": patch(json!([])),
-            "16": { "patch": false, "approvals": [] },
+            "16": patch(json!([])),
         }),
     );
     let row =
         |section: &str, id: &str, tag: &str, reason: &str, next: &str| (section.into(), id.into(), tag.into(), reason.into(), next.into());
-    let request = "Request an uplift in Lando, or set the status flags if it isn't needed";
     assert_eq!(
         listed(&s),
         vec![
-            row(
-                "uplift",
-                "10",
-                "up",
-                "fixed in 161; Beta 160 is affected and no uplift was requested",
-                request
-            ),
             row(
                 "land",
                 "11",
@@ -92,23 +90,36 @@ fn each_uplift_state_is_one_turn() {
                 "uplift to Beta 160 requested, waiting on release management, 3 days",
                 ""
             ),
-            row(
-                "uplift",
-                "14",
-                "up",
-                "fixed in 161; Beta 160 and ESR 153 are affected and no uplift was requested",
-                request
-            ),
         ],
-        "13 is fixed everywhere, 15 is marked checkin-needed-beta, and 16 has no patch to uplift, so they're left out"
+        "any Nightly fix could be uplifted, so an affected or unset Beta status alone asks nothing of me"
     );
-    assert_eq!(s.section(Section::Uplift, false).count(), 2);
+    let in_nightly = "Bugzilla marks Firefox 161 fixed; build inclusion unverified";
+    assert_eq!(
+        landed(&s),
+        [
+            ("10".to_owned(), in_nightly.to_owned()),
+            (
+                "13".to_owned(),
+                "Bugzilla marks Firefox 160 fixed; build inclusion unverified".to_owned()
+            ),
+            ("14".to_owned(), in_nightly.to_owned()),
+            ("16".to_owned(), in_nightly.to_owned()),
+        ],
+        "with nothing to do, they're listed as landed"
+    );
 }
 
 #[test]
-fn a_fixed_bug_without_uplift_info_stays_out() {
+fn a_fixed_bug_without_uplift_info_is_only_landed() {
     let s = snapshot(&[fixed(10, &json!({ "161": "fixed", "160": "affected" }), "")], &json!({}));
-    assert!(s.entries.is_empty(), "no uplift info: nothing to say about a fixed bug");
+    assert!(listed(&s).is_empty(), "no uplift info: nothing to do about a fixed bug");
+    assert_eq!(
+        landed(&s),
+        [(
+            "10".to_owned(),
+            "Bugzilla marks Firefox 161 fixed; build inclusion unverified".to_owned()
+        )]
+    );
 }
 
 #[test]
@@ -201,24 +212,6 @@ fn crash_signatures_are_split() {
 }
 
 #[test]
-fn a_fix_with_no_beta_status_needs_one_set() {
-    let s = snapshot(
-        &[fixed(60, &json!({ "161": "fixed", "160": "---" }), "")],
-        &json!({ "60": { "patch": true, "approvals": [] } }),
-    );
-    assert_eq!(
-        listed(&s),
-        vec![(
-            "uplift".into(),
-            "60".into(),
-            "st?".into(),
-            "fixed in 161; the Beta 160 status isn't set, so nobody can tell if it needs an uplift".into(),
-            "Set status-firefox160 to affected or unaffected".into()
-        )]
-    );
-}
-
-#[test]
 fn the_comment_that_came_with_a_needinfo_is_found() {
     let mut bug = fixed(70, &json!({}), "");
     bug["status"] = json!("NEW");
@@ -271,84 +264,18 @@ fn group_reviews_wait_on_me_after_direct_ones() {
     assert_eq!(
         waiting,
         [
-            ("D91".into(), "r?".into(), "review requested on D91 by them, 4 days".into()),
+            (
+                "D91".into(),
+                "r?".into(),
+                "review requested on D91 by them; revision last modified 4 days ago".into()
+            ),
             (
                 "80".into(),
                 "r?#".into(),
-                "review requested of #ai-platform-reviewers on D90 by them, 12 days".into()
+                "review requested of #ai-platform-reviewers on D90 by them; revision last modified 12 days ago".into()
             ),
         ],
         "the direct review comes first though the group one is older"
-    );
-}
-
-fn needs_uplift(s: &Snapshot) -> Vec<String> {
-    s.section(Section::Uplift, true).map(|i| s.id(s.entry(i)).to_string()).collect()
-}
-
-#[test]
-fn a_needinfo_on_the_assignee_holds_the_uplift() {
-    let mut asked = fixed(10, &json!({ "161": "fixed", "160": "affected" }), "");
-    asked["assigned_to"] = json!("dev@mozilla.com");
-    asked["flags"] = json!([
-        { "name": "needinfo", "status": "?", "requestee": "dev@mozilla.com", "setter": "qa@mozilla.com", "creation_date": "2026-10-31T12:00:00Z" },
-    ]);
-    let mut elsewhere = fixed(11, &json!({ "161": "fixed", "160": "affected" }), "");
-    elsewhere["flags"] = json!([
-        { "name": "needinfo", "status": "?", "requestee": "qa@mozilla.com", "setter": "dev@mozilla.com", "creation_date": "2026-10-31T12:00:00Z" },
-    ]);
-    let patch = json!({ "patch": true, "approvals": [] });
-    let s = snapshot(&[asked, elsewhere], &json!({ "10": patch, "11": patch }));
-    assert_eq!(
-        needs_uplift(&s),
-        ["11"],
-        "10's assignee has an open question; 11's needinfo is on someone else"
-    );
-}
-
-#[test]
-fn an_open_regression_holds_the_uplift() {
-    let regression = |id: u32, of: u32, open: bool| {
-        let mut b = fixed(id, &json!({}), "");
-        if open {
-            b["status"] = json!("NEW");
-            b["resolution"] = json!("");
-        }
-        b["assigned_to"] = json!("nobody@mozilla.org");
-        b["via"] = json!(["regression"]);
-        b["regressed_by"] = json!([of]);
-        b
-    };
-    let patch = json!({ "patch": true, "approvals": [] });
-    let s = snapshot(
-        &[
-            fixed(10, &json!({ "161": "fixed", "160": "affected" }), ""),
-            fixed(11, &json!({ "161": "fixed", "160": "affected" }), ""),
-            regression(30, 10, true),
-            regression(31, 11, false),
-        ],
-        &json!({ "10": patch, "11": patch }),
-    );
-    assert_eq!(needs_uplift(&s), ["11"], "10 caused open bug 30; 11's regression 31 is fixed");
-    let waiting: Vec<String> = s.section(Section::Waiting, true).map(|i| s.id(s.entry(i)).to_string()).collect();
-    assert_eq!(waiting, ["30"], "the regression itself is still mine to look at");
-}
-
-#[test]
-fn only_supported_esrs_need_uplifts() {
-    let patch = json!({ "patch": true, "approvals": [] });
-    let s = snapshot(
-        &[
-            fixed(10, &json!({ "161": "fixed", "160": "unaffected", "_esr140": "affected" }), ""),
-            fixed(11, &json!({ "161": "fixed", "160": "unaffected", "_esr153": "affected" }), ""),
-        ],
-        &json!({ "10": patch, "11": patch }),
-    );
-    assert_eq!(needs_uplift(&s), ["11"], "ESR 140 isn't a supported train, so 10 has nowhere to go");
-    let e = s.entries.iter().find(|e| s.id(e).to_string() == "11").unwrap();
-    assert_eq!(
-        s.reason(e).to_string(),
-        "fixed in 161; ESR 153 is affected and no uplift was requested"
     );
 }
 
@@ -362,7 +289,7 @@ fn the_brief_shows_evidence_where_it_decides_the_next_step() {
         json!([{ "name": "needinfo", "status": "?", "requestee": ME, "setter": "a@mozilla.com", "creation_date": "2026-10-30T10:00:30Z" }]);
     let s = snapshot(
         &[fixed(10, &json!({ "161": "fixed", "160": "affected" }), ""), asked],
-        &json!({ "10": { "patch": true, "approvals": [] } }),
+        &json!({ "10": { "patch": true, "approvals": [["beta", "+"]] } }),
     );
     let brief = |id: &str| {
         let e = s.entries.iter().find(|e| s.id(e).to_string() == id).unwrap();
@@ -375,7 +302,7 @@ fn the_brief_shows_evidence_where_it_decides_the_next_step() {
     assert!(uplift.contains("- Beta 160: Bugzilla reports affected"), "{uplift}");
     assert!(
         uplift.contains("- Nightly 161: Bugzilla reports fixed"),
-        "the channels decide the uplift: {uplift}"
+        "the channels decide where the uplift lands: {uplift}"
     );
     assert!(uplift.contains("\n- Unknown: telemetry\n"), "limitations on one line: {uplift}");
     assert!(!uplift.contains("Glean definitions not fetched"), "{uplift}");

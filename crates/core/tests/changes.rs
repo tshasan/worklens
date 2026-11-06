@@ -200,3 +200,19 @@ fn legacy_marks_acquire_a_baseline_then_detect_a_later_diff_without_waking_early
     apply(&mut after, &marks, now);
     assert!(after.entry(after.find("1995008").unwrap()).marks.hidden.is_none());
 }
+
+#[test]
+fn a_section_worklens_no_longer_has_is_not_a_move() {
+    use std::borrow::Cow;
+    use worklens_core::changes::{Failed, changes};
+    use worklens_core::marks::Signature;
+    let sig = |section: &'static str| Signature {
+        section: Some(Cow::Borrowed(section)),
+        ..Signature::default()
+    };
+    assert!(changes(&sig("uplift"), &sig("landed"), Failed::default()).is_empty());
+    assert_eq!(
+        changes(&sig("waiting"), &sig("landed"), Failed::default()),
+        ["moved: Waiting on you → Landed"]
+    );
+}

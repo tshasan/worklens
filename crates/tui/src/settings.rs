@@ -84,7 +84,13 @@ pub fn groups() -> Vec<(&'static str, Vec<Setting>)> {
         ("Fetching", vec![S::Telemetry, S::LandingChecks, S::DriftDays, S::CacheMinutes]),
         ("Look", vec![S::Theme, S::ShowHidden]),
         ("Agent", vec![S::Agent, S::AgentDir]),
-        ("Section tabs", (0..Section::COUNT).map(S::Section).collect()),
+        (
+            "Section tabs",
+            (0..Section::COUNT)
+                .filter(|i| *i != Section::Backlog.index())
+                .map(S::Section)
+                .collect(),
+        ),
         ("Detail tabs", (0..Pane::COUNT).map(S::Pane).collect()),
     ]
 }

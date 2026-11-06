@@ -446,7 +446,10 @@ impl App {
         };
         for (n, section) in Section::ALL.iter().enumerate() {
             let mut count = 0;
-            for i in s.section(*section, self.show_hidden) {
+            for i in s
+                .section(*section, self.show_hidden)
+                .chain(s.section(Section::Backlog, self.show_hidden).filter(|_| *section == Section::Other))
+            {
                 if matches(s.entry(i)) {
                     count += 1;
                     if n == self.tab {
@@ -561,7 +564,11 @@ impl App {
 
     fn switch_tab(&mut self, to: usize) {
         self.seen[self.tab] = self.seen_now();
-        self.tab = to % Section::COUNT;
+        self.tab = if to == Section::Backlog.index() {
+            Section::Other.index()
+        } else {
+            to % Section::COUNT
+        };
         self.pane_scroll = 0;
         let before = std::mem::take(&mut self.seen[self.tab]);
         if let Some(gone) = self.rebuild_rows(&before) {
@@ -571,6 +578,9 @@ impl App {
     }
 
     pub fn tab_shown(&self, i: usize) -> bool {
+        if i == Section::Backlog.index() {
+            return false;
+        }
         match self.prefs.sections[i] {
             _ if i == 0 => true,
             Show::Always => true,
@@ -584,7 +594,7 @@ impl App {
             return Vec::new();
         }
         (0..Section::COUNT)
-            .filter(|i| self.prefs.sections[*i] == Show::Hidden && self.counts[*i] > 0)
+            .filter(|i| *i != Section::Backlog.index() && self.prefs.sections[*i] == Show::Hidden && self.counts[*i] > 0)
             .collect()
     }
 

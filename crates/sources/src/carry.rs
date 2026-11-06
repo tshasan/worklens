@@ -137,6 +137,7 @@ mod tests {
             source: source.into(),
             message: "503 Service Unavailable".into(),
             unset: false,
+            retry_at: None,
         });
     }
 

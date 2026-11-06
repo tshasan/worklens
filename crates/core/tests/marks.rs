@@ -109,8 +109,10 @@ fn hidden_entries_leave_their_section_unless_asked_for() {
     let mut marks = Marks::default();
     mark_done(&mut marks, &s, &s.entries[0], now());
     apply(&mut s, &marks, now());
-    assert_eq!(s.section(Section::Other, false).count(), 1);
-    assert_eq!(s.section(Section::Other, true).count(), 2);
+    let section = s.entries[0].placement.unwrap().section;
+    assert_eq!(section, Section::Backlog, "assigned with nothing started");
+    assert_eq!(s.section(section, false).count(), 1);
+    assert_eq!(s.section(section, true).count(), 2);
 }
 
 #[test]

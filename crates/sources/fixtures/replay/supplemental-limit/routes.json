@@ -1,0 +1,26 @@
+[
+  [
+    "GET https://probeinfo.telemetry.mozilla.org/glean/firefox-desktop/metrics",
+    "../cooldown/limited.json",
+    {
+      "status": 429,
+      "retryAfter": "Fri, 01 Jan 2100 00:00:00 GMT"
+    }
+  ],
+  [
+    "GET https://treeherder.mozilla.org/api/project/autoland/push/",
+    "../cooldown/limited.json",
+    {
+      "status": 429,
+      "retryAfter": "Fri, 01 Jan 2100 00:00:00 GMT"
+    }
+  ],
+  [
+    "GET https://treeherder.mozilla.org/api/project/mozilla-central/push/",
+    "../cooldown/limited.json",
+    {
+      "status": 429,
+      "retryAfter": "Fri, 01 Jan 2100 00:00:00 GMT"
+    }
+  ]
+]

@@ -32,7 +32,7 @@ impl Evidence {
 }
 
 pub fn decides(e: &Entry) -> bool {
-    matches!(e.placement.map(|p| p.section), Some(Section::Land | Section::Uplift))
+    matches!(e.placement.map(|p| p.section), Some(Section::Land))
         || matches!(e.placement.map(|p| p.reason), Some(crate::rules::Reason::LandingBlocked(_)))
 }
 
@@ -289,8 +289,15 @@ fn landing_evidence(s: &Snapshot, e: &Entry) -> Vec<Evidence> {
                 } else {
                     ""
                 };
+                let backout = match crate::backout::after(&s.raw, &repo.repository, landing) {
+                    Some(b) => format!("backed out in {} push {} at {}", repo.repository, b.push_revision, b.pushed_at),
+                    None => {
+                        "no attributed later backout in the scanned pushes; bug-number candidates and unscanned pushes remain unverified"
+                            .to_owned()
+                    }
+                };
                 format!(
-                    "Commit {} observed in {} push {} at {}; {version}{health}; later backouts and shipped builds unverified",
+                    "Commit {} observed in {} push {} at {}; {version}{health}; {backout}; shipped builds unverified",
                     landing.commit, repo.repository, landing.push_revision, landing.pushed_at
                 )
             } else {

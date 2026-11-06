@@ -1,0 +1,6 @@
+[
+  ["GET https://bugzilla.mozilla.org/rest/bug?id=1", "limited.json", {"status": 429, "retryAfter": "3", "times": 1}],
+  ["GET https://bugzilla.mozilla.org/rest/bug?id=1", "ok.json"],
+  ["GET https://bugzilla.mozilla.org/rest/bug?id=2", "ok.json"],
+  ["GET https://mozilla-hub.atlassian.net/rest/api/3/myself", "ok.json"]
+]

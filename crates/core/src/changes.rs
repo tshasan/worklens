@@ -119,13 +119,11 @@ fn text(v: Option<&str>) -> &str {
 }
 
 fn section(old: Option<&str>, new: Option<&str>, out: &mut Vec<String>) {
-    if old == new {
+    let find = |id: &str| Section::ALL.into_iter().find(|s| s.id() == id);
+    if old == new || old.is_some_and(|id| find(id).is_none()) {
         return;
     }
-    let title = |v: Option<&str>| {
-        v.and_then(|id| Section::ALL.iter().find(|s| s.id() == id))
-            .map_or("no section", |s| s.title())
-    };
+    let title = |v: Option<&str>| v.and_then(find).map_or("no section", Section::title);
     out.push(format!("moved: {} → {}", title(old), title(new)));
 }
 

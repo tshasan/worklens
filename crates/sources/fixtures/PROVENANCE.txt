@@ -1,0 +1,46 @@
+Evidence collected November 5, 2026 for the bounded SPEC.md assignment.
+
+phabricator/availability-recorded.json
+  A real user.search response obtained through the existing ~/.arcrc token,
+  after user.whoami identified the requesting account. Only the availability
+  attachment was retained; the PHID was replaced, identity fields were removed,
+  and eventPHID was removed. The recorded state was available, with null until.
+  No credentials, names, email addresses or calendar events were retained.
+  Token access to this attachment is verified. A real away response was not
+  recorded. Away and error cases in tests are explicitly derived cases.
+  Authoritative shape and enum evidence:
+  https://secure.phabricator.com/conduit/method/user.search/
+  https://github.com/phacility/phabricator/blob/master/src/applications/people/engineextension/PhabricatorPeopleAvailabilitySearchEngineAttachment.php
+  https://github.com/phacility/phabricator/blob/master/src/applications/calendar/storage/PhabricatorCalendarEventInvitee.php
+
+replay/availability/available.json and worklens/tests/replay/availability/available.json
+  Copies of that sanitized attachment response. The surrounding revision,
+  identity, names and other replay responses are synthetic test setup.
+  worklens/tests/replay/availability/away-derived.json changes the attachment
+  to away with a synthetic 2099-01-01 return date. It is not recorded PTO.
+
+treeherder/revert-recorded.json
+  Reduced real response from:
+  https://treeherder.mozilla.org/api/project/autoland/push/?count=100
+  Only one push, its timestamp, commit hash and message were retained. Authors
+  and unrelated pushes were removed. Reviewer handles in the quoted subject
+  were replaced with fixture-reviewers. The message explicitly names the reverted
+  commit in its body. Existing integration-backouts.json is synthetic, including
+  its older Mercurial-style abbreviated changeset examples.
+
+product-details-recorded.json
+  Reduced real response from:
+  https://product-details.mozilla.org/1.0/firefox_versions.json
+  Only the version and calendar keys consumed by worklens were retained.
+  Nightly 162, Beta 160 and Release 159 demonstrate that train numbers need not
+  be consecutive. The response does not establish inclusion in any build.
+
+Inactivity policy audit
+  https://github.com/mozilla/bugbot/blob/master/bugbot/rules/inactive_reviewer.py
+  https://github.com/mozilla/bugbot/blob/master/bugbot/rules/not_landed.py
+  The former evaluates reviewer activity and old patches; the latter evaluates
+  accepted, unlanded patches using a configurable number of weeks. Neither
+  establishes a two-week policy for Jira in-progress tickets or arbitrary open
+  revisions. Those branch-only stale cases were withdrawn. Existing review
+  follow-up thresholds were preserved; text names latest-diff or modification
+  age, rather than claiming that no activity occurred.

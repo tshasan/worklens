@@ -36,6 +36,7 @@ index_type!(RevIdx);
 index_type!(IssueIdx);
 index_type!(EntryIdx);
 index_type!(IdeaIdx);
+index_type!(StackIdx);
 
 impl fmt::Display for BugId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

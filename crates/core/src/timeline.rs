@@ -2,7 +2,7 @@ use jiff::Timestamp;
 use serde::Serialize;
 
 use crate::ids::RevIdx;
-use crate::raw::{Bug, RevStatus};
+use crate::raw::RevStatus;
 use crate::section::Section;
 use crate::snapshot::{Entry, Snapshot, TryState};
 
@@ -87,33 +87,25 @@ pub fn events(s: &Snapshot, e: &Entry) -> Vec<Event> {
     out
 }
 
-fn fixed_in(b: &Bug) -> Option<u32> {
-    b.release_flags
-        .iter()
-        .filter(|(_, v)| matches!(v.as_str(), "fixed" | "verified"))
-        .filter_map(|(k, _)| k.strip_prefix("cf_status_firefox")?.parse().ok())
-        .min()
-}
-
 pub fn ships(s: &Snapshot, e: &Entry) -> Option<String> {
-    let version = fixed_in(s.bug(e.bug?))?;
-    let t = s.raw.trains.as_ref()?;
-    let day = |d: jiff::civil::Date| d.strftime("%b %-d").to_string();
-    if version <= t.release {
-        Some(format!("Firefox {version} has the fix and is released (Bugzilla status)"))
-    } else if version == t.beta {
-        Some(format!(
-            "Fixed in Beta {version}; Firefox {version} releases {} (Bugzilla status)",
-            day(t.next_release)
-        ))
-    } else if version == t.nightly {
-        Some(format!(
-            "Fixed in Nightly {version}; it becomes Beta on {} (Bugzilla status)",
-            day(t.next_merge)
-        ))
-    } else {
-        None
-    }
+    use crate::train::{Train, day, position};
+    let version = crate::train::fixed_in(s.bug(e.bug?))?;
+    let today = s.now.to_zoned(jiff::tz::TimeZone::UTC).date();
+    let train = s
+        .raw
+        .trains
+        .as_ref()
+        .filter(|_| crate::train::trusted(&s.raw, s.now))
+        .and_then(|t| position(version, t, today));
+    let expected = match train {
+        Some(Train::Released) => "expected in a released train".to_owned(),
+        Some(Train::Beta(d)) => format!("expected in Beta; scheduled release {}", day(d)),
+        Some(Train::Nightly(d)) => format!("expected in Nightly; scheduled Beta merge {}", day(d)),
+        _ => "train unknown: calendar missing, stale or version unmatched".to_owned(),
+    };
+    Some(format!(
+        "Bugzilla marks Firefox {version} fixed; {expected}; build inclusion unverified"
+    ))
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]

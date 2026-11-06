@@ -1,0 +1,8 @@
+{
+  "result": {
+    "phid": "PHID-USER-me",
+    "primaryEmail": "me@mozilla.com"
+  },
+  "error_code": null,
+  "error_info": null
+}

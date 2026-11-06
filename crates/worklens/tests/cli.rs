@@ -266,6 +266,7 @@ fn recorded_stack_survives_cache_cli_compact_brief_and_mcp_with_another_source_f
         repositories: vec![
             scan,
             RepositoryLandings {
+                retry_at: None,
                 repository: "mozilla-central".into(),
                 checked_at: now,
                 push_limit: 100,
@@ -273,6 +274,7 @@ fn recorded_stack_survives_cache_cli_compact_brief_and_mcp_with_another_source_f
                 oldest_push: None,
                 error: Some("503 service unavailable".into()),
                 matches: Vec::new(),
+                backouts: Vec::new(),
             },
         ],
     });
@@ -280,6 +282,7 @@ fn recorded_stack_survives_cache_cli_compact_brief_and_mcp_with_another_source_f
         source: "treeherder-landings".into(),
         message: "mozilla-central: 503 service unavailable".into(),
         unset: false,
+        retry_at: None,
     });
     worklens_store::write_raw(&cache, &raw).unwrap();
 
@@ -587,20 +590,32 @@ fn next_prints_in_the_order_its_help_describes() {
     let busy = Home::with_cache("busy-order", "busy.json");
     let (_, help, _) = busy.run_exactly(&["next", "--help"]);
     assert!(help.contains("critical first"), "{help}");
+    assert!(help.contains("backed-out landings first"), "{help}");
     assert!(!help.contains("What needs you, oldest first"), "{help}");
     let (_, out, _) = busy.run(&["next", "--all", "--json"]);
     let json: serde_json::Value = serde_json::from_str(&out).unwrap();
     let rank = |tier: &serde_json::Value| ["critical", "important", "other"].iter().position(|t| tier == t).unwrap();
-    let items = json["items"].as_array().unwrap();
+    assert!(help.contains("stack stays together, bottom first"), "{help}");
+    let all = json["items"].as_array().unwrap();
+    let key = |x: &serde_json::Value| (rank(&x["tier"]), x["since"].as_str().unwrap_or("~").to_owned());
+    let mut units: Vec<Vec<&serde_json::Value>> = Vec::new();
+    for x in all {
+        let bottom = &x["stack"]["bottom"];
+        match units.last_mut() {
+            Some(unit) if !bottom.is_null() && unit[0]["stack"]["bottom"] == *bottom && unit[0]["section"] == x["section"] => unit.push(x),
+            _ => units.push(vec![x]),
+        }
+    }
+    let items: Vec<&serde_json::Value> = units.iter().map(|unit| *unit.iter().min_by_key(|x| key(x)).unwrap()).collect();
     for pair in items.windows(2) {
-        let (a, b) = (&pair[0], &pair[1]);
-        if a["section"] != b["section"] || a["tag"] == "r?#" || b["tag"] == "r?#" {
+        let (a, b) = (pair[0], pair[1]);
+        if a["section"] != b["section"] || a["tag"] == "r?#" || b["tag"] == "r?#" || a["tag"] == "bo" {
             continue;
         }
-        let key = |x: &serde_json::Value| (rank(&x["tier"]), x["since"].as_str().unwrap_or("~").to_owned());
+        assert_ne!(b["tag"], "bo", "a backout comes before everything else in its section:\n{a}\n{b}");
         assert!(
             key(a) <= key(b),
-            "critical first, then important, then the rest; oldest first within each:\n{a}\n{b}"
+            "critical first, then important, then the rest; oldest first within each; a stack sorts as its first member:\n{a}\n{b}"
         );
     }
 }
@@ -743,4 +758,413 @@ fn drift_tells_an_unset_jira_how_to_turn_it_on_and_a_broken_one_where_to_look() 
     let (ok, out, err) = broken.run(&["drift"]);
     assert!(ok, "{err}");
     assert!(out.contains("Jira couldn't be read. See `worklens doctor`."), "{out}");
+}
+
+fn first_run_home(name: &str) -> Home {
+    let home = Home::new(name);
+    fs::remove_file(home.0.join(".cache/worklens/state.json")).unwrap();
+    worklens_store::write_atomic(&home.0.join(".config/worklens.json"), |out| {
+        out.write_all(br#"{"email": "me@mozilla.com"}"#)
+    })
+    .unwrap();
+    home
+}
+
+fn replay_dir(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/replay").join(name)
+}
+
+#[test]
+fn a_limited_request_waits_as_long_as_asked_then_succeeds() {
+    let home = first_run_home("rate-limited");
+    let (ok, out, err) = home.run_with(&["refresh"], &[("WORKLENS_REPLAY", &replay_dir("rate_limited"))]);
+    assert!(ok, "{out}{err}");
+    let raw: serde_json::Value = serde_json::from_slice(&fs::read(home.0.join(".cache/worklens/state.json")).unwrap()).unwrap();
+    let calls = raw["calls"].as_array().unwrap();
+    let needinfo: Vec<&serde_json::Value> = calls
+        .iter()
+        .filter(|c| c["url"].as_str().unwrap().contains("requestees.login_name"))
+        .collect();
+    assert_eq!(needinfo.len(), 2, "one 429 and one retry: {needinfo:#?}");
+    assert_eq!(needinfo[0]["status"], 429);
+    assert_eq!(needinfo[1]["status"], 200);
+    assert_eq!(needinfo[1]["waitMs"], 3000, "the fixture's Retry-After: 3");
+    let other: Vec<&serde_json::Value> = calls.iter().filter(|c| c["status"] != 200).collect();
+    assert_eq!(other.len(), 1, "only the recorded 429 failed: {other:#?}");
+    let failed: Vec<&serde_json::Value> = raw["errors"].as_array().unwrap().iter().filter(|e| e["unset"] != true).collect();
+    assert!(failed.is_empty(), "the retry succeeded, so nothing failed: {failed:#?}");
+}
+
+#[test]
+fn a_limit_longer_than_a_refresh_says_when_to_try_again() {
+    let home = first_run_home("rate-limited-long");
+    let (ok, out, err) = home.run_with(&["refresh"], &[("WORKLENS_REPLAY", &replay_dir("rate_limited_long"))]);
+    assert!(ok, "{out}{err}");
+    assert!(out.contains("bugzilla: rate limited, try again after"), "{out}");
+    let raw: serde_json::Value = serde_json::from_slice(&fs::read(home.0.join(".cache/worklens/state.json")).unwrap()).unwrap();
+    let bugzilla: Vec<&serde_json::Value> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["url"].as_str().unwrap().contains("bugzilla"))
+        .collect();
+    assert_eq!(bugzilla.len(), 1, "after the 429 no other Bugzilla request is sent: {bugzilla:#?}");
+    let (ok, out, err) = home.run_exactly(&["health", "--json"]);
+    assert!(ok, "{err}");
+    let health: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let source = health["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["name"] == "Bugzilla")
+        .unwrap()
+        .clone();
+    assert_eq!(source["state"], "failed", "{source}");
+    assert_eq!(source["rateLimitedUntil"], "2100-01-01T00:00:00Z", "the fixture's Retry-After date");
+    assert!(
+        health["errors"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["source"] == "bugzilla" && e["retryAt"] == "2100-01-01T00:00:00Z"),
+        "{health}"
+    );
+    let (_, text, _) = home.run_exactly(&["health"]);
+    assert!(text.contains("the service is rate-limiting; refresh after"), "{text}");
+}
+
+fn with_scanned_pushes(home: &Home, drop_push: Option<&str>) {
+    use worklens_core::raw::Landings;
+    use worklens_core::{Raw, RevId};
+    let mut page: serde_json::Value =
+        serde_json::from_slice(include_bytes!("../../sources/fixtures/treeherder/integration-backouts.json")).unwrap();
+    if let Some(push) = drop_push {
+        page["results"].as_array_mut().unwrap().retain(|p| p["revision"] != push);
+    }
+    let now = "2026-11-03T20:00:00Z".parse().unwrap();
+    let scan = worklens_sources::landing::parse_scan(&serde_json::to_vec(&page).unwrap(), "autoland", &[RevId(321987)], now).unwrap();
+    let cache = home.0.join(".cache/worklens/state.json");
+    let mut raw: Raw = serde_json::from_slice(&fs::read(&cache).unwrap()).unwrap();
+    raw.landings = Some(Landings {
+        revisions: vec![RevId(321987)],
+        repositories: vec![scan],
+    });
+    worklens_store::write_raw(&cache, &raw).unwrap();
+}
+
+#[test]
+fn waiting_json_names_the_backout_from_the_recorded_push_log() {
+    let home = Home::new("backout");
+    with_scanned_pushes(&home, Some(&"3".repeat(40)));
+    let (ok, out, err) = home.run(&["waiting", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let item = &v["items"][0];
+    assert_eq!(item["id"], "1995008");
+    assert_eq!(
+        item["reason"], "D321987 backed out of autoland 3h after landing: causing bc failures in browser_viewsource.js",
+        "pushed 1793700000, backed out 1793710800, cause from the subject"
+    );
+    assert_eq!(item["tag"], "bo");
+    let push = format!("https://treeherder.mozilla.org/jobs?repo=autoland&revision={}", "2".repeat(40));
+    assert_eq!(item["actionUrl"], push);
+    assert_eq!(item["backout"]["url"], push);
+    assert_eq!(item["backout"]["revision"], 321987);
+    assert_eq!(item["backout"]["landedCommit"], "1".repeat(40));
+    assert_eq!(item["backout"]["cause"], "causing bc failures in browser_viewsource.js");
+    let (_, out, _) = home.run(&["next", "--compact"]);
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["items"][0]["backout"]["url"], push, "agents get the link too");
+}
+
+#[test]
+fn a_reland_in_the_push_log_clears_the_backout() {
+    let home = Home::new("backout-reland");
+    with_scanned_pushes(&home, None);
+    let (ok, out, err) = home.run(&["waiting", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["items"][0]["tag"], "ni?", "{}", v["items"][0]);
+    assert!(v["items"][0].get("backout").is_none());
+}
+
+fn busy_now(name: &str, edit: impl FnOnce(&mut serde_json::Value, jiff::Timestamp)) -> Home {
+    let home = Home::with_cache(name, "busy.json");
+    let path = home.0.join(".cache/worklens/state.json");
+    let mut raw: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    let now = jiff::Timestamp::now();
+    raw["fetchedAt"] = serde_json::json!(now);
+    edit(&mut raw, now);
+    worklens_store::write_atomic(&path, |w| serde_json::to_writer(w, &raw).map_err(std::io::Error::other)).unwrap();
+    home
+}
+
+fn days_from(now: jiff::Timestamp, days: i64) -> jiff::Timestamp {
+    now.checked_add(jiff::SignedDuration::from_hours(24 * days)).unwrap()
+}
+
+#[test]
+fn landed_lists_each_fix_with_where_it_is_on_the_train() {
+    let merge = std::cell::Cell::new(String::new());
+    let home = busy_now("landed", |raw, now| {
+        let date = |days: i64| days_from(now, days).to_zoned(jiff::tz::TimeZone::UTC).date();
+        raw["trains"]["nextMerge"] = serde_json::json!(date(5).to_string());
+        raw["trains"]["nextRelease"] = serde_json::json!(date(6).to_string());
+        merge.set(date(5).strftime("%b %-d").to_string());
+        for bug in raw["bugs"].as_array_mut().unwrap() {
+            let age = match bug["id"].as_u64() {
+                Some(2010101..=2010104) => 1,
+                Some(2010106) => 31,
+                _ => continue,
+            };
+            bug["cf_last_resolved"] = serde_json::json!(days_from(now, -age));
+        }
+    });
+    let (ok, out, err) = home.run(&["landed"]);
+    assert!(ok, "{err}");
+    assert!(out.contains("Landed "), "{out}");
+    for line in [
+        "Bugzilla marks Firefox 147 fixed; build inclusion unverified".to_owned(),
+        "Bugzilla marks Firefox 145 fixed; build inclusion unverified".to_owned(),
+        "Resolved FIXED; no Firefox status flag set; build inclusion unverified".to_owned(),
+    ] {
+        assert!(out.contains(&line), "{line} in\n{out}");
+    }
+    assert!(!out.contains("2010106"), "a fix older than 30 days is gone:\n{out}");
+    let (ok, out, err) = home.run(&["landed", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["section"], "landed");
+    let item = v["items"].as_array().unwrap().iter().find(|i| i["id"] == "2010102").unwrap();
+    assert_eq!(item["fixedIn"], 146, "the lowest version flagged fixed");
+    assert_eq!(item["train"], "beta");
+    let autoland = v["items"].as_array().unwrap().iter().find(|i| i["id"] == "2010105").unwrap();
+    assert_eq!(autoland["train"], "autoland");
+    assert!(autoland.get("fixedIn").is_none(), "{autoland}");
+}
+
+fn land_json_with_merge(name: &str, merge_in_days: i64) -> serde_json::Value {
+    let home = busy_now(name, |raw, now| {
+        let date = |days: i64| days_from(now, days).to_zoned(jiff::tz::TimeZone::UTC).date().to_string();
+        let mut details: serde_json::Value = serde_json::from_slice(include_bytes!("../../sources/fixtures/product-details.json")).unwrap();
+        details["NEXT_MERGE_DATE"] = serde_json::json!(date(merge_in_days));
+        details["NEXT_RELEASE_DATE"] = serde_json::json!(date(merge_in_days + 1));
+        let trains = worklens_sources::trains::parse_trains(&serde_json::to_vec(&details).unwrap()).unwrap();
+        raw["trains"] = serde_json::to_value(trains).unwrap();
+    });
+    let (ok, out, err) = home.run(&["land", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let item = v["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["tag"] == "r+")
+        .unwrap_or_else(|| panic!("an accepted revision in {v}"))
+        .clone();
+    let (ok, out, _) = home.run(&["land", "--compact"]);
+    assert!(ok);
+    let compact: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let same = compact["items"].as_array().unwrap().iter().find(|i| i["id"] == item["id"]).unwrap();
+    assert_eq!(same["landsIn"], item["landsIn"], "compact and full agree");
+    let request =
+        serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"worklens_show","arguments":{"ref":item["id"]}}});
+    let reply: serde_json::Value = serde_json::from_str(&home.mcp(&request.to_string())).unwrap();
+    let mcp: serde_json::Value = serde_json::from_str(reply["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(mcp["landsIn"], item["landsIn"], "MCP and CLI agree");
+    item["landsIn"].clone()
+}
+
+#[test]
+fn land_json_says_which_release_on_merge_day_and_the_day_after() {
+    assert_eq!(land_json_with_merge("lands-in-merge-day", 0), serde_json::Value::Null);
+    assert_eq!(land_json_with_merge("lands-in-day-after", -1), serde_json::Value::Null);
+    assert_eq!(land_json_with_merge("lands-in-before", 2)["version"], 161);
+}
+
+#[test]
+fn backlog_lists_unstarted_work_for_planning() {
+    let home = Home::with_cache("backlog", "busy.json");
+    let (ok, out, err) = home.run(&["backlog", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["section"], "backlog");
+    let items = v["items"].as_array().unwrap();
+    assert!(!items.is_empty(), "{v}");
+    for item in items {
+        assert_eq!(item["tag"], "bl", "{item}");
+        assert!(item["reason"].as_str().unwrap().ends_with("not started"), "{item}");
+        assert!(item["actionUrl"].as_str().is_some(), "{item}");
+    }
+    let (ok, text, _) = Home::with_cache("backlog-bz", "bugzilla_only.json").run(&["backlog"]);
+    assert!(ok);
+    assert!(text.contains("2057035"), "a Bugzilla-only user's unstarted bug:\n{text}");
+}
+
+#[test]
+fn reviewer_availability_agrees_in_text_json_compact_and_mcp() {
+    let home = busy_now("reviewer-away", |raw, now| {
+        raw["revisions"].as_array_mut().unwrap().push(serde_json::json!({
+            "id": 990001, "title": "Check reviewer availability", "author": "PHID-USER-harbor",
+            "status": "needs-review", "modified": days_from(now, -1),
+            "reviewers": [{"phid": "PHID-USER-away", "status": "blocking"}]
+        }));
+        raw["away"]["PHID-USER-away"] = serde_json::json!(days_from(now, 2));
+        raw["users"]["PHID-USER-away"] = serde_json::json!("Fixture reviewer");
+    });
+    let (ok, text, err) = home.run(&["others"]);
+    assert!(ok, "{err}");
+    assert!(text.contains("Fixture reviewer, away until"), "{text}");
+    let (ok, detail, err) = home.run(&["show", "D990001"]);
+    assert!(ok, "{err}");
+    assert!(detail.contains("Consider another reviewer"), "{detail}");
+    let mut documents = Vec::new();
+    for flag in ["--json", "--compact"] {
+        let (ok, out, err) = home.run(&["others", flag]);
+        assert!(ok, "{err}");
+        let doc: serde_json::Value = serde_json::from_str(&out).unwrap();
+        documents.push(
+            doc["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|i| i["id"] == "D990001")
+                .unwrap()
+                .clone(),
+        );
+    }
+    let reply: serde_json::Value = serde_json::from_str(
+        &home.mcp(r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"worklens_show","arguments":{"ref":"D990001"}}}"#),
+    )
+    .unwrap();
+    let doc: serde_json::Value = serde_json::from_str(reply["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    documents.push(doc);
+    for doc in &documents {
+        assert_eq!(doc["reviewerAway"][0]["who"], "Fixture reviewer", "{doc}");
+        assert!(doc["reviewerAway"][0]["until"].is_string(), "{doc}");
+        assert_eq!(doc["reviewerAway"], documents[0]["reviewerAway"]);
+        assert!(doc["reason"].as_str().unwrap().contains("away until"));
+    }
+}
+
+#[test]
+fn weekly_reporting_is_withdrawn_and_old_additive_cache_fields_are_readable() {
+    let home = busy_now("withdraw-week", |raw, _| {
+        raw["reviewed"] = serde_json::json!([{"old": "ignored"}]);
+    });
+    assert!(home.run(&["sections", "--json"]).0);
+    assert!(!home.run(&["week"]).0);
+    let tools = home.mcp(r#"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#);
+    assert!(!tools.contains("worklens_week"), "{tools}");
+}
+
+#[test]
+fn availability_refresh_replays_the_recorded_shape_and_a_source_derived_away_response() {
+    for (replay, away) in [("availability", false), ("availability-away", true)] {
+        let home = first_run_home(replay);
+        worklens_store::write_atomic(&home.0.join(".arcrc"), |out| {
+            out.write_all(br#"{"hosts":{"https://phabricator.services.mozilla.com/api/":{"token":"fixture-token"}}}"#)
+        })
+        .unwrap();
+        worklens_store::write_atomic(&home.0.join(".config/worklens.json"), |out| {
+            out.write_all(br#"{"email":"me@mozilla.com","telemetry":false,"landingChecks":false}"#)
+        })
+        .unwrap();
+        let (ok, out, err) = home.run_with(&["refresh"], &[("WORKLENS_REPLAY", &replay_dir(replay))]);
+        assert!(ok, "{out}\n{err}");
+        assert!(!out.contains("nothing recorded"), "{out}");
+        let (ok, out, err) = home.run(&["others", "--json"]);
+        assert!(ok, "{err}");
+        let doc: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert!(
+            !doc["errors"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|e| e["source"].as_str().unwrap_or_default().starts_with("phabricator")),
+            "{doc}"
+        );
+        let item = &doc["items"][0];
+        assert_eq!(item["id"], "D990002", "{doc}");
+        assert_eq!(item["reason"].as_str().unwrap().contains("away until"), away);
+        if away {
+            assert_eq!(item["reviewerAway"][0]["who"], "Fixture reviewer");
+            assert_eq!(item["reviewerAway"][0]["until"], "2099-01-01T00:00:00Z");
+        }
+    }
+}
+
+#[test]
+fn a_second_refresh_respects_the_cached_server_retry_time() {
+    let home = first_run_home("rate-limit-second-refresh");
+    let replay = replay_dir("rate_limited_long");
+    for _ in 0..2 {
+        let (ok, out, err) = home.run_with(&["refresh"], &[("WORKLENS_REPLAY", &replay)]);
+        assert!(ok, "{out}\n{err}");
+    }
+    let raw: serde_json::Value = serde_json::from_slice(&fs::read(home.0.join(".cache/worklens/state.json")).unwrap()).unwrap();
+    assert!(
+        raw["errors"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["source"] == "bugzilla" && e["retryAt"] == "2100-01-01T00:00:00Z"),
+        "{raw}"
+    );
+    assert!(
+        !raw["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c["url"].as_str().unwrap().contains("bugzilla.mozilla.org")),
+        "the second refresh must not send Bugzilla requests before 2100"
+    );
+}
+
+#[test]
+fn a_stack_reaches_agents_and_the_shell_bottom_first() {
+    let home = Home::new("stack");
+    let state = home.0.join(".cache/worklens/state.json");
+    let mut raw: serde_json::Value = serde_json::from_slice(&fs::read(&state).unwrap()).unwrap();
+    let rev = |id: u32| {
+        serde_json::json!({
+            "id": id, "phid": format!("PHID-DREV-{id}"), "title": format!("Captcha patch {id}"), "status": "needs-review",
+            "author": "PHID-USER-me", "bug": null, "modified": "2026-11-02T12:00:00Z", "reviewers": [],
+        })
+    };
+    raw["revisions"].as_array_mut().unwrap().extend([rev(338972), rev(338971)]);
+    raw["dependencies"] = serde_json::json!({ "parents": { "338972": ["PHID-DREV-338971"] } });
+    worklens_store::write_atomic(&state, |w| serde_json::to_writer(w, &raw).map_err(std::io::Error::other)).unwrap();
+
+    let (ok, out, err) = home.run(&["show", "D338972", "--json"]);
+    assert!(ok, "{err}");
+    let shown: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(
+        shown["stack"],
+        serde_json::json!({
+            "position": 2, "of": 2, "bottom": "D338971", "bottomStatus": "needs-review",
+            "revisions": ["D338971", "D338972"],
+        })
+    );
+
+    let (ok, out, err) = home.run(&["next", "--compact"]);
+    assert!(ok, "{err}");
+    let next: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let stacked: Vec<(&str, u64)> = next["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|i| Some((i["id"].as_str()?, i["stack"]["position"].as_u64()?)))
+        .collect();
+    assert_eq!(stacked, [("D338971", 1), ("D338972", 2)]);
+
+    let (ok, out, err) = home.run(&["sections"]);
+    assert!(ok, "{err}");
+    let head = out
+        .find("┌ Stack of 2 · bottom D338971 needs-review")
+        .unwrap_or_else(|| panic!("{out}"));
+    assert!(
+        out[head..].find("D338971").unwrap() < out[head..].find("D338972 ").unwrap(),
+        "{out}"
+    );
 }

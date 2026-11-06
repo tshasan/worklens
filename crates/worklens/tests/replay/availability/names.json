@@ -1,0 +1,14 @@
+{
+  "result": {
+    "PHID-USER-me": {
+      "name": "Fixture author",
+      "type": "USER"
+    },
+    "PHID-USER-fixture": {
+      "name": "Fixture reviewer",
+      "type": "USER"
+    }
+  },
+  "error_code": null,
+  "error_info": null
+}
