@@ -10,10 +10,11 @@ description: The user's Mozilla work across Bugzilla, Jira and Phabricator, orga
 | What's waiting on the user, by section | `worklens sections --compact` |
 | What to work on next | `worklens next --json` |
 | Sprint points vs budget | `worklens sprint --json` |
-| Bugzilla/Jira mismatches, and ideas whose target or status the work contradicts (add `--team` for the team) | `worklens drift --json` |
+| Bugzilla/Jira mismatches, local commits that differ from their revision, and ideas whose target or status the work contradicts (add `--team` for the team) | `worklens drift --json` |
 | Ideas the user's work rolls up to | `worklens sections --json`, items with `section: "ideas"` |
 | Recent fixed bugs assigned to the user and observed patch landings, with status and expected train | `worklens landed --json` |
 | What's assigned but not started, for sprint planning (`bl`) | `worklens backlog --json` |
+| Local commits and branches not on Phabricator yet (`loc`) | `worklens local --json` |
 | One item | `worklens show <ref> --json` |
 | Context before starting work | `worklens brief <ref>` |
 | A factual engineering update for an idea's owner | `worklens brief AIDI-79` |
@@ -45,4 +46,5 @@ description: The user's Mozilla work across Bugzilla, Jira and Phabricator, orga
 
 - `reviewerAway` lists `{who, until}` for known away reviewers when all required reviewers are away; consider another reviewer without treating it as required. Groups, unknown or failed lookups never imply availability. Backlog items remain in the TUI Other list; `backlog` CLI/MCP sections remain supported.
 - `stack` is present on items whose revision sits in a Phabricator stack with other listed work: `position` (1 is the bottom, which lands first), `of`, `bottom`, `bottomStatus` and `revisions` bottom to top. Items in a stack are listed together, bottom first; talk about the stack as one piece of work and say what the bottom patch needs. A stack only follows parents worklens fetched, so a member may be missing.
+- `local` on an item lists the user's own commits from their Firefox checkout that aren't on origin/main yet: `sha`, `branch` (or `worktree <dir>`), `subject`, `bug`, `revision`, and `state`: `not_uploaded`, `same` (matches the revision's latest diff; rebases don't count), `differs` (changes differ, see drift for which side is newer), or `unchecked`. `loc` items (section `local`) have commits on no revision; a branch with no bug number is its own item, with the branch as its `id`. Drift says when an uploaded commit's changes, title or bug differ from Phabricator, or when a `fixup!` isn't squashed. Suggest `moz-phab submit` or `moz-phab patch` as drift's cause says; never run them or touch the user's branches. If the section is off, the agent directory isn't a git checkout.
 - Uplifts: only an approved uplift (`up+`, land it on that channel) or a requested one (`up?`, waiting on release management) is listed. Any Nightly fix could be uplifted, so an unset or affected Beta status is not work.

@@ -3166,6 +3166,28 @@
    "via": [
     "assigned"
    ]
+  },
+  {
+   "id": 2020001,
+   "summary": "Tokenizer warm-up delays the first Smart Window answer",
+   "status": "NEW",
+   "resolution": "",
+   "assigned_to": "nobody@mozilla.org",
+   "severity": "S3",
+   "priority": "P2",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-10-30T10:00:00Z",
+   "creation_time": "2026-10-29T10:00:00Z",
+   "flags": [],
+   "depends_on": [],
+   "regressed_by": [],
+   "product": "Core",
+   "component": "Machine Learning: General",
+   "via": [
+    "local"
+   ]
   }
  ],
  "issues": {
@@ -6381,5 +6403,105 @@
  },
  "away": {
   "PHID-USER-quill": "2026-11-18T12:00:00Z"
+ },
+ "local": {
+  "repo": "/home/harbor/firefox",
+  "base": "origin/main",
+  "scannedAt": "2026-11-03T18:50:00Z",
+  "error": null,
+  "commits": [
+   {
+    "sha": "a1f0000000000000000000000000000000000001",
+    "place": "wip-ranking",
+    "subject": "WIP: try ranking tabs by recency",
+    "committed": "2026-11-03T16:00:00Z",
+    "fingerprint": "00000000000000a1"
+   },
+   {
+    "sha": "a1f0000000000000000000000000000000000002",
+    "place": "wip-ranking",
+    "subject": "No bug - Add a ranking benchmark",
+    "committed": "2026-11-02T16:00:00Z",
+    "fingerprint": "00000000000000a2"
+   },
+   {
+    "sha": "b2e0000000000000000000000000000000000001",
+    "place": "bug-2020001-tokenizer",
+    "subject": "Bug 2020001 - Warm the tokenizer up before the first request",
+    "bug": 2020001,
+    "committed": "2026-11-01T09:00:00Z",
+    "fingerprint": "00000000000000b2"
+   },
+   {
+    "sha": "c3d0000000000000000000000000000000000001",
+    "place": "webgpu-cleanup",
+    "subject": "Bug 1998555 - Remove dead code from WebGPU backend r?gale",
+    "bug": 1998555,
+    "revision": 342300,
+    "committed": "2026-11-03T14:00:00Z",
+    "fingerprint": "00000000000000c3"
+   },
+   {
+    "sha": "c3d0000000000000000000000000000000000002",
+    "place": "webgpu-cleanup",
+    "subject": "fixup! Bug 1998555 - Remove dead code from WebGPU backend r?gale",
+    "bug": 1998555,
+    "committed": "2026-11-03T15:00:00Z",
+    "fingerprint": "00000000000000c4"
+   },
+   {
+    "sha": "d4c0000000000000000000000000000000000001",
+    "place": "webgpu-throttle",
+    "subject": "Bug 2002472 - Throttle the WebGPU backend while hidden r?gale",
+    "bug": 2002472,
+    "revision": 348881,
+    "committed": "2026-10-19T19:00:05Z",
+    "fingerprint": "00000000000000d4"
+   },
+   {
+    "sha": "d4c0000000000000000000000000000000000002",
+    "place": "worktree firefox-webgpu",
+    "subject": "Bug 2002472 - Throttle WebGPU backend r?gale",
+    "bug": 2002472,
+    "revision": 348881,
+    "committed": "2026-10-19T18:00:00Z",
+    "fingerprint": "00000000000000d0"
+   },
+   {
+    "sha": "e5b0000000000000000000000000000000000001",
+    "place": "link-preview-crash",
+    "subject": "Bug 1995195 - Crash in link preview",
+    "bug": 1995195,
+    "revision": 336263,
+    "committed": "2026-10-19T13:20:00Z",
+    "fingerprint": "00000000000000e5"
+   }
+  ],
+  "uploads": {
+   "342300": {
+    "title": "Bug 1998555 - Remove dead code from WebGPU backend",
+    "status": "needs-revision",
+    "bug": 1998555,
+    "diffPHID": "PHID-DIFF-342300",
+    "uploaded": "2026-11-03T10:35:15Z",
+    "fingerprint": "00000000000000c0"
+   },
+   "348881": {
+    "title": "Bug 2002472 - Throttle WebGPU backend",
+    "status": "needs-review",
+    "bug": 2002472,
+    "diffPHID": "PHID-DIFF-348881",
+    "uploaded": "2026-10-19T19:00:00Z",
+    "fingerprint": "00000000000000d4"
+   },
+   "336263": {
+    "title": "Bug 1995195 - Crash in link preview",
+    "status": "published",
+    "bug": 1995195,
+    "diffPHID": "PHID-DIFF-336263",
+    "uploaded": "2026-10-19T13:27:08Z",
+    "fingerprint": "00000000000000e0"
+   }
+  }
  }
 }

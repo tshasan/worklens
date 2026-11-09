@@ -44,3 +44,13 @@ Inactivity policy audit
   revisions. Those branch-only stale cases were withdrawn. Existing review
   follow-up thresholds were preserved; text names latest-diff or modification
   age, rather than claiming that no activity occurred.
+
+phabricator/diff.search.json and phabricator/getrawdiff.json
+  Synthetic, written November 6, 2026 from the Conduit method documentation;
+  no response was recorded. differential.diff.search returns data[] with id,
+  phid and fields.dateCreated; differential.getrawdiff takes diffID and returns
+  the patch as a string. The patch uses git's unified format with full file
+  context, as moz-phab uploads it. Whether Phabricator re-renders renames or
+  binary files differently from git is unverified.
+  https://phabricator.services.mozilla.com/conduit/method/differential.diff.search/
+  https://phabricator.services.mozilla.com/conduit/method/differential.getrawdiff/

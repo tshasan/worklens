@@ -1,0 +1,33 @@
+{
+  "result": {
+    "data": [
+      {
+        "id": 1500001,
+        "type": "DIFF",
+        "phid": "PHID-DIFF-latest",
+        "fields": {
+          "revisionPHID": "PHID-DREV-1",
+          "authorPHID": "PHID-USER-fixture",
+          "repositoryPHID": "PHID-REPO-mc",
+          "refs": [{ "type": "base", "identifier": "0000000000000000000000000000000000000000" }],
+          "dateCreated": 1793995200,
+          "dateModified": 1793995260,
+          "policy": { "view": "public" }
+        },
+        "attachments": {}
+      },
+      {
+        "id": 1500002,
+        "type": "DIFF",
+        "phid": "PHID-DIFF-no-date",
+        "fields": { "revisionPHID": "PHID-DREV-2" },
+        "attachments": {}
+      }
+    ],
+    "maps": {},
+    "query": { "queryKey": null },
+    "cursor": { "limit": 100, "after": null, "before": null, "order": null }
+  },
+  "error_code": null,
+  "error_info": null
+}

@@ -1179,6 +1179,8 @@ fn divider(t: Theme, label: &str, width: usize) -> Line<'static> {
     ])
 }
 
+const LOCAL_ROWS: usize = 6;
+
 fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<Line<'a>> {
     let t = Theme::of(app.tone);
     let drift_first = matches!(app.section(), Section::Drift | Section::Team);
@@ -1318,6 +1320,26 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         let reviews = styled(t, present::review_segments(s, r));
         out.extend(strip_row(t, "  Reviewers", &reviews, LABEL, width));
     }
+    for (n, l) in e.local.iter().enumerate() {
+        let sync = s.syncs.get(l.get()).copied().unwrap_or(worklens_core::local::Sync::Unchecked);
+        if n == LOCAL_ROWS {
+            let more = format!(
+                "{} more on {}",
+                e.local.len() - n,
+                s.raw.local.as_ref().map_or("", |x| x.repo.as_str())
+            );
+            row(&mut out, "", &more, fg(t.quiet));
+            break;
+        }
+        let Some(text) = worklens_core::local::line(&s.raw, *l, sync) else {
+            continue;
+        };
+        let style = match sync {
+            worklens_core::local::Sync::NotUploaded | worklens_core::local::Sync::Differs => fg(t.warn),
+            _ => Style::new(),
+        };
+        row(&mut out, if n == 0 { "Local" } else { "" }, &text, style);
+    }
     if e.scope == Scope::Team {
         row(&mut out, "Owner", present::owner(s, e).unwrap_or("nobody"), Style::new());
     }
@@ -1349,6 +1371,8 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         out.push(Line::raw(""));
         let title = if matches!(e.id, ItemId::Idea(_)) {
             "The idea and your work disagree"
+        } else if !e.local.is_empty() {
+            "Out of sync"
         } else {
             "Bugzilla and Jira disagree"
         };

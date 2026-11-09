@@ -182,7 +182,11 @@ fn apply_setting(app: &mut App, sources: &mut worklens_sources::Config, setting:
         Setting::LandingChecks => sources.landing_checks = p.landing_checks,
         Setting::DriftDays => sources.drift_days = p.drift_days,
         Setting::Agent => app.opts.agent = crate::config::find_agent(Some(&p.agent)),
-        Setting::AgentDir => app.opts.dir = crate::config::agent_dir(crate::config::home().as_deref(), &p.agent_dir),
+        Setting::AgentDir => {
+            let home = crate::config::home();
+            app.opts.dir = crate::config::agent_dir(home.as_deref(), &p.agent_dir);
+            sources.repo = crate::config::local_repo(home.as_deref(), &p.agent_dir);
+        }
         _ => {}
     }
 }

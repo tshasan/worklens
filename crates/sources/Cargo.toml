@@ -24,4 +24,5 @@ workspace = true
 
 [dev-dependencies]
 proptest = "1.9.0"
+worklens-store.workspace = true
 worklens-testkit = { path = "../testkit" }

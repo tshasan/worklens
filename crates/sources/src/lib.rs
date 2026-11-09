@@ -6,6 +6,7 @@ pub mod fetch;
 pub mod http;
 pub mod jira;
 pub mod landing;
+pub mod local;
 pub mod phab;
 pub mod refetch;
 mod supplemental;

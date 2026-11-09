@@ -51,6 +51,51 @@ pub struct Raw {
     pub dependencies: Dependencies,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub away: HashMap<String, Timestamp>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local: Option<Local>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Local {
+    pub repo: String,
+    pub base: String,
+    pub scanned_at: Timestamp,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub commits: Vec<LocalCommit>,
+    #[serde(default)]
+    pub uploads: HashMap<RevId, Upload>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCommit {
+    pub sha: String,
+    pub place: String,
+    pub subject: String,
+    #[serde(default)]
+    pub bug: Option<BugId>,
+    #[serde(default)]
+    pub revision: Option<RevId>,
+    pub committed: Timestamp,
+    pub fingerprint: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Upload {
+    pub title: String,
+    pub status: RevStatus,
+    #[serde(default)]
+    pub bug: Option<BugId>,
+    #[serde(default, rename = "diffPHID")]
+    pub diff_phid: Option<String>,
+    #[serde(default)]
+    pub uploaded: Option<Timestamp>,
+    #[serde(default)]
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -305,6 +350,7 @@ pub enum Via {
     Landed,
     Regression,
     Asked,
+    Local,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

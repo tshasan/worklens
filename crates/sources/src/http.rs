@@ -720,6 +720,7 @@ mod tests {
             drift_days: 30,
             telemetry: false,
             landing_checks: false,
+            repo: None,
         };
         futures::executor::block_on(crate::dependencies::refresh(&http, &cfg, &mut raw));
         for source in ["bugzilla-dependencies", "phabricator-dependencies"] {
@@ -745,6 +746,7 @@ mod tests {
             drift_days: 30,
             telemetry: true,
             landing_checks: true,
+            repo: None,
         };
         futures::executor::block_on(crate::supplemental::refresh(&http, &cfg, &mut raw, &[], |_| {}, now()));
         for source in ["probeinfo", "treeherder-landings"] {

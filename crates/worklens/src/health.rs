@@ -37,7 +37,12 @@ const SOURCES: [Source; 7] = [
     Source {
         name: "Phabricator",
         hosts: &["phabricator.services.mozilla.com"],
-        errors: &["phabricator", "phabricator-dependencies", "phabricator-availability"],
+        errors: &[
+            "phabricator",
+            "phabricator-dependencies",
+            "phabricator-availability",
+            "phabricator-diffs",
+        ],
         key: Some(Service::Phabricator),
     },
     Source {

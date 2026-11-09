@@ -17,6 +17,7 @@ enum Item {
     Jira(JiraKey),
     Rev(RevId),
     Idea(JiraKey),
+    Branch(String),
 }
 
 impl EntryKey {
@@ -26,6 +27,7 @@ impl EntryKey {
             ItemId::Jira(i) => Item::Jira(s.issue(i).key.clone()),
             ItemId::Rev(r) => Item::Rev(r),
             ItemId::Idea(i) => Item::Idea(s.idea(i).key.clone()),
+            ItemId::Branch(_) => Item::Branch(s.id(e).to_string()),
         };
         Self { item, scope: e.scope }
     }
@@ -37,6 +39,7 @@ impl EntryKey {
                 (Item::Jira(a), ItemId::Jira(i)) => *a == s.issue(i).key,
                 (Item::Rev(a), ItemId::Rev(b)) => *a == b,
                 (Item::Idea(a), ItemId::Idea(i)) => *a == s.idea(i).key,
+                (Item::Branch(a), ItemId::Branch(_)) => *a == s.id(e).to_string(),
                 _ => false,
             }
     }
@@ -52,6 +55,7 @@ impl fmt::Display for EntryKey {
             Item::Bug(b) => write!(f, "{b}"),
             Item::Jira(k) | Item::Idea(k) => f.write_str(&k.0),
             Item::Rev(r) => write!(f, "{r}"),
+            Item::Branch(b) => f.write_str(b),
         }
     }
 }

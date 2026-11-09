@@ -6,7 +6,7 @@ use jiff::Timestamp;
 use crate::bugs::{HumanDays, State, days_between, is_closed, is_dead, jira_key_of};
 use crate::drift::{Drift, DriftInput, JiraStatuses, Level, drift_of};
 use crate::ideas::{Work, idea_of};
-use crate::ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, RevId, RevIdx};
+use crate::ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, LocalIdx, RevId, RevIdx};
 use crate::marks::MarkState;
 use crate::raw::{
     Bug, Comment, Flag, Idea, Issue, Raw, RevStatus, ReviewerStatus, Revision, SourceState, StatusCategory, TryPush, TryResult, Via,
@@ -45,6 +45,7 @@ pub enum ItemId {
     Jira(IssueIdx),
     Rev(RevId),
     Idea(IdeaIdx),
+    Branch(LocalIdx),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,6 +69,7 @@ pub struct Entry {
     pub marks: MarkState,
     pub changes: Vec<String>,
     pub stack: Option<crate::ids::StackIdx>,
+    pub local: Vec<LocalIdx>,
 }
 
 impl Entry {
@@ -86,6 +88,7 @@ impl Entry {
             marks: MarkState::NONE,
             changes: Vec::new(),
             stack: None,
+            local: Vec::new(),
         }
     }
 
@@ -118,6 +121,7 @@ pub struct Snapshot {
     sections: [Vec<EntryIdx>; Section::COUNT],
     pub stacks: Vec<crate::stack::Stack>,
     pub sprint: Option<SprintSummary>,
+    pub syncs: Vec<crate::local::Sync>,
     has_whiteboard: bool,
 }
 
@@ -225,14 +229,18 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
         entries.push(e);
     }
 
+    let syncs = crate::local::syncs(&raw);
+    link_local(&raw, &syncs, &mut entries, now);
+
     let ctx = Ctx { raw: &raw, now };
     for e in &mut entries {
         e.placement = Some(place(&ctx, e));
     }
     entries.retain(|e| {
-        let landed_only = e.bug.is_some_and(|b| raw.bugs[b.get()].via.iter().all(|v| *v == Via::Landed));
+        let only = |via: Via| e.bug.is_some_and(|b| raw.bugs[b.get()].via.iter().all(|v| *v == via));
         let kept = e.placement.is_some_and(|p| p.reason.facets().kept_when_landed);
-        !landed_only || kept || !e.drift.is_empty()
+        let unsent = e.placement.is_some_and(|p| matches!(p.reason, Reason::NotUploaded(_)));
+        (!only(Via::Landed) || kept || !e.drift.is_empty()) && (!only(Via::Local) || unsent || !e.drift.is_empty())
     });
     let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
     if with_jira {
@@ -327,7 +335,7 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
     let sprint = sprint_of(&raw, cfg);
     let stacks = crate::stack::find(&raw, &entries[..mine]);
     crate::stack::assign(&stacks, &mut entries);
-    let mut sections = sections_of(&raw, &entries, mine, sprint.as_ref());
+    let mut sections = sections_of(&raw, &entries, mine, sprint.as_ref(), &syncs);
     for list in &mut sections {
         crate::stack::group(list, &entries, &stacks);
     }
@@ -338,7 +346,58 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
         sections,
         stacks,
         sprint,
+        syncs,
         has_whiteboard: cfg.whiteboard().is_some(),
+    }
+}
+
+fn link_local(raw: &Raw, syncs: &[crate::local::Sync], entries: &mut Vec<Entry>, now: Timestamp) {
+    use crate::local::Sync;
+    let Some(local) = raw.local.as_ref() else { return };
+    let mut branches: Vec<usize> = Vec::new();
+    for (i, c) in local.commits.iter().enumerate() {
+        let (idx, sync) = (LocalIdx::new(i), syncs[i]);
+        if !sync.is_live() {
+            continue;
+        }
+        let by_rev = crate::local::revision_of(local, c).and_then(|r| {
+            entries
+                .iter()
+                .position(|e| e.scope == Scope::Mine && e.revisions.iter().chain(&e.review).any(|x| raw.revisions[x.get()].id == r))
+        });
+        let by_bug = || {
+            c.bug
+                .and_then(|b| entries.iter().position(|e| e.scope == Scope::Mine && e.id == ItemId::Bug(b)))
+        };
+        match by_rev.or_else(by_bug) {
+            Some(at) => entries[at].local.push(idx),
+            None => match branches
+                .iter()
+                .find(|n| matches!(entries[**n].id, ItemId::Branch(f) if local.commits[f.get()].place == c.place))
+            {
+                Some(at) => entries[*at].local.push(idx),
+                None => {
+                    let mut e = Entry::new(ItemId::Branch(idx));
+                    e.local.push(idx);
+                    branches.push(entries.len());
+                    entries.push(e);
+                }
+            },
+        }
+    }
+    for e in entries.iter_mut().filter(|e| !e.local.is_empty()) {
+        e.local.sort_by_key(|i| std::cmp::Reverse(local.commits[i.get()].committed));
+        if let ItemId::Branch(_) = e.id {
+            e.id = ItemId::Branch(e.local[0]);
+        }
+        for i in &e.local {
+            e.drift.extend(crate::local::drift_of(raw, *i, syncs[i.get()], now));
+        }
+        let unsent: Vec<LocalIdx> = e.local.iter().copied().filter(|i| syncs[i.get()] == Sync::NotUploaded).collect();
+        let has_revision = !e.revisions.is_empty() || e.review.is_some();
+        if has_revision {
+            e.drift.extend(crate::local::unsent_drift(raw, &unsent, now));
+        }
     }
 }
 
@@ -402,7 +461,13 @@ fn sprint_of(raw: &Raw, cfg: &CoreConfig) -> Option<SprintSummary> {
     })
 }
 
-fn sections_of(raw: &Raw, entries: &[Entry], mine: usize, sprint: Option<&SprintSummary>) -> [Vec<EntryIdx>; Section::COUNT] {
+fn sections_of(
+    raw: &Raw,
+    entries: &[Entry],
+    mine: usize,
+    sprint: Option<&SprintSummary>,
+    syncs: &[crate::local::Sync],
+) -> [Vec<EntryIdx>; Section::COUNT] {
     let mut sections: [Vec<EntryIdx>; Section::COUNT] = Default::default();
     let since = |i: &EntryIdx| entries[i.get()].placement.and_then(|p| p.since);
     let issue_key = |i: IssueIdx| raw.issues.get_index(i.get()).map(|(_, x)| x.key.0.as_str());
@@ -420,6 +485,10 @@ fn sections_of(raw: &Raw, entries: &[Entry], mine: usize, sprint: Option<&Sprint
         if !e.drift.is_empty() {
             sections[Section::Drift.index()].push(idx);
         }
+        let local_placed = e.placement.is_some_and(|p| p.section == Section::Local);
+        if !local_placed && e.local.iter().any(|l| syncs.get(l.get()) == Some(&crate::local::Sync::NotUploaded)) {
+            sections[Section::Local.index()].push(idx);
+        }
     }
     for s in [Section::Waiting, Section::Land, Section::Returned, Section::Others, Section::Other] {
         let facet = |i: &EntryIdx| entries[i.get()].placement.map(|p| p.reason.facets());
@@ -429,6 +498,16 @@ fn sections_of(raw: &Raw, entries: &[Entry], mine: usize, sprint: Option<&Sprint
     }
     sections[Section::Sprint.index()].sort_by_key(since);
     sections[Section::Landed.index()].sort_by_key(|i| std::cmp::Reverse(since(i)));
+    let newest_local = |i: &EntryIdx| {
+        let commits = raw.local.as_ref().map(|l| &l.commits);
+        entries[i.get()]
+            .local
+            .iter()
+            .filter_map(|l| commits?.get(l.get()))
+            .map(|c| c.committed)
+            .max()
+    };
+    sections[Section::Local.index()].sort_by_key(|i| std::cmp::Reverse(newest_local(i)));
     let priority = |i: &EntryIdx| {
         let e = &entries[i.get()];
         let text = match (e.bug, e.issue) {
@@ -458,6 +537,12 @@ impl Snapshot {
                 SourceState::Failed => Some("Not checked: Phabricator couldn't be read."),
                 SourceState::Read => None,
             },
+            Section::Local => match &self.raw.local {
+                None => Some("Off: point the agent directory in `worklens setup` at your Firefox git checkout to turn this on."),
+                Some(l) if l.error.is_some() => Some("Not checked: git couldn't read your checkout; `worklens doctor` says why."),
+                Some(_) => None,
+            },
+            Section::Drift if self.raw.local.is_some() && !self.sections[Section::Drift.index()].is_empty() => None,
             Section::Sprint | Section::Ideas | Section::Drift | Section::Team => match self.raw.state("jira") {
                 SourceState::Off => Some("Off: Jira isn't set up. `worklens auth set jira` turns it on."),
                 SourceState::Failed => Some("Not checked: Jira couldn't be read."),
@@ -472,6 +557,8 @@ impl Snapshot {
 
     pub fn off(&self, section: Section) -> bool {
         let source = match section {
+            Section::Local => return self.raw.local.is_none(),
+            Section::Drift if self.raw.local.is_some() && !self.sections[Section::Drift.index()].is_empty() => return false,
             Section::Land | Section::Returned | Section::Others => "phabricator",
             Section::Sprint | Section::Ideas | Section::Drift | Section::Team => "jira",
             _ => return false,
@@ -556,6 +643,7 @@ impl Snapshot {
                 .review
                 .or_else(|| e.revisions.first().copied())
                 .map_or("", |r| self.rev(r).title.as_str()),
+            ItemId::Branch(i) => crate::local::commit(&self.raw, i).map_or("", |c| c.subject.as_str()),
         }
     }
 
@@ -755,6 +843,7 @@ impl fmt::Display for EntryId<'_> {
             ItemId::Jira(i) => f.write_str(&self.snap.issue(i).key.0),
             ItemId::Rev(r) => write!(f, "{r}"),
             ItemId::Idea(i) => f.write_str(&self.snap.idea(i).key.0),
+            ItemId::Branch(i) => f.write_str(crate::local::commit(&self.snap.raw, i).map_or("", |c| c.place.as_str())),
         }
     }
 }
@@ -904,6 +993,23 @@ impl fmt::Display for ReasonText<'_> {
                 Some(_) => write!(f, "Filed {} ago, not started", HumanDays(days_between(p.since, s.now))),
                 None => f.write_str("Assigned to you, not started"),
             },
+            Reason::NotUploaded(newest) => {
+                let unsent: Vec<&crate::raw::LocalCommit> = e
+                    .local
+                    .iter()
+                    .filter(|i| s.syncs.get(i.get()) == Some(&crate::local::Sync::NotUploaded))
+                    .filter_map(|i| crate::local::commit(&s.raw, *i))
+                    .collect();
+                let place = crate::local::commit(&s.raw, newest).map_or("", |c| c.place.as_str());
+                match unsent.len() {
+                    1 => write!(f, "1 commit on {place} not on Phabricator, made {ago}")?,
+                    n => write!(f, "{n} commits on {place} not on Phabricator, newest {ago}")?,
+                }
+                if unsent.iter().any(|c| crate::local::is_wip(&c.subject)) {
+                    f.write_str(", marked WIP")?;
+                }
+                Ok(())
+            }
             Reason::Other => match (e.bug, e.issue) {
                 (Some(b), _) => write!(f, "bug is {}", State(s.bug(b))),
                 (None, Some(i)) => write!(f, "{} is {}", s.issue(i).key, s.issue(i).status),

@@ -140,6 +140,19 @@ impl Phab<'_> {
         Ok(out)
     }
 
+    pub async fn diffs(&self, phids: &[&str]) -> Result<HashMap<String, (u32, Timestamp)>> {
+        let mut out = HashMap::with_capacity(phids.len());
+        for part in phids.chunks(100) {
+            let bytes: DiffPage = self.call("differential.diff.search", &list("phids", part)).await?;
+            out.extend(diff_ids(bytes));
+        }
+        Ok(out)
+    }
+
+    pub async fn raw_diff(&self, id: u32) -> Result<String> {
+        self.call("differential.getrawdiff", &[("diffID".to_owned(), id.to_string())]).await
+    }
+
     pub async fn names(&self, phids: &[&str]) -> Result<HashMap<String, String>> {
         let mut out = HashMap::with_capacity(phids.len());
         for part in phids.chunks(100) {
@@ -201,6 +214,38 @@ impl Phab<'_> {
         }
         Ok(out)
     }
+}
+
+#[derive(Deserialize)]
+pub struct DiffPage {
+    data: Vec<DiffRow>,
+}
+
+#[derive(Deserialize)]
+struct DiffRow {
+    id: u32,
+    phid: String,
+    fields: DiffRowFields,
+}
+
+#[derive(Deserialize)]
+struct DiffRowFields {
+    #[serde(rename = "dateCreated", default)]
+    date_created: Option<i64>,
+}
+
+fn diff_ids(page: DiffPage) -> impl Iterator<Item = (String, (u32, Timestamp))> {
+    page.data
+        .into_iter()
+        .filter_map(|d| Some((d.phid, (d.id, Timestamp::from_second(d.fields.date_created?).ok()?))))
+}
+
+pub fn parse_diffs(bytes: &[u8]) -> Result<HashMap<String, (u32, Timestamp)>> {
+    Ok(diff_ids(conduit_result("differential.diff.search", bytes)?).collect())
+}
+
+pub fn parse_raw_diff(bytes: &[u8]) -> Result<String> {
+    conduit_result("differential.getrawdiff", bytes)
 }
 
 #[derive(Deserialize)]
@@ -456,6 +501,22 @@ mod tests {
         assert_eq!(parents["PHID-DREV-1"], ["PHID-DREV-parent"]);
         assert!(parents["PHID-DREV-2"].is_empty());
         assert_eq!(parents.len(), 2);
+    }
+
+    #[test]
+    fn diff_ids_and_dates_parse_and_undated_diffs_are_dropped() {
+        let diffs = parse_diffs(&fixture("diff.search.json")).unwrap();
+        assert_eq!(diffs.len(), 1);
+        let (id, at) = diffs["PHID-DIFF-latest"];
+        assert_eq!((id, at.as_second()), (1_500_001, 1_793_995_200));
+        assert!(parse_diffs(br#"{"result":null,"error_code":"ERR-CONDUIT-CORE","error_info":"no"}"#).is_err());
+    }
+
+    #[test]
+    fn raw_diffs_are_conduit_strings() {
+        let text = parse_raw_diff(&fixture("getrawdiff.json")).unwrap();
+        assert!(text.starts_with("diff --git a/toolkit/components/ml/a.txt"));
+        assert!(parse_raw_diff(br#"{"result":{"not":"a string"},"error_code":null,"error_info":null}"#).is_err());
     }
 
     #[test]

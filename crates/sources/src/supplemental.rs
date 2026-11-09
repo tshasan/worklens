@@ -215,6 +215,7 @@ mod tests {
             drift_days: 30,
             telemetry: true,
             landing_checks: true,
+            repo: None,
         };
         let mut raw = fixture();
         raw.telemetry = Some(Telemetry {

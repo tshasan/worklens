@@ -157,6 +157,7 @@ pub fn load_without_secrets() -> anyhow::Result<Config> {
             drift_days: prefs.drift_days,
             telemetry: prefs.telemetry,
             landing_checks: prefs.landing_checks,
+            repo: local_repo(home.as_deref(), &prefs.agent_dir),
         },
         cache_minutes: prefs.cache_minutes,
         agent: find_agent(Some(&prefs.agent)),
@@ -333,11 +334,20 @@ pub fn find_agent(configured: Option<&str>) -> Option<worklens_tui::Agent> {
         })
 }
 
-pub fn agent_dir(home: Option<&Path>, configured: &str) -> PathBuf {
-    let expanded = match (configured.strip_prefix('~'), home) {
+fn expand(home: Option<&Path>, configured: &str) -> PathBuf {
+    match (configured.strip_prefix('~'), home) {
         (Some(rest), Some(home)) => home.join(rest.trim_start_matches('/')),
         _ => PathBuf::from(configured),
-    };
+    }
+}
+
+pub fn local_repo(home: Option<&Path>, configured: &str) -> Option<PathBuf> {
+    let dir = expand(home, configured);
+    dir.join(".git").exists().then_some(dir)
+}
+
+pub fn agent_dir(home: Option<&Path>, configured: &str) -> PathBuf {
+    let expanded = expand(home, configured);
     if expanded.is_dir() {
         expanded
     } else {

@@ -82,6 +82,11 @@ enum Command {
         long_about = "What's assigned to you that you haven't started.\n\nJira tickets in To Do outside an open sprint, and open bugs with no revision and no ticket in progress; highest priority first, then oldest."
     )]
     Backlog,
+    #[command(
+        about = "Local commits that aren't on Phabricator",
+        long_about = "Local commits that aren't on Phabricator.\n\nScans your branches and detached worktrees in the agent directory (default ~/firefox) for your commits from the last 90 days that aren't on origin/main. Branches with \"backup\" in their name are skipped. Commits whose changes differ from their revision's latest diff are listed under drift."
+    )]
+    Local,
     #[command(about = "Sprint points and tickets")]
     Sprint,
     #[command(about = "Where Bugzilla, Phabricator and Jira disagree")]
@@ -500,8 +505,16 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
                 },
             )
         }
-        Command::Waiting | Command::Land | Command::Returned | Command::Others | Command::Other | Command::Landed | Command::Backlog => {
+        Command::Waiting
+        | Command::Land
+        | Command::Returned
+        | Command::Others
+        | Command::Other
+        | Command::Landed
+        | Command::Backlog
+        | Command::Local => {
             let section = match cli.command {
+                Some(Command::Local) => Section::Local,
                 Some(Command::Landed) => Section::Landed,
                 Some(Command::Backlog) => Section::Backlog,
                 Some(Command::Waiting) => Section::Waiting,
