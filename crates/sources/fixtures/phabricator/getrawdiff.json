@@ -1,0 +1,5 @@
+{
+  "result": "diff --git a/toolkit/components/ml/a.txt b/toolkit/components/ml/a.txt\n--- a/toolkit/components/ml/a.txt\n+++ b/toolkit/components/ml/a.txt\n@@ -1,10 +1,10 @@\n one\n two\n three\n four\n-five\n+FIVE\n six\n seven\n eight\n nine\n ten\ndiff --git a/toolkit/components/ml/new.txt b/toolkit/components/ml/new.txt\nnew file mode 100644\n--- /dev/null\n+++ b/toolkit/components/ml/new.txt\n@@ -0,0 +1,2 @@\n+-- a line that looks like a header\n+second\n",
+  "error_code": null,
+  "error_info": null
+}

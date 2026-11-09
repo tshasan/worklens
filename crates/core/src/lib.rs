@@ -10,6 +10,7 @@ pub mod guidance;
 pub mod ideas;
 pub mod ids;
 pub mod key;
+pub mod local;
 pub mod marks;
 pub mod present;
 pub mod raw;
@@ -21,7 +22,7 @@ pub mod stack;
 pub mod timeline;
 pub mod train;
 
-pub use ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, JiraKey, RevId, RevIdx, StackIdx};
+pub use ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, JiraKey, LocalIdx, RevId, RevIdx, StackIdx};
 pub use raw::{RAW_VERSION, Raw};
 pub use section::Section;
 pub use snapshot::{CoreConfig, Entry, Snapshot, build_snapshot};

@@ -11,10 +11,11 @@ pub enum Section {
     Team,
     Landed,
     Backlog,
+    Local,
 }
 
 impl Section {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Waiting,
         Self::Land,
         Self::Returned,
@@ -26,6 +27,7 @@ impl Section {
         Self::Team,
         Self::Landed,
         Self::Backlog,
+        Self::Local,
     ];
     pub const COUNT: usize = Self::ALL.len();
 
@@ -46,6 +48,7 @@ impl Section {
             Self::Team => "team",
             Self::Landed => "landed",
             Self::Backlog => "backlog",
+            Self::Local => "local",
         }
     }
 
@@ -62,6 +65,7 @@ impl Section {
             Self::Team => "Team drift",
             Self::Landed => "Landed",
             Self::Backlog => "Backlog",
+            Self::Local => "Not uploaded",
         }
     }
 
@@ -78,6 +82,7 @@ impl Section {
             Self::Team => "Team",
             Self::Landed => "Landed",
             Self::Backlog => "Backlog",
+            Self::Local => "Local",
         }
     }
 
@@ -94,6 +99,7 @@ impl Section {
             Self::Team => "Every team bug agrees with its Jira ticket.",
             Self::Landed => "No recent fixes or observed landings in this cache.",
             Self::Backlog => "Nothing assigned to you is waiting to be started.",
+            Self::Local => "Every local commit of yours is on Phabricator.",
         }
     }
 }

@@ -1168,3 +1168,47 @@ fn a_stack_reaches_agents_and_the_shell_bottom_first() {
         "{out}"
     );
 }
+
+#[test]
+fn local_lists_unsent_commits_and_show_reports_each_commits_state() {
+    let busy = Home::with_cache("local", "busy.json");
+    let (ok, out, err) = busy.run(&["local", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["section"], "local");
+    let ids: Vec<&str> = v["items"].as_array().unwrap().iter().filter_map(|i| i["id"].as_str()).collect();
+    for id in ["wip-ranking", "2020001", "1998555"] {
+        assert!(ids.contains(&id), "{id} missing from {ids:?}");
+    }
+    assert!(!ids.contains(&"2002472"), "everything there is uploaded");
+
+    let (ok, out, err) = busy.run(&["show", "1998555", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let local = v["local"].as_array().unwrap();
+    let states: Vec<(&str, &str)> = local
+        .iter()
+        .map(|c| (c["sha"].as_str().unwrap(), c["state"].as_str().unwrap()))
+        .collect();
+    assert_eq!(
+        states,
+        [
+            ("c3d0000000000000000000000000000000000002", "not_uploaded"),
+            ("c3d0000000000000000000000000000000000001", "differs")
+        ]
+    );
+    assert_eq!(local[0]["revision"], "D342300", "a fixup points at its target's revision");
+    assert_eq!(local[1]["branch"], "webgpu-cleanup");
+
+    let (ok, text, err) = busy.run(&["local"]);
+    assert!(ok, "{err}");
+    assert!(text.contains("2 commits on wip-ranking not on Phabricator"), "{text}");
+}
+
+#[test]
+fn local_is_off_without_a_scanned_checkout() {
+    let home = Home::new("local-off");
+    let (ok, out, err) = home.run(&["local"]);
+    assert!(ok, "{err}");
+    assert!(out.contains("Off:"), "{out}");
+}

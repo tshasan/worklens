@@ -1,7 +1,7 @@
 use worklens_core::ids::{BugId, IdeaIdx, IssueIdx, RevIdx};
 use worklens_core::rules::{Channel, Reason, TAGS};
 
-fn every_reason() -> [Reason; 18] {
+fn every_reason() -> [Reason; 19] {
     let r = RevIdx(0);
     let all = [
         Reason::BackedOut(BugId(1)),
@@ -21,6 +21,7 @@ fn every_reason() -> [Reason; 18] {
         Reason::Idea(IdeaIdx(0)),
         Reason::Landed(BugId(1)),
         Reason::Backlog(worklens_core::rules::Unstarted::Bug(BugId(1))),
+        Reason::NotUploaded(worklens_core::LocalIdx(0)),
         Reason::Other,
     ];
     for reason in all {
@@ -42,6 +43,7 @@ fn every_reason() -> [Reason; 18] {
             | Reason::Idea(_)
             | Reason::Landed(_)
             | Reason::Backlog(_)
+            | Reason::NotUploaded(_)
             | Reason::Other => {}
         }
     }
@@ -54,7 +56,7 @@ fn each_reason_has_its_tag() {
     assert_eq!(
         tags,
         [
-            "bo", "ni?", "r?", "r+", "chk", "r-", "r?", "", "up+", "up?", "reg", "ni>", "cr", "r?#", "", "ld", "bl", ""
+            "bo", "ni?", "r?", "r+", "chk", "r-", "r?", "", "up+", "up?", "reg", "ni>", "cr", "r?#", "", "ld", "bl", "loc", ""
         ]
     );
 }

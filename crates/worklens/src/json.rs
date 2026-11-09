@@ -67,6 +67,29 @@ pub struct Item<'a> {
     reviewer_away: Vec<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stack: Option<worklens_core::stack::Place>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    local: Vec<Value>,
+}
+
+pub fn local(s: &Snapshot, e: &Entry) -> Vec<Value> {
+    let Some(repo) = s.raw.local.as_ref() else { return Vec::new() };
+    e.local
+        .iter()
+        .filter_map(|i| {
+            let c = repo.commits.get(i.get())?;
+            let sync = s.syncs.get(i.get()).copied()?;
+            Some(json!({
+                "sha": c.sha,
+                "branch": c.place,
+                "subject": c.subject,
+                "committed": c.committed,
+                "bug": c.bug,
+                "revision": worklens_core::local::revision_of(repo, c).map(|r| r.to_string()),
+                "state": sync.as_str(),
+                "summary": worklens_core::local::state_text(&s.raw, *i, sync),
+            }))
+        })
+        .collect()
 }
 
 fn reviewer_away(s: &Snapshot, e: &Entry) -> Vec<Value> {
@@ -414,6 +437,7 @@ pub fn item<'a>(s: &'a Snapshot, e: &'a Entry) -> Item<'a> {
         quiet_days: quiet_days(s, e),
         reviewer_away: reviewer_away(s, e),
         stack: worklens_core::stack::place(s, e),
+        local: local(s, e),
     }
 }
 
@@ -487,6 +511,7 @@ pub fn compact(s: &Snapshot, e: &Entry) -> Value {
         "quietDays": quiet_days(s, e),
         "reviewerAway": reviewer_away(s, e),
         "stack": worklens_core::stack::place(s, e),
+        "local": local(s, e),
     })
 }
 

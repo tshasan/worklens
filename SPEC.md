@@ -1,6 +1,6 @@
 # Worklens: finish the attention tool
 
-Revised November 5, 2026. This replaces the previous feature roadmap and its
+Revised November 6, 2026. This replaces the previous feature roadmap and its
 build order. Read this file before any numbered spec. If an older passage in
 a numbered spec conflicts with this file or its revised-scope section, the
 revised scope wins.
@@ -165,3 +165,47 @@ and new modes or configuration are outside this assignment. The deferred
 specs record ideas, not instructions to implement them. Reconsider only when
 real daily use identifies a recurring decision the current tool cannot help
 with.
+
+## State machine follow up
+
+Status: deferred at the user's request on November 6, 2026. Keep this work for
+later; it is not part of the current implementation assignment.
+
+The [state machine reliability backlog](specs/state-machine-backlog.md)
+contains the code references, dependencies, reproduction requirements, and
+acceptance criteria for these 18 tasks. The first four ranked findings need
+failing reproductions; the remaining tasks include investigations and bounded
+refactors. An implicit state machine alone is not evidence of a defect.
+
+When this work resumes, use the order below. It balances expected user impact,
+likely exposure, confidence in the finding, effort, and dependencies. Effort
+includes regression coverage: S is a focused change, M requires coordinated
+changes, and L spans subsystems or difficult failure testing. These are
+relative estimates, not measured durations. A reproduced data-loss or
+incorrect-evidence case takes precedence over lower-impact work.
+
+| Rank | ID | Work and expected effect | Impact | Effort |
+| --- | --- | --- | --- | --- |
+| 1 | SM02 | Arm refresh from fresh cache; keep normal sessions current | High | S |
+| 2 | SM01 | Reject late progress; prevent a permanently busy refresh | High | M |
+| 3 | SM03 | Wake expired snoozes; bring obligations back on time | High | M |
+| 4 | SM04 | Commit settings consistently; avoid applying unsaved values | Medium | M |
+| 5 | SM06 | Acknowledge the activity actually read; keep unread cues useful | Medium | M |
+| 6 | SM05 | Retain touched items; reconcile upstream edits after failures | Medium | M |
+| 7 | SM14 | Detect pagination cycles; bound runaway refresh requests | High | S |
+| 8 | SM09 | Preserve unsaved marks; protect done, snooze, and read state | High | L |
+| 9 | SM11 | Align health and evidence; expose stale or incomplete facts | High | L |
+| 10 | SM12 | Restore the terminal and clean up owned child processes | Medium | L |
+| 11 | SM10 | Advance time-based facts; keep long-running sessions accurate | Medium | L |
+| 12 | SM13 | Verify retries and cooldowns; recover predictably from limits | High | M |
+| 13 | SM15 | Verify cache transitions; avoid stale supplemental comparisons | Medium | M |
+| 14 | SM08 | Match feedback to operations; preserve meaningful error reports | Medium | M |
+| 15 | SM16 | Verify write and credential failures; preserve durable state | High | L |
+| 16 | SM07 | Bind dialogs to targets; preserve selection during changes | Medium | L |
+| 17 | SM17 | Verify parser boundaries and replay; contain malformed inputs | Medium | L |
+| 18 | SM18 | Consolidate conflicting rules; reduce future interpretation drift | Medium | L |
+
+Begin with automatic refresh, stuck-refresh recovery, and snooze expiry.
+Use small independent states where they prevent invalid combinations; keep
+domain classifications pure. Preserve existing output and cache contracts,
+and follow the backlog's completion requirements when implementing a task.

@@ -47,6 +47,7 @@ pub enum Reason {
     Idea(IdeaIdx),
     Landed(crate::ids::BugId),
     Backlog(Unstarted),
+    NotUploaded(crate::ids::LocalIdx),
     Other,
 }
 
@@ -102,6 +103,7 @@ pub const UPLIFT_APPROVED: Facets = kept_when_landed("up+", "approved");
 pub const UPLIFT_REQUESTED: Facets = kept_when_landed("up?", "asked");
 pub const LANDED: Facets = kept_when_landed("ld", "landed");
 pub const BACKLOG: Facets = facets("bl", "not started");
+pub const NOT_UPLOADED: Facets = facets("loc", "not uploaded");
 pub const UNTAGGED: Facets = facets("", "");
 
 pub const TAGS: &[Facets] = &[
@@ -119,6 +121,7 @@ pub const TAGS: &[Facets] = &[
     UPLIFT_REQUESTED,
     LANDED,
     BACKLOG,
+    NOT_UPLOADED,
 ];
 
 impl Reason {
@@ -138,6 +141,7 @@ impl Reason {
             Self::UpliftRequested(_) => UPLIFT_REQUESTED,
             Self::Landed(_) => LANDED,
             Self::Backlog(_) => BACKLOG,
+            Self::NotUploaded(_) => NOT_UPLOADED,
             Self::Sprint(_) | Self::Idea(_) | Self::Other => UNTAGGED,
         }
     }
@@ -165,6 +169,7 @@ impl Reason {
             Self::Idea(_) if has_drift => Some(NextStep::TellIdeaOwner),
             Self::Landed(b) | Self::Backlog(Unstarted::Bug(b)) => Some(NextStep::OpenBug(b)),
             Self::Backlog(Unstarted::Ticket(i)) => Some(NextStep::OpenTicket(i)),
+            Self::NotUploaded(_) => Some(NextStep::Upload),
             Self::InReview(_) | Self::Sprint(_) | Self::Other | Self::UpliftRequested(_) | Self::Asked(_) | Self::Idea(_) => None,
         }
     }
@@ -253,6 +258,7 @@ pub const RULES: &[Rule] = &[
     Rule { id: "inReview",         section: Section::Others,   test: in_review },
     Rule { id: "upliftRequested",  section: Section::Others,   test: uplift_requested },
     Rule { id: "asked",            section: Section::Others,   test: asked },
+    Rule { id: "notUploaded",      section: Section::Local,    test: not_uploaded },
     Rule { id: "sprint",           section: Section::Sprint,   test: sprint },
     Rule { id: "idea",             section: Section::Ideas,    test: idea },
     Rule { id: "landed",           section: Section::Landed,   test: landed },
@@ -429,6 +435,7 @@ fn backlog(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
         let bug = &raw.bugs[b.get()];
         let started = !e.revisions.is_empty()
             || e.review.is_some()
+            || !e.local.is_empty()
             || ticket.is_some_and(|(_, x)| x.status_category == StatusCategory::Indeterminate);
         return (bug.assigned_to == raw.me.email && !crate::bugs::is_closed(bug) && !started).then_some(Hit {
             reason: Reason::Backlog(Unstarted::Bug(bug.id)),
@@ -442,6 +449,32 @@ fn backlog(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
     (mine && issue.status_category == StatusCategory::New && !in_open_sprint).then_some(Hit {
         reason: Reason::Backlog(Unstarted::Ticket(i)),
         since: issue.created,
+        stale: false,
+    })
+}
+
+fn not_uploaded(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
+    let local = ctx.raw.local.as_ref()?;
+    if e.bug.is_some_and(|b| crate::bugs::is_closed(&ctx.raw.bugs[b.get()])) {
+        return None;
+    }
+    let phid = ctx.raw.me.phid.as_deref();
+    let open_rev = e.revisions.iter().any(|r| {
+        let rev = &ctx.raw.revisions[r.get()];
+        Some(rev.author.as_str()) == phid && !matches!(rev.status, RevStatus::Published | RevStatus::Abandoned)
+    });
+    if open_rev {
+        return None;
+    }
+    let newest = e
+        .local
+        .iter()
+        .copied()
+        .filter(|i| crate::local::sync(local, *i) == crate::local::Sync::NotUploaded)
+        .max_by_key(|i| local.commits[i.get()].committed)?;
+    Some(Hit {
+        reason: Reason::NotUploaded(newest),
+        since: Some(local.commits[newest.get()].committed),
         stale: false,
     })
 }
@@ -559,6 +592,7 @@ pub enum NextStep {
     OpenBug(crate::ids::BugId),
     OpenTicket(IssueIdx),
     AddReviewer(crate::ids::RevId),
+    Upload,
 }
 
 pub const NEW_COMMENT_DAYS: f64 = 14.0;
@@ -589,6 +623,7 @@ impl std::fmt::Display for NextStep {
             Self::OpenBug(b) => write!(f, "Open bug {b} in Bugzilla"),
             Self::AddReviewer(r) => write!(f, "Consider another reviewer for {r} in Phabricator"),
             Self::OpenTicket(_) => f.write_str("Open the ticket in Jira to start it or unassign yourself"),
+            Self::Upload => f.write_str("Upload it with `moz-phab submit`, or delete the branch if it's dead"),
         }
     }
 }

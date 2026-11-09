@@ -31,6 +31,7 @@ pub struct Config {
     pub drift_days: i64,
     pub telemetry: bool,
     pub landing_checks: bool,
+    pub repo: Option<std::path::PathBuf>,
 }
 
 const MY_TICKETS: &str = "assignee = currentUser() AND (statusCategory != Done OR sprint in openSprints()) ORDER BY updated DESC";
@@ -137,7 +138,8 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         (false, true) => "Fetching bugs and revisions",
         (false, false) => "Fetching bugs",
     });
-    let (assigned, needinfos, issues, my_revs, to_review, team, fixed, asked, groups) = futures::join!(
+    let cached = cached_diffs(previous.as_ref());
+    let (assigned, needinfos, issues, my_revs, to_review, team, fixed, asked, groups, scan) = futures::join!(
         bz.assigned_to(&email),
         bz.needinfo_on(&email),
         maybe(jira.as_ref().map(|j| j.search(MY_TICKETS))),
@@ -147,6 +149,12 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         bz.fixed_by(&email, LANDED_DAYS),
         bz.needinfo_from(&email),
         maybe(phab.as_ref().zip(my_phid).map(|(p, id)| p.group_reviews(id))),
+        async {
+            match &cfg.repo {
+                Some(repo) => Some(crate::local::scan(repo, &email).await),
+                None => None,
+            }
+        },
     );
     let assigned = soft(&mut errors, "bugzilla", assigned, Vec::new());
     let needinfos = soft(&mut errors, "bugzilla", needinfos, Vec::new());
@@ -208,6 +216,10 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         (try_pushes, dates, errors)
     };
 
+    let local_commits: &[worklens_core::raw::LocalCommit] = match &scan {
+        Some(Ok(s)) => &s.commits,
+        _ => &[],
+    };
     let the_rest = async {
         let mut errors = Vec::new();
         let live_team: Vec<BugId> = team
@@ -252,6 +264,17 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         if !rev_bugs.is_empty() {
             let found = bz.by_ids(&rev_bugs).await;
             tag(&mut bugs, soft(&mut errors, "bugzilla", found, Vec::new()), Via::Revision);
+        }
+        let mut local_bugs: Vec<BugId> = local_commits
+            .iter()
+            .filter_map(|c| c.bug)
+            .filter(|id| !bugs.contains_key(id))
+            .collect();
+        local_bugs.sort_unstable();
+        local_bugs.dedup();
+        if !local_bugs.is_empty() {
+            let found = bz.by_ids(&local_bugs).await;
+            tag(&mut bugs, soft(&mut errors, "bugzilla", found, Vec::new()), Via::Local);
         }
 
         let mut issue_by_key: IndexMap<JiraKey, Issue> = issues.into_iter().map(|i| (JiraKey(i.key.0.clone()), i)).collect();
@@ -391,6 +414,25 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
     ) = futures::join!(try_status, the_rest);
     errors.extend(rest_errors);
     errors.extend(try_errors);
+    let local = match (&cfg.repo, scan) {
+        (Some(repo), Some(scan)) => {
+            log("Matching local commits to revisions");
+            let (base, commits, error) = match scan {
+                Ok(s) => (s.base, s.commits, None),
+                Err(e) => (String::new(), Vec::new(), Some(e)),
+            };
+            let uploads = crate::local::uploads(phab.as_ref(), &commits, &revisions, &cached, &mut errors).await;
+            Some(worklens_core::raw::Local {
+                repo: repo.display().to_string(),
+                base,
+                scanned_at: Timestamp::now(),
+                error,
+                commits,
+                uploads,
+            })
+        }
+        _ => None,
+    };
     for r in &mut revisions {
         if let Some(phid) = &r.diff_phid {
             r.diff_created = diff_dates.get(phid).copied().or(r.diff_created);
@@ -446,12 +488,30 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         roadmap,
         dependencies: Default::default(),
         away,
+        local,
     };
     crate::supplemental::restore(&mut raw, previous.as_ref());
     crate::supplemental::refresh(http, cfg, &mut raw, &[], log, Timestamp::now()).await;
     crate::carry::carry_forward(&mut raw, previous);
     crate::dependencies::refresh(http, cfg, &mut raw).await;
     Ok(raw)
+}
+
+fn cached_diffs(previous: Option<&Raw>) -> HashMap<String, crate::local::Cached> {
+    let Some(local) = previous.and_then(|p| p.local.as_ref()) else {
+        return HashMap::new();
+    };
+    local
+        .uploads
+        .values()
+        .filter_map(|u| {
+            let cached = crate::local::Cached {
+                uploaded: u.uploaded,
+                fingerprint: u.fingerprint.clone()?,
+            };
+            Some((u.diff_phid.clone()?, cached))
+        })
+        .collect()
 }
 
 fn identity_error() -> Error {
@@ -497,6 +557,7 @@ mod tests {
             drift_days: 30,
             telemetry: true,
             landing_checks: true,
+            repo: None,
         };
         let http = Http::new().unwrap();
         let result = futures::executor::block_on(fetch_raw(&http, &cfg, None, |_| {}));

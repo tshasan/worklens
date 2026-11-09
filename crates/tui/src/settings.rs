@@ -147,7 +147,7 @@ impl Setting {
             Self::Theme => "auto asks the terminal for its background",
             Self::ShowHidden => "when worklens opens; Z toggles it",
             Self::Agent => "auto looks for claude, then codex",
-            Self::AgentDir => "where agents and checkouts run",
+            Self::AgentDir => "where agents and checkouts run; its git branches are scanned",
             Self::Section(0) | Self::Pane(0) => "everything else falls back here",
             Self::Section(_) if show == Show::Always => "shown even when empty",
             Self::Section(_) if show == Show::Hidden => "never shown; its count shows top right",

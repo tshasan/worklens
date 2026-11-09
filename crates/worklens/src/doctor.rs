@@ -71,7 +71,11 @@ pub fn pending_checks(cfg: &Config) -> Vec<Check> {
         None => pending("you", true, "looking up your email"),
     };
     let bugzilla = pending("bugzilla", true, "checking Bugzilla answers");
-    let mut out = vec![you, bugzilla, jira, phab, agent_check(cfg)];
+    let local = match &cfg.sources.repo {
+        Some(_) => pending("local", false, "reading your branches"),
+        None => no_local(cfg),
+    };
+    let mut out = vec![you, bugzilla, jira, phab, local, agent_check(cfg)];
     with_last_fetch(&mut out, cfg);
     out.extend(keys_check(cfg));
     out
@@ -160,7 +164,7 @@ pub async fn run_checks(cfg: &Config) -> Vec<Check> {
             Err(e) => check("bugzilla", true, false, e.summary(), fix),
         }
     };
-    let ((jira, jira_email), (phab, phab_email), bugzilla) = futures::join!(jira, phab, bugzilla);
+    let ((jira, jira_email), (phab, phab_email), bugzilla, local) = futures::join!(jira, phab, bugzilla, local_check(cfg));
 
     let you = match cfg.sources.email.clone().or(jira_email).or(phab_email) {
         Some(email) => check("you", true, true, email, None),
@@ -172,10 +176,49 @@ pub async fn run_checks(cfg: &Config) -> Vec<Check> {
             Some("run `worklens setup`"),
         ),
     };
-    let mut out = vec![you, bugzilla, jira, phab, agent_check(cfg)];
+    let mut out = vec![you, bugzilla, jira, phab, local, agent_check(cfg)];
     with_last_fetch(&mut out, cfg);
     out.extend(keys_check(cfg));
     out
+}
+
+const LOCAL_FIX: &str = "set Agent › Directory in `worklens setup` to your Firefox git checkout";
+
+fn no_local(cfg: &Config) -> Check {
+    check(
+        "local",
+        false,
+        false,
+        format!("{} isn't a git checkout; local commits aren't tracked", cfg.prefs.agent_dir),
+        Some(LOCAL_FIX),
+    )
+}
+
+async fn local_check(cfg: &Config) -> Check {
+    let Some(repo) = &cfg.sources.repo else { return no_local(cfg) };
+    let email = cfg.sources.email.as_deref().unwrap_or_default();
+    match worklens_sources::local::scan(repo, email).await {
+        Ok(s) => check(
+            "local",
+            false,
+            true,
+            format!(
+                "{}: {} commits of yours from the last {} days aren't on {}",
+                repo.display(),
+                s.commits.len(),
+                worklens_sources::local::DAYS,
+                s.base
+            ),
+            None,
+        ),
+        Err(e) => check(
+            "local",
+            false,
+            false,
+            e,
+            Some("check that `git status` works there and the checkout has an origin remote"),
+        ),
+    }
 }
 
 fn agent_check(cfg: &Config) -> Check {
