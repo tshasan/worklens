@@ -67,7 +67,7 @@ fn press(app: &mut App, code: KeyCode) {
 fn narrow_terminal_stacks_the_list_over_the_detail() {
     let s = screen(&app(80, 24));
     assert!(s.lines().next().unwrap().contains("worklens"), "{s}");
-    assert!(s.contains("Waiting on you 1"), "full tab titles at 80 columns:\n{s}");
+    assert!(s.contains("Waiting on you 1"), "the group heading names the section in full:\n{s}");
     assert!(s.contains("ni? "), "{s}");
     assert!(s.contains("1995008"), "{s}");
     assert!(
@@ -78,10 +78,10 @@ fn narrow_terminal_stacks_the_list_over_the_detail() {
 }
 
 #[test]
-fn wide_terminal_puts_them_side_by_side_with_full_tab_titles() {
+fn wide_terminal_puts_them_side_by_side() {
     let s = screen(&app(170, 30));
     assert!(s.contains("Waiting on you 1"), "{s}");
-    let tabs = line_with(&s, "Waiting on you 1");
+    let tabs = line_with(&s, "On you 1");
     assert!(tabs.contains("Overview   Timeline"), "detail tabs share the section tab row:\n{s}");
     assert!(s.contains("D321987 · needs-review"), "{s}");
 }
@@ -212,14 +212,19 @@ fn integration_evidence_and_menu_only_destination_fit_both_sizes() {
                 break;
             }
         }
-        assert!(seen.contains(&"1".repeat(40)), "matched commit unreachable at {w}x{h}");
+        assert!(seen.contains(&"1".repeat(12)), "matched commit unreachable at {w}x{h}");
+        assert!(
+            !seen.lines().any(|l| l.contains("Commit") && l.contains(&"1".repeat(13))),
+            "commits read as 12-character hashes at {w}x{h}:\n{}",
+            seen.lines().filter(|l| l.contains(&"1".repeat(13))).collect::<Vec<_>>().join("\n")
+        );
         assert!(seen.contains("No jobs"), "missing health must remain visible at {w}x{h}: {seen}");
         let at = a
             .actions()
             .iter()
             .position(|action| action.label.contains("autoland push"))
             .unwrap();
-        press(&mut a, KeyCode::Enter);
+        press(&mut a, KeyCode::Char(' '));
         for _ in 0..at {
             press(&mut a, KeyCode::Down);
         }
@@ -359,14 +364,14 @@ fn tabs_hide_empty_sections_and_underline_the_current_one() {
     a.tone = worklens_tui::Tone::Dark;
     let s = screen(&a);
     let tabs = s.lines().nth(1).unwrap().to_owned();
-    assert!(tabs.contains("Waiting on you 1   Sprint 1"), "spaced apart: {tabs}");
+    assert!(tabs.contains("All 1   On you 1   Sprint 1"), "spaced apart: {tabs}");
     assert!(
         !tabs.contains("Land") && !tabs.contains("Team") && !tabs.contains("empty"),
         "{tabs}"
     );
     let border = s.lines().nth(2).unwrap();
-    let start = tabs.find("Waiting").unwrap();
-    let width = "Waiting on you 1".len();
+    let start = tabs.find("All").unwrap();
+    let width = "All 1".len();
     assert_eq!(
         border.chars().skip(start).take(width).collect::<String>(),
         "━".repeat(width),
@@ -375,28 +380,37 @@ fn tabs_hide_empty_sections_and_underline_the_current_one() {
     assert_eq!(border.matches('━').count(), width, "{border}");
     press(&mut a, KeyCode::Char('9'));
     let tabs = screen(&a).lines().nth(1).unwrap().to_owned();
-    assert!(tabs.contains("Team drift 0"), "{tabs}");
+    assert!(tabs.contains("Team 0"), "{tabs}");
+}
+
+fn menu_rows(s: &str, label: &str) -> String {
+    let line = line_with(s, label);
+    let cells: Vec<char> = line.chars().collect();
+    let at = line[..line.find(label).unwrap()].chars().count();
+    let left = cells[..at].iter().rposition(|c| *c == '│').unwrap();
+    let right = at + cells[at..].iter().position(|c| *c == '│').unwrap();
+    cells[left..=right].iter().collect()
 }
 
 #[test]
-fn the_menu_shows_numbered_actions() {
+fn the_menu_shows_actions_with_their_keys() {
     let mut a = app(140, 30);
-    press(&mut a, KeyCode::Enter);
+    press(&mut a, KeyCode::Char(' '));
     let s = screen(&a);
-    assert!(s.contains("> 1 Open bug 1995008 in Bugzilla"), "{s}");
-    assert!(s.contains("9 Done locally"), "{s}");
-    let snooze = s.lines().find(|l| l.contains("Snooze locally until")).unwrap();
-    assert!(
-        snooze.contains("│   0 Snooze") && !snooze.contains("10"),
-        "0 picks the tenth, as with sections: {s}"
-    );
+    assert!(s.contains("> Open bug 1995008 in Bugzilla"), "{s}");
+    let snooze = menu_rows(&s, "Snooze locally until");
+    assert!(snooze.starts_with("│   Snooze"), "no numbers, only keys: {snooze}");
     assert!(snooze.ends_with(" z │"), "the key sits in a right-aligned column: {s}");
-    let bugzilla = s.lines().find(|l| l.contains("Open bug 1995008 in Bugzilla")).unwrap();
+    let bugzilla = menu_rows(&s, "Open bug 1995008 in Bugzilla");
     assert_eq!(bugzilla.chars().count(), snooze.chars().count(), "{s}");
     assert!(bugzilla.ends_with(" B │") && !bugzilla.contains("[B]"), "{s}");
     assert!(!s.contains("Action 1"), "a menu that fits doesn't repeat the footer: {s}");
-    press(&mut a, KeyCode::Char('0'));
-    assert!(screen(&a).contains("Snooze 1995008 locally:"), "0 runs the tenth action");
+    assert!(
+        s.contains("Next: Answer the needinfo"),
+        "the detail stays readable behind the menu:\n{s}"
+    );
+    press(&mut a, KeyCode::Char('z'));
+    assert!(screen(&a).contains("Snooze locally"), "a key runs its action");
 }
 
 #[test]
@@ -412,17 +426,16 @@ fn long_menu_labels_wrap_under_themselves_within_80_columns() {
         run: "echo example".into(),
         terminal: false,
     });
-    press(&mut a, KeyCode::Enter);
+    press(&mut a, KeyCode::Char(' '));
     let s = screen(&a);
-    let fix = s
-        .lines()
-        .find(|l| l.contains("Open bug 1995008 and copy the See Also URL"))
-        .unwrap();
-    assert!(fix.ends_with(" F │"), "{s}");
+    assert!(menu_rows(&s, "Open bug 1995008 and copy the See Also URL").ends_with(" F │"), "{s}");
+    let first = menu_rows(&s, "Run the long custom");
+    assert!(first.ends_with(" x │"), "the key is on the first line:\n{s}");
     let at = s.lines().position(|l| l.contains("Run the long custom")).unwrap();
-    assert!(s.lines().nth(at).unwrap().ends_with(" x │"), "the key is on the first line:\n{s}");
-    let next = s.lines().nth(at + 1).unwrap();
-    assert!(next.starts_with("│     ") && !next.starts_with("│      "), "a hanging indent:\n{s}");
+    let line: Vec<char> = s.lines().nth(at).unwrap().chars().collect();
+    let next: Vec<char> = s.lines().nth(at + 1).unwrap().chars().collect();
+    let text = line.windows(3).position(|w| w == ['R', 'u', 'n']).unwrap();
+    assert!(next[text - 1] == ' ' && next[text] != ' ', "a hanging indent under the label:\n{s}");
     assert!(s.lines().all(|l| l.chars().count() <= 80), "{s}");
 }
 
@@ -436,10 +449,10 @@ fn before_the_first_fetch_nothing_claims_zero_work() {
     let tabs = s.lines().nth(1).unwrap();
     assert_eq!(
         tabs.trim(),
-        "Waiting on you",
+        "All",
         "only the first tab, until counts say which others have work: {s}"
     );
-    assert!(s.lines().nth(2).unwrap().starts_with("╭━━━━"), "it is underlined: {s}");
+    assert!(s.lines().nth(2).unwrap().starts_with("╭━━━─"), "it is underlined: {s}");
     assert_eq!(s.matches("Fetching").count(), 1, "one line says it's fetching:\n{s}");
     assert!(!s.contains("Select an item"), "nothing to select yet:\n{s}");
     a.busy = Some("Identifying you".into());
@@ -565,7 +578,8 @@ fn empty_states_distinguish_filter_hidden_failure_and_first_load() {
     a.rows.clear();
     a.busy = Some("Fetching Bugzilla".into());
     let loading = screen(&a);
-    assert!(loading.contains("No cached work yet"), "{loading}");
+    assert!(loading.contains("Fetching Bugzilla"), "the current step shows:\n{loading}");
+    assert!(loading.contains("The last try failed: Offline"), "{loading}");
 }
 
 #[test]
@@ -606,7 +620,7 @@ fn menu_wraps_long_actions_and_reaches_the_last_action_without_bleed() {
         run: "echo example".into(),
         terminal: false,
     });
-    press(&mut a, KeyCode::Enter);
+    press(&mut a, KeyCode::Char(' '));
     for _ in 0..30 {
         press(&mut a, KeyCode::Down);
     }
@@ -616,7 +630,7 @@ fn menu_wraps_long_actions_and_reaches_the_last_action_without_bleed() {
     let s = screen(&a);
     assert!(s.contains("END-OF-ACTION"), "{s}");
     assert!(
-        s.contains("Action 11 of 11 · PgUp PgDn read"),
+        s.contains("Action 10 of 10 · PgUp PgDn read"),
         "a scrolling menu says where you are: {s}"
     );
     assert!(!s.contains("Support view-source:"), "the full-body overlay clears the list: {s}");
@@ -632,8 +646,8 @@ fn selection_has_a_marker_and_reverse_video_without_relying_on_hue() {
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
     terminal.draw(|f| view(&a, f)).unwrap();
     let buf = terminal.backend().buffer();
-    assert_eq!(buf[(1, 3)].symbol(), ">");
-    assert!(buf[(25, 3)].modifier.contains(Modifier::REVERSED));
+    assert_eq!(buf[(1, 4)].symbol(), ">");
+    assert!(buf[(25, 4)].modifier.contains(Modifier::REVERSED));
 }
 
 #[test]
@@ -644,14 +658,14 @@ fn on_a_known_dark_background_selection_is_a_raised_band_and_structure_recedes()
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
     terminal.draw(|f| view(&a, f)).unwrap();
     let buf = terminal.backend().buffer();
-    assert_eq!(buf[(1, 3)].symbol(), "▌");
-    let title = &buf[(25, 3)];
+    assert_eq!(buf[(1, 4)].symbol(), "▌");
+    let title = &buf[(25, 4)];
     assert_eq!(title.bg, Color::Indexed(237));
     assert!(!title.modifier.contains(Modifier::REVERSED));
     assert!(title.modifier.contains(Modifier::BOLD));
-    assert_eq!(buf[(3, 3)].fg, Color::Reset, "age on the selected row");
+    assert_eq!(buf[(3, 4)].fg, Color::Reset, "age on the selected row");
     assert_eq!(buf[(0, 2)].fg, Color::Indexed(240));
-    assert_eq!(buf[(1, 1)].symbol(), "W");
+    assert_eq!(buf[(1, 1)].symbol(), "A");
     assert!(!buf[(1, 1)].modifier.contains(Modifier::REVERSED));
     assert!(buf[(1, 1)].modifier.contains(Modifier::BOLD));
     assert_eq!(buf[(1, 1)].fg, Color::Cyan);
@@ -675,8 +689,8 @@ fn without_color_status_and_selection_still_read() {
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
     terminal.draw(|f| view(&a, f)).unwrap();
     let buf = terminal.backend().buffer();
-    assert_eq!(buf[(1, 3)].symbol(), ">");
-    assert!(buf[(25, 3)].modifier.contains(Modifier::REVERSED));
+    assert_eq!(buf[(1, 4)].symbol(), ">");
+    assert!(buf[(25, 4)].modifier.contains(Modifier::REVERSED));
     let hues = (0..24)
         .flat_map(|y| (0..80).map(move |x| (x, y)))
         .filter(|p| !matches!(buf[*p].fg, Color::Reset) || !matches!(buf[*p].bg, Color::Reset))
@@ -981,11 +995,11 @@ fn a_hidden_section_leaves_the_tabs_but_keeps_its_count_in_sight() {
     a.set_prefs(prefs);
     let s = screen(&a);
     let tabs = s.lines().nth(1).unwrap();
-    assert!(tabs.starts_with(" Waiting on you 1") && !tabs.contains("   Sprint 1"), "{s}");
+    assert!(tabs.starts_with(" All 1   On you 1") && !tabs.contains("   Sprint 1"), "{s}");
     assert!(tabs.ends_with("hidden: Sprint 1"), "{s}");
     for _ in 0..Section::COUNT {
         press(&mut a, KeyCode::Right);
-        assert_eq!(a.section(), Section::Waiting, "arrows skip the hidden section");
+        assert!(a.all_tab() || a.section() == Section::Waiting, "arrows skip the hidden section");
     }
 }
 
@@ -1040,7 +1054,7 @@ fn the_ideas_tab_shows_the_idea_and_the_work_under_it_at_80x24() {
     assert!(!line_with(&screen(&a), "Waiting on you").contains("AIDI"), "the idea is not a turn");
     press(&mut a, KeyCode::Char('6'));
     let s = screen(&a);
-    assert!(line_with(&s, "Waiting on you").contains("Ideas 1"), "{s}");
+    assert!(line_with(&s, "On you 1").contains("Ideas 1"), "{s}");
     assert!(line_with(&s, "AIDI-79").contains("Example idea: page extraction"), "{s}");
     assert!(
         s.contains("Developing, Dev on track, target Fx158.0.1 (Oct 20)"),
@@ -1072,7 +1086,7 @@ fn work_names_its_epic_and_idea_and_the_idea_names_its_work() {
 fn an_idea_offers_an_engineering_update_instead_of_an_agent_brief() {
     let mut a = app_with_idea(140, 44);
     press(&mut a, KeyCode::Char('7'));
-    press(&mut a, KeyCode::Enter);
+    press(&mut a, KeyCode::Char(' '));
     let s = screen(&a);
     assert!(s.contains("Copy an engineering update for AIDI-79"), "{s}");
     assert!(!s.contains("Copy a brief for a coding agent"), "{s}");
@@ -1201,7 +1215,7 @@ fn every_footer_and_hint_separates_keys_the_same_way() {
     let s = screen(&a);
     assert_eq!(
         s.lines().last().unwrap(),
-        " ↑↓ move · ←→ section · Tab detail · Enter actions · / filter · ? help"
+        " ↑↓ move · ←→ section · Enter open · Space actions · / filter · ? help"
     );
     let hint = line_with(&s, "lines · PgUp PgDn scroll");
     assert!(
@@ -1219,7 +1233,7 @@ fn every_footer_and_hint_separates_keys_the_same_way() {
     assert_eq!(buf[(x + 10, y)].fg, Color::Indexed(246), "labels quiet");
     assert_eq!(buf[(1, 23)].fg, Color::Reset);
     for (keys, footer) in [
-        (vec![KeyCode::Enter], "↑↓ choose · Enter or key run · Esc back"),
+        (vec![KeyCode::Char(' ')], "↑↓ choose · Enter or key run · Esc back"),
         (
             vec![KeyCode::Char('s')],
             "PgUp PgDn scroll · Tab settings · r retry · Esc back · q quit",
@@ -1255,7 +1269,7 @@ fn detail_and_settings_tabs_are_underlined_in_their_box_border_like_sections() {
     for (w, h) in [(80, 24), (160, 30)] {
         let mut a = app(w, h);
         let s = screen(&a);
-        assert!(underlined(&s, "Waiting on you 1"), "{s}");
+        assert!(underlined(&s, "All 1"), "{s}");
         assert!(underlined(&s, "Overview"), "{w}x{h}:\n{s}");
         assert!(!s.lines().any(|l| l.starts_with("│ ━")), "no rule row inside the box:\n{s}");
         press(&mut a, KeyCode::Tab);
@@ -1573,7 +1587,7 @@ fn the_landed_tab_says_where_each_fix_is_and_shows_its_release_table() {
 fn backlog_items_remain_reachable_in_other_without_a_separate_destination() {
     let mut a = overloaded(80, 24);
     assert!(!a.tab_shown(Section::Backlog.index()));
-    open_section(&mut a, "Other");
+    open_section(&mut a, "Backlog");
     let ids: Vec<String> = a
         .rows
         .iter()
@@ -1591,7 +1605,7 @@ fn backlog_items_remain_reachable_in_other_without_a_separate_destination() {
     filter_to(&mut a, &expected[0]);
     let s = screen(&a);
     assert!(s.contains("not started"), "{s}");
-    update(&mut a, Msg::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)), now());
+    update(&mut a, Msg::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), now());
     let s = screen(&a);
     assert!(s.contains("Open"), "{s}");
 }
@@ -1728,8 +1742,329 @@ fn the_stack_header_fits_80x24_and_the_count_ignores_it() {
     press(&mut a, KeyCode::Char('4'));
     let s = screen(&a);
     assert!(s.lines().all(|l| l.chars().count() <= 80), "{s}");
+    assert!(line_with(&s, "On others").contains("On others 3"), "the header is not counted: {s}");
+}
+
+#[test]
+fn the_header_says_which_sources_are_read_and_which_are_not_set_up() {
+    let s = screen(&app(140, 30));
+    assert!(line_with(&s, "worklens").contains("Bugzilla ✓  Jira ✓  Phabricator ✓"), "{s}");
+    let s = screen(&app(80, 24));
+    assert!(line_with(&s, "worklens").contains("Sources ✓"), "{s}");
+    for (w, h) in [(80, 24), (160, 48)] {
+        let s = screen(&app_from("bugzilla_only.json", w, h));
+        let header = s.lines().next().unwrap();
+        assert!(header.contains("Jira") && header.contains("not set up"), "{s}");
+        assert!(header.contains("Phabricator"), "{s}");
+        assert!(!header.contains('✗'), "unset is not a failure: {s}");
+    }
+}
+
+#[test]
+fn a_wide_list_spells_out_tags_and_labels_its_columns() {
+    let s = screen(&overloaded(200, 50));
+    let head = line_with(&s, "Age  Why");
+    assert!(head.contains("ID") && head.contains("Title"), "{s}");
+    assert!(s.contains("asked of you"), "{s}");
+    assert!(s.contains("backed out"), "{s}");
+    assert!(s.contains("! asked of you"), "priority is its own column:\n{s}");
+    let s = screen(&overloaded(80, 24));
+    assert!(s.contains("! ni?"), "80 columns keep the short tags:\n{s}");
+}
+
+#[test]
+fn a_stack_split_across_sections_says_how_much_of_it_is_here() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../store/fixtures/raw.json");
+    let mut raw: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let rev = |id: u32, status: &str| {
+        serde_json::json!({
+            "id": id, "phid": format!("PHID-DREV-{id}"), "title": format!("Captcha patch {id}"), "status": status,
+            "author": "PHID-USER-me", "bug": null, "modified": "2026-11-02T12:00:00Z", "reviewers": [],
+        })
+    };
+    let revisions = raw["revisions"].as_array_mut().unwrap();
+    revisions.extend([
+        rev(338973, "needs-review"),
+        rev(338971, "needs-revision"),
+        rev(338972, "needs-review"),
+    ]);
+    raw["dependencies"] = serde_json::json!({ "parents": {
+        "338972": ["PHID-DREV-338971"], "338973": ["PHID-DREV-338972"],
+    }});
+    let raw: Raw = serde_json::from_value(raw).unwrap();
+    let opts = Options {
+        cache_minutes: None,
+        agent: None,
+        dir: PathBuf::from("/tmp"),
+        keys: Vec::new(),
+    };
+    let mut a = App::new(CoreConfig::default(), opts, Some(raw), Marks::default(), now());
+    update(&mut a, Msg::Resize(120, 30), now());
+    press(&mut a, KeyCode::Char('4'));
+    let s = screen(&a);
+    assert!(s.contains("┌ 2 of a 3-revision stack · bottom D338971"), "{s}");
+    press(&mut a, KeyCode::Char('3'));
+    let s = screen(&a);
+    assert!(s.contains("┌ 1 of a 3-revision stack · bottom D338971"), "{s}");
+}
+
+#[test]
+fn channels_with_nothing_known_fold_into_one_line() {
+    let seen = paged(&mut overloaded(200, 50));
+    let folded = seen
+        .iter()
+        .find(|l| l.contains("Unknown") && l.contains("nothing reported or checked yet"))
+        .unwrap_or_else(|| panic!("{seen:#?}"));
+    assert!(folded.contains("Beta 146") && folded.contains("ESR 115"), "{folded}");
+    assert!(seen.iter().any(|l| l.contains("Nightly 147")), "a channel with facts keeps its row");
+}
+
+#[test]
+fn a_tall_screen_shows_the_timeline_inside_the_overview() {
+    let mut a = overloaded(200, 50);
+    let s = screen(&a);
+    assert!(s.contains("── Timeline"), "{s}");
+    assert!(!line_with(&s, "Overview").contains("Timeline"), "no separate tab for it:\n{s}");
+    press(&mut a, KeyCode::Char('1'));
+    let s = screen(&overloaded(200, 30));
+    assert!(line_with(&s, "Overview").contains("Timeline"), "a short screen keeps the tab:\n{s}");
+}
+
+#[test]
+fn a_wide_footer_shows_more_keys() {
+    let s = screen(&overloaded(200, 50));
+    let footer = s.lines().last().unwrap();
+    for key in [
+        "Enter open",
+        "Space actions",
+        "d done",
+        "z snooze",
+        "r refresh",
+        "s sources",
+        "? help",
+    ] {
+        assert!(footer.contains(key), "{key}: {footer}");
+    }
+    let s = screen(&overloaded(80, 24));
+    assert!(!s.lines().last().unwrap().contains("d done"), "{s}");
+}
+
+#[test]
+fn filtering_keeps_every_tab_and_points_to_matches_elsewhere() {
+    let mut a = overloaded(80, 24);
+    let tabs = |a: &App| screen(a).lines().nth(1).unwrap().to_owned();
+    let before = tabs(&a);
+    press(&mut a, KeyCode::Char('1'));
+    filter_to(&mut a, "AIPLAT-");
+    let after = tabs(&a);
+    for name in ["On you", "Land", "Returned"] {
+        assert_eq!(before.contains(name), after.contains(name), "{name}: {before} / {after}");
+    }
+    let s = screen(&a);
     assert!(
-        line_with(&s, "Waiting on others").contains("Waiting on others 3"),
-        "the header is not counted: {s}"
+        s.contains("No matches for “aiplat-” here") || s.contains("No matches for “AIPLAT-” here"),
+        "{s}"
     );
+    assert!(
+        s.contains(" match →") || s.contains(" match ←"),
+        "points to a section with matches:\n{s}"
+    );
+    assert!(
+        Section::ALL.iter().any(|x| s.contains(&format!("{} has ", x.title()))),
+        "names the section:\n{s}"
+    );
+}
+
+fn selected_line(s: &str) -> usize {
+    s.lines()
+        .position(|l| l.starts_with("│>"))
+        .unwrap_or_else(|| panic!("no selection:\n{s}"))
+}
+
+#[test]
+fn the_menu_opens_just_below_the_selected_row_or_above_it_at_the_bottom() {
+    let mut a = overloaded(200, 50);
+    for _ in 0..3 {
+        press(&mut a, KeyCode::Down);
+    }
+    press(&mut a, KeyCode::Char(' '));
+    let s = screen(&a);
+    let lines: Vec<&str> = s.lines().collect();
+    let row = selected_line(&s);
+    let below: Vec<char> = lines[row + 1].chars().collect();
+    let x = 1 + 27;
+    assert_eq!(below[x], '╭', "the menu starts after the row's marks, under the row:\n{s}");
+    assert!(lines[row + 1].contains("╭ Actions ·"), "{s}");
+    press(&mut a, KeyCode::Esc);
+    press(&mut a, KeyCode::End);
+    press(&mut a, KeyCode::Char(' '));
+    let s = screen(&a);
+    let lines: Vec<&str> = s.lines().collect();
+    let row = selected_line(&s);
+    assert!(lines[row - 1].contains('╰'), "near the bottom the menu sits above the row:\n{s}");
+    assert!(!lines[row + 1].contains("Actions"), "{s}");
+}
+
+#[test]
+fn all_heads_each_group_with_its_count_and_spaces_the_groups() {
+    let s = screen(&app_with_idea(140, 44));
+    let list: Vec<String> = s
+        .lines()
+        .skip(3)
+        .map_while(|l| {
+            l.strip_prefix('│')
+                .and_then(|l| l.split('│').next())
+                .map(|l| l.trim_end().to_owned())
+        })
+        .collect();
+    let at = list.iter().position(|l| l == " Waiting on you 1").unwrap_or_else(|| panic!("{s}"));
+    assert!(list[at + 1].contains("1995008"), "{s}");
+    assert_eq!(list[at + 2], "", "a blank line between groups:\n{s}");
+    assert_eq!(list[at + 3], " Drift 1", "the idea sits under Drift, its most urgent section:\n{s}");
+    assert!(list[at + 4].contains("AIDI-79"), "{s}");
+    let s = screen(&app_with_stack(120, 30));
+    let lines: Vec<&str> = s.lines().collect();
+    let head = lines
+        .iter()
+        .position(|l| l.contains("Waiting on others 3"))
+        .unwrap_or_else(|| panic!("{s}"));
+    assert!(
+        lines[head + 1].contains("┌ Stack of 3"),
+        "the stack header follows the group heading:\n{s}"
+    );
+    assert!(lines[head + 2].contains("├ D338971"), "{s}");
+    assert!(lines[head + 4].contains("└ D338973"), "{s}");
+}
+
+#[test]
+fn the_all_border_counts_what_lives_elsewhere_hidden_and_new() {
+    let mut a = overloaded(80, 24);
+    let s = a.snapshot.as_ref().unwrap();
+    let backlog = s.section(Section::Other, false).count() + s.section(Section::Backlog, false).count();
+    let landed = s.section(Section::Landed, false).count();
+    let screen_text = screen(&a);
+    assert!(
+        screen_text.contains(&format!("Backlog {backlog}, Landed {landed} in their tabs →")),
+        "{screen_text}"
+    );
+    press(&mut a, KeyCode::Char('d'));
+    a.toast = None;
+    assert!(screen(&a).contains("1 hidden Z shows"), "{}", screen(&a));
+    open_section(&mut a, "Backlog");
+    press(&mut a, KeyCode::Char('d'));
+    a.toast = None;
+    assert!(
+        screen(&a).contains("1 hidden Z shows"),
+        "a done backlog item counts in Backlog:\n{}",
+        screen(&a)
+    );
+
+    let path = format!("{}/../store/fixtures/raw.json", env!("CARGO_MANIFEST_DIR"));
+    let raw: Raw = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let marks: Marks = serde_json::from_value(serde_json::json!({"version": 1, "lastLook": "2026-01-01T00:00:00Z", "items": {}})).unwrap();
+    let opts = Options {
+        cache_minutes: None,
+        agent: None,
+        dir: PathBuf::from("/tmp"),
+        keys: Vec::new(),
+    };
+    let mut a = App::new(CoreConfig::default(), opts, Some(raw), marks, now());
+    update(&mut a, Msg::Resize(80, 24), now());
+    let fresh = a
+        .rows
+        .iter()
+        .filter(|i| a.snapshot.as_ref().unwrap().entry(**i).marks.is_new)
+        .count();
+    assert!(fresh > 0, "unseen since the last look");
+    assert!(screen(&a).contains(&format!("• {fresh} new")), "{}", screen(&a));
+}
+
+#[test]
+fn tabs_that_overflow_say_how_many_are_out_of_sight() {
+    let mut a = overloaded(80, 24);
+    let shown = App::tab_order().filter(|i| a.tab_shown(*i)).count();
+    let tabs = screen(&a).lines().nth(1).unwrap().to_owned();
+    let visible = App::tab_order()
+        .filter(|i| a.tab_shown(*i))
+        .filter(|i| tabs.contains(&format!("{} {}", a.tab_short(*i), a.counts[*i])))
+        .count();
+    assert!(tabs.ends_with(&format!("{} more ›", shown - visible)), "{tabs}");
+    press(&mut a, KeyCode::Left);
+    let tabs = screen(&a).lines().nth(1).unwrap().to_owned();
+    assert!(tabs.starts_with(" ‹ ") && tabs.contains(" more  "), "{tabs}");
+    let wide = screen(&overloaded(140, 30));
+    let tabs = wide.lines().nth(1).unwrap();
+    assert!(
+        !tabs.contains(" mo ") && !tabs.ends_with(" mo"),
+        "the overflow count is never cut: {tabs}"
+    );
+}
+
+#[test]
+fn without_a_cache_the_footer_offers_r_and_the_detail_says_what_to_set_up() {
+    let mut a = app(80, 24);
+    a.snapshot = None;
+    a.rows.clear();
+    let s = screen(&a);
+    assert_eq!(s.lines().last().unwrap(), " r fetch · s sources · ? help · q quit", "{s}");
+    assert!(s.contains("No work cached yet. r fetches it now"), "{s}");
+    assert!(s.contains("worklens auth set jira"), "{s}");
+    a.error = Some("Offline".into());
+    let s = screen(&a);
+    assert!(s.contains("Couldn't fetch your work.") && s.contains("Offline"), "{s}");
+    assert!(!s.contains("auth set jira"), "a failure is not a setup problem:\n{s}");
+}
+
+#[test]
+fn sprint_points_and_snoozes_read_in_words_on_a_wide_list() {
+    let mut a = overloaded(200, 50);
+    open_section(&mut a, "Sprint");
+    let s = screen(&a);
+    assert!(s.contains(" pts ") && s.contains("no estimate"), "{s}");
+    let mut a = overloaded(80, 24);
+    open_section(&mut a, "Sprint");
+    let s = screen(&a);
+    assert!(line_with(&s, "2006319").contains("13p "), "{s}");
+
+    for (w, h, word) in [(200, 50, "snoozed"), (80, 24, "zz")] {
+        let mut a = overloaded(w, h);
+        press(&mut a, KeyCode::Char('z'));
+        press(&mut a, KeyCode::Enter);
+        press(&mut a, KeyCode::Char('Z'));
+        let s = screen(&a);
+        assert!(line_with(&s, "2010001").contains(word), "{w}x{h}:\n{s}");
+    }
+}
+
+#[test]
+fn the_drift_pane_names_the_key_that_fixes_it() {
+    let mut a = overloaded(140, 30);
+    open_section(&mut a, "Drift");
+    while !a.actions().iter().any(|x| x.key == Some('F')) {
+        let at = a.cursor();
+        press(&mut a, KeyCode::Down);
+        assert_ne!(a.cursor(), at, "busy.json needs drift with a fix");
+    }
+    for _ in 0..6 {
+        if screen(&a).contains("Fix:") {
+            break;
+        }
+        press(&mut a, KeyCode::Tab);
+    }
+    assert!(screen(&a).contains("(F opens it"), "{}", screen(&a));
+}
+
+#[test]
+fn a_filtered_all_heads_only_groups_with_matches() {
+    let mut a = overloaded(200, 50);
+    filter_to(&mut a, "crash");
+    let s = screen(&a);
+    for line in s.lines() {
+        let cell = line.strip_prefix('│').and_then(|l| l.split('│').next()).unwrap_or("").trim_end();
+        assert!(
+            !(cell.starts_with(' ') && cell.ends_with(" 0") && !cell.contains("  ")),
+            "empty heading {cell:?}:\n{s}"
+        );
+    }
+    assert!(s.contains("Waiting on you 4"), "{s}");
 }

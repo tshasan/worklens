@@ -1,0 +1,26 @@
+{
+  "result": {
+    "data": [
+      {
+        "id": 101,
+        "type": "PROJ",
+        "phid": "PHID-PROJ-1",
+        "fields": {"name": "ai-platform-reviewers", "slug": "ai-platform-reviewers"},
+        "attachments": {
+          "members": {
+            "members": [
+              {"phid": "PHID-USER-me"},
+              {"phid": "PHID-USER-1"},
+              {"phid": "PHID-USER-2"}
+            ]
+          }
+        }
+      }
+    ],
+    "maps": {"slugMap": {}},
+    "query": {"queryKey": null},
+    "cursor": {"limit": 100, "after": null, "before": null, "order": null}
+  },
+  "error_code": null,
+  "error_info": null
+}

@@ -8,15 +8,25 @@ Rules for the TUI. Code lives in `crates/tui/src`: layout and styles in
 - 80x24 must work. Below that width, stack the list above the detail; above
   it, put them side by side. Keep the selection when the terminal resizes.
 - The screen has four parts:
-  - a header: sprint, cache age and source health;
+  - a header: sprint, source health and cache age;
   - section tabs;
   - the list and the detail;
   - a footer of keys for the current context.
-- Row order: activity, age, tag, try/drift status, ID, title. Align columns
-  and reserve slots for optional marks so titles don't move.
+- When the header is short of room, drop the merge countdown first, then
+  shorten source health to "Sources ✓" or the sources that aren't set up.
+- Row order: activity, age, priority, tag, try/drift status, ID, title. Align
+  columns and reserve slots for optional marks so titles don't move. Priority
+  (`!` critical, `*` important) has its own column, apart from the tag.
+- A list at least 96 cells wide spells tags out ("asked of you", not `ni?`)
+  and, when tall enough, labels its columns.
 - Measure width in terminal cells, not bytes or `char`s. Truncate titles in
   the list with `…`; wrap text in the detail.
-- Detail order: title, reason, next step, then facts and comments.
+- Detail order: title, reason, next step, then facts and comments. On a
+  wide screen at least 40 rows tall, the timeline sits inside the Overview
+  and loses its own tab.
+- Fold release channels with nothing known into one "Unknown" row. "not
+  set" is a fact and keeps its row.
+- Show commit hashes as their first 12 characters.
 - Put a blank line between subjects, not between facts. Prefer spacing to
   borders.
 
@@ -47,6 +57,16 @@ status colors use ANSI names so they follow the user's theme.
 
 ## Tabs
 
+The first tab is **All**: every section that needs you (On you, Land,
+Returned, On others, Sprint, Drift, Local, Ideas) in one list, each item once,
+under a heading for the first of those sections that holds it. Backlog and
+Landed stay in their own tabs; All's border says how many they hold.
+
+Tabs use the short names everywhere (`On you`, `On others`, `Backlog`); the
+full title is the heading inside All. When tabs overflow, say how many are
+hidden: `‹ 2 more`, `3 more ›`. While filtering, tabs keep their places and
+show the matches in each.
+
 Section and detail tabs look the same:
 - names three cells apart;
 - the current tab in the accent, with a heavy `━` under it, drawn in the top
@@ -62,13 +82,22 @@ Section and detail tabs look the same:
 
 ## Keys
 
-- Arrows move, `Enter` opens actions, `Esc` backs out.
+- Arrows move, `Enter` opens the next step (what `o` opens), `Space` opens
+  the actions menu, `Esc` backs out.
 - `←` `→` switch sections, `Tab` switches detail tabs.
-- Add new actions to the actions menu before giving them a letter.
+- `u` undoes the last done or snooze; the confirmation says so.
+- Add new actions to the actions menu before giving them a letter. The menu
+  shows each action's letter, not a number, and leaves out actions that
+  can't run (no coding agent found).
+- The menu is a popup under the selected row, sized to its actions, so the
+  detail stays readable. Only a menu taller than the body covers it.
 - Keys, footer, menu and help all come from `BINDINGS`. Help must fit 80x24.
+- The footer fills by rank as width allows: at 80 columns the essentials, on
+  a full screen done, snooze, refresh and sources too.
 - Footers and hints read `key label · key label`: keys in the default fg,
   labels and separators quiet. Scroll hints give the range with its unit and
   the keys: "1–9 of 13 lines · PgUp PgDn scroll".
+- Confirmations start with `✓`, errors with `!`.
 - Typing in a prompt (filter, snooze) edits the prompt, not item shortcuts.
 
 ## States
@@ -79,17 +108,17 @@ queue with a loading screen.
 | State | Show |
 |---|---|
 | Empty section | "Nothing waiting on you" |
-| Filter with no matches | the query, "No matches", how to clear it |
+| Filter with no matches | the query, "No matches", how to clear it, and the next tab with matches |
 | Everything hidden | that items are done or snoozed, and that `Z` shows them |
 | Source failing | which source, and that `s` explains it. Don't imply there's no work |
-| First run, no cache | what's being fetched |
+| First run, no cache | what's being fetched, or one line saying `r` fetches; the detail says which sources need setting up |
 
 ## Before shipping a UI change
 
-- At 80x24, find the first item, read why it's there, open its actions with
-  `Enter` and close with `Esc`.
+- At 80x24 and full screen, find the first item, read why it's there, open
+  its actions with `Space` and close with `Esc`.
 - Filter to a match, then to no match, then clear the filter. Mark an item
-  done and restore it.
+  done and undo it with `u`.
 - Refresh while reading an item. Try a failing source, no cache and an empty
   queue.
 - Check light and dark terminals, and with `NO_COLOR`.

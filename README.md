@@ -10,10 +10,14 @@ and links to the ticket so you can fix it there. It only reads from these
 tools.
 
 ```
- worklens   Sprint  ▓▓▓░░░░░░░  3 of 10 pts · 13 days left   Beta merge in 2 days   Updated 19m ago
- Waiting on you 1   Sprint 1
-╭━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────╮
-│>4d    ni?  ✗   1995008 Support view-source: for the PageExtractor                                │
+ worklens   Sprint 3 of 10 pts                   Sources ✓   Beta merge in 2 days   Updated 19m ago
+ All 1   On you 1   Sprint 1
+╭━━━━━─────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Waiting on you 1                                                                                 │
+│▌4d     asked of you   ✗   1995008 Support view-source: for the PageExtractor                     │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
  Overview   Timeline   Comments   Links                                                       Tab ⇥
 ╭━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────╮
@@ -26,8 +30,10 @@ tools.
 │ Phabricator  D321987 · needs-review                                                              │
 │   Reviewers  waiting on quillfox (blocking)                                                      │
 │   Try        builds passed · lint passed · tests failed · 1 failing job · pushed 12d ago         │
+│                                                                                                  │
+│ 1–10 of 12 lines · PgUp PgDn scroll                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
- ↑↓ move · ←→ section · Tab detail · Enter actions · / filter · ? help
+ ↑↓ move · ←→ section · Tab detail · Enter open · Space actions · / filter · ? help · d done
 ```
 
 ## Start
@@ -73,12 +79,17 @@ The first run takes a few seconds to fetch your data. Later runs open from
 the cache.
 
 ```
-↑ ↓      move               o   open in browser
-← →      switch section     /   filter
-Tab      switch detail tab  r   refresh
-Enter    actions            s   sources and settings
+↑ ↓      move               /   filter
+← →      switch section     d   done (u undoes)
+Tab      switch detail tab  z   snooze (u undoes)
+Enter    open the next step r   refresh
+Space    actions            s   sources and settings
 ?        all keys           q   quit
 ```
+
+worklens opens on **All**: everything that needs you, each item once, grouped
+under the most urgent section it belongs to. The other tabs show one section
+each; Backlog and Landed live only in their tabs.
 
 From the shell:
 

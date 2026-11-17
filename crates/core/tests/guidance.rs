@@ -132,3 +132,37 @@ fn a_failed_review_lookup_does_not_treat_cached_acceptance_as_current_readiness(
     assert!(step(&s).starts_with("Check outstanding reviews"));
     assert!(s.reason(selected(&s)).to_string().contains("could not be refreshed"));
 }
+
+#[test]
+fn feedback_on_a_later_patch_opens_that_revision_not_the_first() {
+    let mut raw = fixture();
+    raw["revisions"][0]["status"] = json!("needs-review");
+    let mut later = raw["revisions"][0].clone();
+    later["id"] = json!(321999);
+    later["status"] = json!("needs-revision");
+    raw["revisions"].as_array_mut().unwrap().push(later);
+    raw["bugRevisions"]["1995008"] = json!([321987, 321999]);
+    let s = snapshot(raw);
+    let e = selected(&s);
+    assert_eq!(e.placement.unwrap().section, Section::Returned);
+    assert_eq!(step(&s), "Address feedback on D321999");
+    assert_eq!(
+        guidance::next_url(&s.raw, s.next_step(e).unwrap()).unwrap(),
+        "https://phabricator.services.mozilla.com/D321999"
+    );
+    assert_eq!(s.rev(s.revision_of(e).unwrap()).id.to_string(), "D321999");
+}
+
+#[test]
+fn a_review_asked_of_me_opens_the_revision() {
+    let mut raw = fixture();
+    raw["revisions"][0]["author"] = json!("PHID-USER-alice");
+    raw["revisions"][0]["status"] = json!("needs-review");
+    raw["toReview"] = json!([321987]);
+    let s = snapshot(raw);
+    let e = s.entry(s.find("D321987").unwrap());
+    assert_eq!(
+        guidance::next_url(&s.raw, s.next_step(e).unwrap()).unwrap(),
+        "https://phabricator.services.mozilla.com/D321987"
+    );
+}

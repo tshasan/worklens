@@ -202,6 +202,20 @@ pub enum Tone {
 }
 
 pub const WIDE: u16 = 110;
+pub const TALL: u16 = 40;
+pub const ALL_TAB: usize = Section::COUNT;
+pub const TABS: usize = Section::COUNT + 1;
+pub const ALL_GROUPS: [Section; 8] = [
+    Section::Waiting,
+    Section::Land,
+    Section::Returned,
+    Section::Others,
+    Section::Sprint,
+    Section::Drift,
+    Section::Local,
+    Section::Ideas,
+];
+pub const ALL_ELSEWHERE: [Section; 2] = [Section::Other, Section::Landed];
 const SEEN_AFTER_MS: i64 = 800;
 const TOAST_SECONDS: i64 = 3;
 
@@ -212,9 +226,9 @@ pub struct App {
     pub marks: Marks,
     pub mode: Mode,
     pub tab: usize,
-    cursors: [usize; Section::COUNT],
-    selected_ids: [Option<EntryKey>; Section::COUNT],
-    seen: [Vec<EntryKey>; Section::COUNT],
+    cursors: [usize; TABS],
+    selected_ids: [Option<EntryKey>; TABS],
+    seen: [Vec<EntryKey>; TABS],
     pub filter: String,
     pub show_hidden: bool,
     pub prefs: Prefs,
@@ -241,7 +255,10 @@ pub struct App {
     pub tone: Tone,
     pub now: Timestamp,
     pub rows: Vec<EntryIdx>,
-    pub counts: [usize; Section::COUNT],
+    pub groups: Vec<(usize, Section)>,
+    pub counts: [usize; TABS],
+    pub totals: [usize; TABS],
+    undo: Option<EntryKey>,
     touched: Vec<Touched>,
     resting: Option<(EntryKey, Timestamp)>,
     last_fetch_started: Option<Timestamp>,
@@ -257,8 +274,8 @@ impl App {
             snapshot: None,
             marks,
             mode: Mode::List,
-            tab: 0,
-            cursors: [0; Section::COUNT],
+            tab: ALL_TAB,
+            cursors: [0; TABS],
             selected_ids: std::array::from_fn(|_| None),
             seen: std::array::from_fn(|_| Vec::new()),
             filter: String::new(),
@@ -287,7 +304,10 @@ impl App {
             tone: Tone::Unknown,
             now,
             rows: Vec::new(),
-            counts: [0; Section::COUNT],
+            groups: Vec::new(),
+            counts: [0; TABS],
+            totals: [0; TABS],
+            undo: None,
             touched: Vec::new(),
             resting: None,
             last_fetch_started: None,
@@ -307,7 +327,38 @@ impl App {
     }
 
     pub fn section(&self) -> Section {
-        Section::ALL[self.tab]
+        Section::ALL.get(self.tab).copied().unwrap_or(Section::Waiting)
+    }
+
+    pub fn all_tab(&self) -> bool {
+        self.tab == ALL_TAB
+    }
+
+    pub fn row_section(&self, n: usize) -> Section {
+        if !self.all_tab() {
+            return self.section();
+        }
+        self.groups
+            .iter()
+            .rev()
+            .find(|(start, _)| *start <= n)
+            .map_or(Section::Waiting, |(_, g)| *g)
+    }
+
+    pub fn tab_title(&self, i: usize) -> &'static str {
+        Section::ALL.get(i).map_or("All", |s| s.title())
+    }
+
+    pub fn tab_short(&self, i: usize) -> &'static str {
+        Section::ALL.get(i).map_or("All", |s| s.short())
+    }
+
+    pub fn tab_order() -> impl Iterator<Item = usize> {
+        std::iter::once(ALL_TAB).chain(0..Section::COUNT)
+    }
+
+    pub fn tall(&self) -> bool {
+        self.wide() && self.size.1 >= TALL
     }
 
     pub fn cursor(&self) -> usize {
@@ -369,7 +420,7 @@ impl App {
             let text = self.left_text(&gone, closed);
             self.flash(text, snooze, now);
         } else if menu {
-            self.flash("Work refreshed; Enter reopens actions for the selected item", false, now);
+            self.flash("Work refreshed; Space reopens actions for the selected item", false, now);
         }
     }
 
@@ -393,16 +444,20 @@ impl App {
 
     fn left_text(&self, gone: &Gone, closed: &str) -> String {
         let here = self.section();
+        let all = self.all_tab();
         let id = &gone.key;
         let Some(s) = self.snapshot.as_ref() else { return String::new() };
-        let filtered = s.section(here, self.show_hidden).any(|i| id.is(s, s.entry(i)));
+        let listed: &[Section] = if all { &ALL_GROUPS } else { std::slice::from_ref(&here) };
+        let filtered = listed
+            .iter()
+            .any(|sec| s.section(*sec, self.show_hidden).any(|i| id.is(s, s.entry(i))));
         let mut text = match id.find(s).map(|i| s.entry(i).whereabouts()) {
             None => format!("{id} is no longer in your work"),
             Some(_) if filtered => format!("{id} no longer matches the filter"),
             Some(Whereabouts::Hidden(Hidden::Done)) => format!("{id} is done locally; Z shows it"),
             Some(Whereabouts::Hidden(Hidden::Snoozed)) => format!("{id} is snoozed locally; Z shows it"),
-            Some(Whereabouts::In(other)) if other != here => format!("{id} is in {} now", other.title()),
-            Some(Whereabouts::In(_) | Whereabouts::Unlisted) => format!("{id} left {}", here.title()),
+            Some(Whereabouts::In(other)) if !listed.contains(&other) => format!("{id} is in {} now", other.title()),
+            Some(Whereabouts::In(_) | Whereabouts::Unlisted) => format!("{id} left {}", self.tab_title(self.tab)),
         };
         text.push_str(closed);
         match self.selected() {
@@ -419,8 +474,10 @@ impl App {
 
     fn rebuild_rows(&mut self, before: &[EntryKey]) -> Option<Gone> {
         self.rows.clear();
+        self.groups.clear();
         let Some(s) = &self.snapshot else {
-            self.counts = [0; Section::COUNT];
+            self.counts = [0; TABS];
+            self.totals = [0; TABS];
             return None;
         };
         let words: Vec<String> = self.filter.to_lowercase().split_whitespace().map(str::to_owned).collect();
@@ -446,10 +503,12 @@ impl App {
         };
         for (n, section) in Section::ALL.iter().enumerate() {
             let mut count = 0;
+            let mut total = 0;
             for i in s
                 .section(*section, self.show_hidden)
                 .chain(s.section(Section::Backlog, self.show_hidden).filter(|_| *section == Section::Other))
             {
+                total += 1;
                 if matches(s.entry(i)) {
                     count += 1;
                     if n == self.tab {
@@ -458,7 +517,31 @@ impl App {
                 }
             }
             self.counts[n] = count;
+            self.totals[n] = total;
         }
+        let mut placed = vec![false; s.entries.len()];
+        let mut count = 0;
+        let mut total = 0;
+        for group in ALL_GROUPS {
+            let start = self.rows.len();
+            for i in s.section(group, self.show_hidden) {
+                if std::mem::replace(&mut placed[i.get()], true) {
+                    continue;
+                }
+                total += 1;
+                if matches(s.entry(i)) {
+                    count += 1;
+                    if self.tab == ALL_TAB {
+                        self.rows.push(i);
+                    }
+                }
+            }
+            if self.rows.len() > start {
+                self.groups.push((start, group));
+            }
+        }
+        self.counts[ALL_TAB] = count;
+        self.totals[ALL_TAB] = total;
         let rows = &self.rows;
         let find = |key: &EntryKey| rows.iter().position(|i| key.is(s, s.entry(*i)));
         let mut left = None;
@@ -524,6 +607,7 @@ impl App {
     pub fn pane_shown(&self, p: Pane) -> bool {
         match self.prefs.panes[p.index()] {
             _ if p == Pane::Overview => true,
+            _ if p == Pane::Timeline && self.tall() => false,
             Show::Always => true,
             Show::Hidden => false,
             Show::Auto => self.pane_has_content(p),
@@ -567,7 +651,7 @@ impl App {
         self.tab = if to == Section::Backlog.index() {
             Section::Other.index()
         } else {
-            to % Section::COUNT
+            to.min(ALL_TAB)
         };
         self.pane_scroll = 0;
         let before = std::mem::take(&mut self.seen[self.tab]);
@@ -578,14 +662,17 @@ impl App {
     }
 
     pub fn tab_shown(&self, i: usize) -> bool {
-        if i == Section::Backlog.index() {
+        if i == ALL_TAB {
+            return true;
+        }
+        if i == Section::Backlog.index() || (self.snapshot.is_none() && i != self.tab) {
             return false;
         }
         match self.prefs.sections[i] {
             _ if i == 0 => true,
             Show::Always => true,
             Show::Hidden => false,
-            Show::Auto => i == self.tab || (self.snapshot.is_some() && self.counts[i] > 0),
+            Show::Auto => i == self.tab || (self.snapshot.is_some() && self.totals[i] > 0),
         }
     }
 
@@ -594,7 +681,7 @@ impl App {
             return Vec::new();
         }
         (0..Section::COUNT)
-            .filter(|i| *i != Section::Backlog.index() && self.prefs.sections[*i] == Show::Hidden && self.counts[*i] > 0)
+            .filter(|i| *i != Section::Backlog.index() && self.prefs.sections[*i] == Show::Hidden && self.totals[*i] > 0)
             .collect()
     }
 
@@ -635,7 +722,7 @@ impl App {
                 self.show_hidden = self.prefs.show_hidden;
                 self.refresh_rows();
             }
-            Setting::Section(i) if i == self.tab && !self.tab_shown(i) => self.switch_tab(0),
+            Setting::Section(i) if i == self.tab && !self.tab_shown(i) => self.switch_tab(ALL_TAB),
             _ => {}
         }
         let mut done = format!("{} {}", setting.label(), self.prefs.value(setting));
@@ -656,18 +743,14 @@ impl App {
     }
 
     fn step_tab(&mut self, forward: bool) {
-        let mut i = self.tab;
-        loop {
-            i = if forward {
-                (i + 1) % Section::COUNT
-            } else {
-                (i + Section::COUNT - 1) % Section::COUNT
-            };
-            if self.tab_shown(i) {
-                break;
-            }
-        }
-        self.switch_tab(i);
+        let order: Vec<usize> = Self::tab_order().filter(|i| self.tab_shown(*i) || *i == self.tab).collect();
+        let at = order.iter().position(|i| *i == self.tab).unwrap_or(0);
+        let next = if forward {
+            (at + 1) % order.len()
+        } else {
+            (at + order.len() - 1) % order.len()
+        };
+        self.switch_tab(order[next]);
     }
 
     fn touch(&mut self) {
@@ -789,11 +872,9 @@ impl App {
                 },
             );
         }
-        let start = match &self.opts.agent {
-            Some(a) => format!("Start {} with the brief", a.name),
-            None => "Start a coding agent (none found; copies the brief)".into(),
-        };
-        add('c', start, ActionKind::StartAgent);
+        if let Some(a) = &self.opts.agent {
+            add('c', format!("Start {} with the brief", a.name), ActionKind::StartAgent);
+        }
         add('y', format!("Copy \"{}\"", s.id(e)), ActionKind::CopyId);
         let done = if e.marks.hidden == Some(Hidden::Done) {
             "Bring back (undo done)"
@@ -996,10 +1077,8 @@ impl App {
                     format!("{id} is back")
                 } else {
                     marks::mark_done(&mut self.marks, s, e, now);
-                    format!(
-                        "{id} done locally; returns on new activity{}",
-                        if self.show_hidden { "" } else { " (Z shows it)" }
-                    )
+                    self.undo = Some(EntryKey::of(s, e));
+                    format!("{id} done locally; returns on new activity · u undoes")
                 };
                 self.flash(text, false, now);
                 self.marks_changed(now)
@@ -1058,9 +1137,31 @@ impl App {
         };
         let id = s.id(e).to_string();
         marks::mark_snoozed(&mut self.marks, s, e, until, now);
+        self.undo = Some(EntryKey::of(s, e));
         self.mode = Mode::List;
         let when = until.map_or_else(|| "it has new activity".to_owned(), |t| present::date(t, zoned_now.time_zone()));
-        self.flash(format!("{id} snoozed locally until {when}; Z shows hidden"), false, now);
+        self.flash(format!("{id} snoozed locally until {when} · u undoes"), false, now);
+        self.marks_changed(now)
+    }
+
+    fn undo(&mut self, now: Timestamp) -> Vec<Effect> {
+        let Some(key) = self.undo.take() else {
+            self.flash("Nothing to undo", false, now);
+            return Vec::new();
+        };
+        let Some(s) = self.snapshot.as_ref() else { return Vec::new() };
+        let Some(i) = key.find(s) else {
+            self.flash(format!("{key} is no longer in your work"), true, now);
+            return Vec::new();
+        };
+        let e = s.entry(i);
+        if e.marks.hidden.is_none() {
+            self.flash(format!("{key} is already back"), false, now);
+            return Vec::new();
+        }
+        marks::restore(&mut self.marks, s, e);
+        self.selected_ids[self.tab] = Some(key.clone());
+        self.flash(format!("{key} is back"), false, now);
         self.marks_changed(now)
     }
 
@@ -1335,9 +1436,11 @@ fn on_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
                     app.menu_cursor = (app.menu_cursor + 1).min(actions.len().saturating_sub(1));
                     return Vec::new();
                 }
+                KeyCode::Char(' ') => {
+                    app.mode = Mode::List;
+                    return Vec::new();
+                }
                 KeyCode::Enter => Some(app.menu_cursor),
-                KeyCode::Char(c @ '1'..='9') => Some(c as usize - '1' as usize),
-                KeyCode::Char('0') => Some(9),
                 KeyCode::Char(c) => actions.iter().position(|a| a.key == Some(c)),
                 _ => None,
             };
@@ -1447,6 +1550,10 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
                 let action = actions.swap_remove(n);
                 app.run_action(action, now)
             }
+            None if c == 'c' && app.opts.agent.is_none() && app.selected().is_some() => {
+                app.flash("No coding agent found; set Agent in s › Settings, or b copies the brief", true, now);
+                Vec::new()
+            }
             None => {
                 app.dirty = false;
                 Vec::new()
@@ -1494,6 +1601,7 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
             app.flash(text, false, now);
         }
         Action::Refresh => return app.begin_refresh(now),
+        Action::Undo => return app.undo(now),
         Action::Menu if app.selected().is_some() => {
             app.menu_cursor = 0;
             app.menu_scroll = 0;
@@ -1557,7 +1665,9 @@ mod tests {
     #[test]
     fn arrows_skip_empty_sections_and_wrap() {
         let mut a = app();
-        assert_eq!(a.section(), Section::Waiting);
+        assert!(a.all_tab(), "it opens on All");
+        update(&mut a, code(KeyCode::Right), now());
+        assert_eq!(a.section(), Section::Waiting, "right from All reaches the first section");
         let with_work: Vec<Section> = (1..Section::COUNT).filter(|i| a.counts[*i] > 0).map(|i| Section::ALL[i]).collect();
         assert!(!with_work.is_empty(), "the fixture needs a non-empty section: {:?}", a.counts);
         update(&mut a, code(KeyCode::Right), now());
@@ -1566,13 +1676,9 @@ mod tests {
             update(&mut a, code(KeyCode::Right), now());
         }
         update(&mut a, code(KeyCode::Right), now());
-        assert_eq!(a.section(), Section::Waiting, "right from the last with work wraps to the first");
+        assert!(a.all_tab(), "right from the last with work wraps to All");
         update(&mut a, code(KeyCode::Left), now());
-        assert_eq!(
-            a.section(),
-            *with_work.last().unwrap(),
-            "left from the first wraps to the last with work"
-        );
+        assert_eq!(a.section(), *with_work.last().unwrap(), "left from All wraps to the last with work");
     }
 
     #[test]
@@ -1622,9 +1728,9 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_lists_actions_and_runs_one_by_number() {
+    fn the_menu_lists_actions_and_runs_one_by_letter() {
         let mut a = app();
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         assert_eq!(a.mode, Mode::Menu);
         let labels: Vec<String> = a
             .actions()
@@ -1634,7 +1740,10 @@ mod tests {
         assert_eq!(labels[0], "B Open bug 1995008 in Bugzilla");
         assert!(labels.iter().any(|l| l.starts_with("P Open D321987")), "{labels:?}");
         assert!(labels.iter().any(|l| l.starts_with("T Open D321987's try push")), "{labels:?}");
-        let effects = update(&mut a, key('1'), now());
+        assert!(!labels.iter().any(|l| l.starts_with('c')), "no agent, no start action: {labels:?}");
+        assert!(update(&mut a, key('1'), now()).is_empty(), "the menu has no numbers");
+        assert_eq!(a.mode, Mode::Menu);
+        let effects = update(&mut a, key('B'), now());
         assert!(matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=1995008")));
         assert_eq!(a.mode, Mode::List);
     }
@@ -1660,7 +1769,7 @@ mod tests {
         let actions = a.actions();
         let at = actions.iter().position(|action| action.label.contains("autoland push")).unwrap();
         assert_eq!(actions[at].key, None);
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         for _ in 0..at {
             update(&mut a, code(KeyCode::Down), now());
         }
@@ -1668,6 +1777,113 @@ mod tests {
         assert!(
             matches!(&effects[..], [Effect::Open(url)] if url.contains("repo=autoland&revision=2222222222222222222222222222222222222222"))
         );
+    }
+
+    #[test]
+    fn enter_opens_the_next_step_and_space_opens_the_actions() {
+        let mut a = app();
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        assert!(
+            matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=1995008")),
+            "{effects:?}"
+        );
+        assert_eq!(a.mode, Mode::List);
+        update(&mut a, key(' '), now());
+        assert_eq!(a.mode, Mode::Menu);
+        update(&mut a, key(' '), now());
+        assert_eq!(a.mode, Mode::List, "space closes the menu again");
+    }
+
+    #[test]
+    fn u_undoes_a_done_and_a_snooze() {
+        let mut a = app();
+        update(&mut a, key('u'), now());
+        assert_eq!(a.toast.as_ref().unwrap().text, "Nothing to undo");
+        update(&mut a, key('d'), now());
+        assert!(a.rows.is_empty());
+        assert!(a.toast.as_ref().unwrap().text.contains("u undoes"));
+        let effects = update(&mut a, key('u'), now());
+        assert!(matches!(effects.as_slice(), [Effect::SaveMarks]));
+        assert_eq!(a.rows.len(), 1, "the item is back");
+        assert!(a.marks.items.values().all(|m| m.done.is_none()), "{:?}", a.marks.items);
+        update(&mut a, key('z'), now());
+        for c in "3d".chars() {
+            update(&mut a, key(c), now());
+        }
+        update(&mut a, code(KeyCode::Enter), now());
+        assert!(a.rows.is_empty());
+        update(&mut a, key('u'), now());
+        assert_eq!(a.rows.len(), 1, "the snooze is undone");
+        assert!(a.marks.items.values().all(|m| m.snooze.is_none()));
+        update(&mut a, key('u'), now());
+        assert_eq!(a.toast.as_ref().unwrap().text, "Nothing to undo", "one undo per change");
+    }
+
+    #[test]
+    fn without_an_agent_c_says_where_to_set_one() {
+        let mut a = app();
+        assert!(update(&mut a, key('x'), now()).is_empty());
+        assert!(a.toast.is_none(), "an unbound letter says nothing");
+        let effects = update(&mut a, key('c'), now());
+        assert!(effects.is_empty(), "{effects:?}");
+        let toast = a.toast.as_ref().unwrap();
+        assert!(toast.error && toast.text.contains("s › Settings"), "{}", toast.text);
+    }
+
+    #[test]
+    fn all_lists_each_item_once_under_the_first_section_that_holds_it() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../store/fixtures/busy.json");
+        let raw: Raw = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let opts = Options {
+            cache_minutes: None,
+            agent: None,
+            dir: PathBuf::from("/tmp"),
+            keys: Vec::new(),
+        };
+        let a = App::new(CoreConfig::default(), opts, Some(raw), Marks::default(), now());
+        assert!(a.all_tab());
+        let s = a.snapshot.as_ref().unwrap();
+        let mut unique = a.rows.clone();
+        unique.sort_by_key(|i| i.get());
+        unique.dedup();
+        assert_eq!(unique.len(), a.rows.len(), "no item twice");
+        let mut expected = std::collections::BTreeSet::new();
+        for g in ALL_GROUPS {
+            expected.extend(s.section(g, false).map(|i| i.get()));
+        }
+        assert_eq!(a.rows.iter().map(|i| i.get()).collect::<std::collections::BTreeSet<_>>(), expected);
+        let overlaps = ALL_GROUPS.iter().enumerate().any(|(n, g)| {
+            ALL_GROUPS[n + 1..]
+                .iter()
+                .any(|h| s.section(*g, false).any(|i| s.section(*h, false).any(|x| x == i)))
+        });
+        assert!(overlaps, "busy.json needs an item in two sections");
+        for (n, i) in a.rows.iter().enumerate() {
+            let home = a.row_section(n);
+            assert!(
+                s.section(home, false).any(|x| x == *i),
+                "row {n} sits under a section that holds it"
+            );
+            let first = ALL_GROUPS.iter().find(|g| s.section(**g, false).any(|x| x == *i)).unwrap();
+            assert_eq!(home, *first, "row {n} sits under the most urgent section holding it");
+        }
+        assert_eq!(a.counts[ALL_TAB], a.rows.len());
+    }
+
+    #[test]
+    fn hiding_the_open_section_goes_back_to_all_and_others_stay_put() {
+        let mut a = app();
+        let sprint = Section::Sprint.index();
+        a.switch_tab(sprint);
+        a.prefs.sections[Section::Landed.index()] = Show::Hidden;
+        a.change_setting(Setting::Section(Section::Landed.index()), now());
+        assert_eq!(a.tab, sprint, "hiding another section leaves this one open");
+        a.prefs.sections[sprint] = Show::Always;
+        a.change_setting(Setting::Section(sprint), now());
+        assert_eq!(a.tab, sprint, "a section still shown stays open");
+        a.prefs.sections[sprint] = Show::Hidden;
+        a.change_setting(Setting::Section(sprint), now());
+        assert!(a.all_tab(), "hiding the open section goes back to All");
     }
 
     #[test]
@@ -1746,11 +1962,11 @@ mod tests {
         earlier.id = BugId(2_000_099);
         earlier.flags[0].creation_date = "2026-10-01T00:00:00Z".parse().unwrap();
         raw.bugs.insert(0, earlier);
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
         let s = a.snapshot.as_ref().unwrap();
         assert_eq!(s.id(a.selected().unwrap()).to_string(), "1995008");
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         assert_eq!(a.mode, Mode::Menu);
         let mut raw = a.snapshot.take().unwrap().raw;
         raw.bugs.reverse();
@@ -1759,7 +1975,7 @@ mod tests {
         assert!(a.toast.as_ref().unwrap().text.contains("reopens actions"));
         let s = a.snapshot.as_ref().unwrap();
         assert_eq!(s.id(a.selected().unwrap()).to_string(), "1995008");
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         let effects = update(&mut a, key('B'), now());
         assert!(matches!(&effects[..], [Effect::Open(url)] if url.ends_with("1995008")));
     }
@@ -1800,7 +2016,7 @@ mod tests {
     #[test]
     fn left_in_the_menu_does_not_close_it() {
         let mut a = app();
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         update(&mut a, code(KeyCode::Left), now());
         assert_eq!(a.mode, Mode::Menu);
         update(&mut a, code(KeyCode::Esc), now());
@@ -1888,6 +2104,7 @@ mod tests {
     #[test]
     fn when_the_last_item_moves_away_the_previous_is_selected_and_its_section_named() {
         let mut a = app();
+        update(&mut a, key('1'), now());
         fetched(&mut a, raw_with(&COPIES));
         let before = row_ids(&a);
         update(&mut a, code(KeyCode::End), now());
@@ -1905,7 +2122,8 @@ mod tests {
     #[test]
     fn a_refresh_that_removes_the_menus_item_closes_it_and_says_so() {
         let mut a = app();
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key('1'), now());
+        update(&mut a, key(' '), now());
         assert_eq!(a.mode, Mode::Menu);
         let mut raw = fixture();
         raw.bugs.clear();
@@ -1962,6 +2180,7 @@ mod tests {
     #[test]
     fn coming_back_to_a_section_whose_item_left_selects_its_neighbor() {
         let mut a = app();
+        update(&mut a, key('1'), now());
         fetched(&mut a, raw_with(&COPIES));
         let before = row_ids(&a);
         update(&mut a, code(KeyCode::Down), now());
@@ -2002,13 +2221,13 @@ mod tests {
         fetched(&mut a, dated([1_995_008, 2_000_011, 2_000_012, 2_000_013]));
         update(&mut a, code(KeyCode::End), now());
         assert_eq!(selected_id(&a).as_deref(), Some("2000013"));
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         fetched(&mut a, dated([2_000_013, 2_000_012, 2_000_011, 1_995_008]));
         assert_eq!(row_ids(&a)[0], "2000013", "it moved to the top");
         assert_eq!(selected_id(&a).as_deref(), Some("2000013"));
         assert_eq!(a.mode, Mode::List);
         assert!(toast(&a).contains("reopens actions"));
-        update(&mut a, code(KeyCode::Enter), now());
+        update(&mut a, key(' '), now());
         let effects = update(&mut a, key('B'), now());
         assert!(
             matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=2000013")),

@@ -121,10 +121,14 @@ pub fn next_url(raw: &Raw, step: NextStep) -> Option<String> {
         | NextStep::ResolveClassification(r)
         | NextStep::CheckReview(r)
         | NextStep::CheckDependency(r)
-        | NextStep::CheckStack(r) => Some(rev_url(r)),
+        | NextStep::CheckStack(r)
+        | NextStep::Review(r)
+        | NextStep::AddressFeedback(r)
+        | NextStep::PingReviewer(r)
+        | NextStep::FindAnotherReviewer(r) => Some(rev_url(r)),
         NextStep::InspectTry(r) => raw.try_pushes.as_ref()?.get(&r).map(|p| p.url.clone()),
         NextStep::Land(r) => Some(crate::bugs::lando_url(r)),
-        NextStep::OpenBug(b) => Some(crate::bugs::bug_url(b)),
+        NextStep::OpenBug(b) | NextStep::StartBug(b) => Some(crate::bugs::bug_url(b)),
         NextStep::OpenTicket(i) => raw.issues.get_index(i.get()).map(|(_, x)| crate::bugs::jira_url(&x.key.0)),
         NextStep::OpenBackout(b) => crate::backout::of(raw, b).map(|f| f.backout.url.clone()),
         _ => None,

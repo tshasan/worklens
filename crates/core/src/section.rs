@@ -71,14 +71,14 @@ impl Section {
 
     pub const fn short(self) -> &'static str {
         match self {
-            Self::Waiting => "You",
+            Self::Waiting => "On you",
             Self::Land => "Land",
             Self::Returned => "Returned",
-            Self::Others => "Others",
+            Self::Others => "On others",
             Self::Sprint => "Sprint",
             Self::Ideas => "Ideas",
             Self::Drift => "Drift",
-            Self::Other => "Other",
+            Self::Other => "Backlog",
             Self::Team => "Team",
             Self::Landed => "Landed",
             Self::Backlog => "Backlog",
