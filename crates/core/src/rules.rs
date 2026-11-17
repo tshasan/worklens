@@ -150,6 +150,18 @@ impl Reason {
         self.facets().tag
     }
 
+    pub const fn revision(self) -> Option<RevIdx> {
+        match self {
+            Self::ReviewRequested(r)
+            | Self::GroupReview(r)
+            | Self::Accepted(r)
+            | Self::LandingBlocked(r)
+            | Self::ChangesRequested(r)
+            | Self::InReview(r) => Some(r),
+            _ => None,
+        }
+    }
+
     pub fn next_step(self, raw: &Raw, stale: bool, has_drift: bool) -> Option<NextStep> {
         let rev = |r: RevIdx| raw.revisions[r.get()].id;
         match self {
@@ -167,7 +179,8 @@ impl Reason {
             Self::Asked(_) if stale => Some(NextStep::FollowUp),
             Self::StillCrashing => Some(NextStep::CheckCrashes),
             Self::Idea(_) if has_drift => Some(NextStep::TellIdeaOwner),
-            Self::Landed(b) | Self::Backlog(Unstarted::Bug(b)) => Some(NextStep::OpenBug(b)),
+            Self::Landed(b) => Some(NextStep::OpenBug(b)),
+            Self::Backlog(Unstarted::Bug(b)) => Some(NextStep::StartBug(b)),
             Self::Backlog(Unstarted::Ticket(i)) => Some(NextStep::OpenTicket(i)),
             Self::NotUploaded(_) => Some(NextStep::Upload),
             Self::InReview(_) | Self::Sprint(_) | Self::Other | Self::UpliftRequested(_) | Self::Asked(_) | Self::Idea(_) => None,
@@ -590,6 +603,7 @@ pub enum NextStep {
     FixDrift,
     TellIdeaOwner,
     OpenBug(crate::ids::BugId),
+    StartBug(crate::ids::BugId),
     OpenTicket(IssueIdx),
     AddReviewer(crate::ids::RevId),
     Upload,
@@ -621,6 +635,7 @@ impl std::fmt::Display for NextStep {
             Self::FixDrift => f.write_str("Fix the Jira/Bugzilla mismatch"),
             Self::TellIdeaOwner => f.write_str("Tell the idea's owner where your work stands"),
             Self::OpenBug(b) => write!(f, "Open bug {b} in Bugzilla"),
+            Self::StartBug(b) => write!(f, "Start bug {b} in Bugzilla, or unassign yourself"),
             Self::AddReviewer(r) => write!(f, "Consider another reviewer for {r} in Phabricator"),
             Self::OpenTicket(_) => f.write_str("Open the ticket in Jira to start it or unassign yourself"),
             Self::Upload => f.write_str("Upload it with `moz-phab submit`, or delete the branch if it's dead"),

@@ -719,6 +719,7 @@ impl Snapshot {
 
     pub fn revision_of(&self, e: &Entry) -> Option<RevIdx> {
         e.review
+            .or_else(|| e.placement.and_then(|p| p.reason.revision()))
             .or_else(|| crate::present::live_revisions(self, e).next())
             .or_else(|| e.revisions.first().copied())
     }

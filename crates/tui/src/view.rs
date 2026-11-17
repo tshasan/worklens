@@ -257,6 +257,7 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
         warnings.push(format!("{} unavailable", down.join(", ")));
     }
     let mut right = Vec::new();
+    let mut tail = Vec::new();
     if !warnings.is_empty() {
         let reserved = left.width() + age.width() + busy.width() + 16;
         let budget = (area.width as usize).saturating_sub(reserved);
@@ -269,18 +270,34 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
             }),
         ));
     }
+    let mut merge = Vec::new();
+    let mut health = (Vec::new(), Vec::new());
     if let Some(s) = &app.snapshot {
         if warnings.is_empty()
             && app.busy.is_none()
             && let Some((_, days)) = s.merge().filter(|(_, d)| *d >= 0)
         {
-            right.push(t.quiet(format!("Beta merge {}   ", merge_when(days))));
+            merge.push(t.quiet(format!("Beta merge {}   ", merge_when(days))));
         }
-        right.push(t.quiet(age));
+        if warnings.is_empty() {
+            health = source_health(t, s);
+        }
+        tail.push(t.quiet(age));
     }
     if !busy.is_empty() {
-        right.push(Span::styled(busy, fg(t.accent)));
+        tail.push(Span::styled(busy, fg(t.accent)));
     }
+    let least = left.width() + 2 * HEADER_GAP + app.snapshot.as_ref().map_or(0, |s| sprint_gauge(t, s, false, app.now).width());
+    let width = |parts: &[&Vec<Span<'static>>]| parts.iter().flat_map(|p| p.iter()).map(Span::width).sum::<usize>();
+    let none = Vec::new();
+    let choices = [[&health.0, &merge], [&health.1, &merge], [&health.1, &none], [&none, &none]];
+    let [h, m] = choices
+        .into_iter()
+        .find(|[h, m]| least + width(&[&right, h, m, &tail]) <= area.width as usize)
+        .unwrap_or([&none, &none]);
+    right.extend(h.iter().cloned());
+    right.extend(m.iter().cloned());
+    right.extend(tail);
     let right = Line::from(right);
     let room = (area.width as usize).saturating_sub(left.width() + right.width() + 2 * HEADER_GAP);
     let mut left = left;
@@ -302,6 +319,53 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
 }
 
 const HEADER_GAP: usize = 3;
+
+fn source_health(t: Theme, s: &Snapshot) -> (Vec<Span<'static>>, Vec<Span<'static>>) {
+    use worklens_core::raw::SourceState;
+    let name = |source: &str| match source {
+        "bugzilla" => "Bugzilla",
+        "jira" => "Jira",
+        _ => "Phabricator",
+    };
+    let states = s.raw.states();
+    let mut full = Vec::new();
+    for (source, state) in states {
+        match state {
+            SourceState::Read => {
+                full.push(t.quiet(format!("{} ", name(source))));
+                full.push(Span::styled("✓", fg(t.ok)));
+            }
+            SourceState::Off => full.push(t.quiet(format!("{} not set up", name(source)))),
+            SourceState::Failed => {
+                full.push(t.quiet(format!("{} ", name(source))));
+                full.push(Span::styled("✗", fg(t.error)));
+            }
+        }
+        full.push(Span::raw("  "));
+    }
+    full.push(Span::raw(" "));
+    let with = |wanted: SourceState| -> Vec<&str> {
+        states
+            .iter()
+            .filter(|(_, state)| *state == wanted)
+            .map(|(source, _)| name(source))
+            .collect()
+    };
+    let (off, failed) = (with(SourceState::Off), with(SourceState::Failed));
+    let mut compact = Vec::new();
+    if !failed.is_empty() {
+        compact.push(t.quiet(format!("{} ", failed.join(", "))));
+        compact.push(Span::styled("✗", fg(t.error)));
+        compact.push(t.quiet(" · s   "));
+    }
+    if !off.is_empty() {
+        compact.push(t.quiet(format!("{} not set up · s   ", off.join(", "))));
+    }
+    if compact.is_empty() {
+        compact = vec![t.quiet("Sources "), Span::styled("✓", fg(t.ok)), Span::raw("   ")];
+    }
+    (full, compact)
+}
 
 fn sprint_gauge(t: Theme, s: &Snapshot, full: bool, now: Timestamp) -> Line<'static> {
     let Some(sp) = &s.sprint else { return Line::default() };
@@ -383,33 +447,26 @@ fn section_strip(app: &App, area: Rect) -> (Line<'static>, Line<'static>, Option
             Line::from(t.quiet(format!("hidden: {}", hidden.join(", "))))
         }
     };
-    let shown: Vec<usize> = (0..Section::COUNT).filter(|i| app.tab_shown(*i)).collect();
+    let shown: Vec<usize> = App::tab_order().filter(|i| app.tab_shown(*i)).collect();
     let current = shown.iter().position(|i| *i == app.tab).unwrap_or(0);
-    let label = |i: usize, short: bool| -> (&'static str, String) {
-        let s = Section::ALL[i];
-        let name = if short { s.short() } else { s.title() };
+    let label = |i: usize| -> (&'static str, String) {
         let count = if app.snapshot.is_some() {
             format!(" {}", app.counts[i])
         } else {
             String::new()
         };
-        (name, count)
+        (app.tab_short(i), count)
     };
     let available = (area.width as usize).saturating_sub(right.width() + usize::from(right.width() > 0));
     let total = |labels: &[(&str, String)], gap: usize| -> usize {
         labels.iter().map(|(n, c)| n.width() + c.width()).sum::<usize>() + gap * labels.len().saturating_sub(1)
     };
-    let long: Vec<(&str, String)> = shown.iter().map(|i| label(*i, false)).collect();
-    let labels = if total(&long, TAB_GAP) <= available {
-        long
-    } else {
-        shown.iter().map(|i| label(*i, true)).collect()
-    };
+    let labels: Vec<(&str, String)> = shown.iter().map(|i| label(*i)).collect();
     let gap = if total(&labels, TAB_GAP) <= available { TAB_GAP } else { 2 };
     let tab_width = |k: usize| labels[k].0.width() + labels[k].1.width();
     let mut start = current;
     let mut end = current + 1;
-    let mut used = tab_width(current) + if total(&labels, gap) > available { 4 } else { 0 };
+    let mut used = tab_width(current) + if total(&labels, gap) > available { 22 } else { 0 };
     loop {
         let mut added = false;
         if start > 0 && used + gap + tab_width(start - 1) <= available {
@@ -430,8 +487,9 @@ fn section_strip(app: &App, area: Rect) -> (Line<'static>, Line<'static>, Option
     let mut x = area.x as usize;
     let mut under = None;
     if start > 0 {
-        spans.push(t.quiet("‹ "));
-        x += 2;
+        let more = format!("‹ {} more  ", start);
+        x += more.width();
+        spans.push(t.quiet(more));
     }
     for k in start..end {
         if k > start {
@@ -441,7 +499,7 @@ fn section_strip(app: &App, area: Rect) -> (Line<'static>, Line<'static>, Option
         let i = shown[k];
         let (name, count) = &labels[k];
         let has_work = app.snapshot.is_some() && app.counts[i] > 0;
-        let drift = has_work && matches!(Section::ALL[i], Section::Drift | Section::Team);
+        let drift = has_work && matches!(Section::ALL.get(i), Some(Section::Drift | Section::Team));
         if k == current {
             spans.push(Span::styled(format!("{name}{count}"), t.current_tab()));
             under = Some((x as u16, (x + tab_width(k)) as u16));
@@ -457,7 +515,7 @@ fn section_strip(app: &App, area: Rect) -> (Line<'static>, Line<'static>, Option
         x += tab_width(k);
     }
     if end < labels.len() {
-        spans.push(t.quiet(" ›"));
+        spans.push(t.quiet(format!("  {} more ›", labels.len() - end)));
     }
     (Line::from(spans), right, under)
 }
@@ -573,6 +631,15 @@ fn detail_content(app: &App, width: u16) -> Paragraph<'_> {
             Pane::Telemetry => unreachable!("drawn above"),
         },
         (Some(_), None) if !app.rows.is_empty() => vec![Line::raw("No item selected.")],
+        (None, _) if app.error.is_none() => vec![
+            Line::raw("worklens collects what needs you from Bugzilla, and from Phabricator and Jira once they're set up."),
+            Line::raw(""),
+            Line::raw("Bugzilla works without a key for public bugs. To set up the others:"),
+            Line::from(Theme::of(app.tone).quiet("  worklens auth set phabricator")),
+            Line::from(Theme::of(app.tone).quiet("  worklens auth set jira")),
+            Line::raw(""),
+            Line::raw("s shows which sources are set up. r fetches your work."),
+        ],
         _ => Vec::new(),
     };
     Paragraph::new(lines).wrap(Wrap { trim: false })
@@ -585,59 +652,171 @@ fn draw_body(app: &App, f: &mut Frame<'_>, area: Rect) {
     if let (_, _, Some(span)) = section_strip(app, strip) {
         underline_tab(Theme::of(app.tone), f, list.y, span, list);
     }
-    let actions = if app.mode == Mode::Menu { app.actions() } else { Vec::new() };
-    if app.mode == Mode::Menu && menu_needs_body(app, &actions, side) {
-        draw_menu(app, f, area, &actions);
-    } else if app.mode == Mode::Menu {
-        draw_menu(app, f, side, &actions);
-    } else {
-        draw_detail(app, f, side);
+    draw_detail(app, f, side);
+    if app.mode == Mode::Menu {
+        let actions = app.actions();
+        draw_menu(app, f, menu_rect(app, &actions, area), &actions);
     }
+}
+
+fn hidden_here(app: &App, s: &Snapshot) -> usize {
+    if app.show_hidden {
+        return 0;
+    }
+    let sections: Vec<Section> = if app.all_tab() {
+        crate::app::ALL_GROUPS.to_vec()
+    } else if app.section() == Section::Other {
+        vec![Section::Other, Section::Backlog]
+    } else {
+        vec![app.section()]
+    };
+    let mut seen = std::collections::HashSet::new();
+    sections
+        .iter()
+        .flat_map(|sec| s.section(*sec, true))
+        .filter(|i| s.entry(*i).marks.hidden.is_some())
+        .filter(|i| seen.insert(*i))
+        .count()
+}
+
+fn wide_tags(width: usize) -> bool {
+    width >= WIDE_TAGS
+}
+
+const WIDE_TAGS: usize = 96;
+
+fn tag_cells(wide: bool) -> usize {
+    if wide { 14 } else { 4 }
+}
+
+fn lead_width(wide: bool) -> usize {
+    13 + tag_cells(wide)
+}
+
+fn list_label(app: &App, s: &Snapshot, t: Theme) -> Line<'static> {
+    let mut parts: Vec<Span<'static>> = Vec::new();
+    let push = |parts: &mut Vec<Span<'static>>, spans: Vec<Span<'static>>| {
+        if !parts.is_empty() {
+            parts.push(t.quiet(keys::SEP));
+        }
+        parts.extend(spans);
+    };
+    if !app.filter.is_empty() {
+        push(
+            &mut parts,
+            vec![t.quiet(format!("{} of {} match", app.rows.len(), app.totals[app.tab]))],
+        );
+        push(&mut parts, vec![Span::raw("Esc"), t.quiet(" clears")]);
+    } else {
+        let fresh = app.rows.iter().filter(|i| s.entry(**i).marks.is_new).count();
+        if fresh > 0 {
+            push(&mut parts, vec![Span::styled(format!("• {fresh} new"), fg(t.accent))]);
+        }
+        let trend = drift_trend(app, app.totals[app.tab]);
+        if !trend.is_empty() {
+            push(&mut parts, vec![t.quiet(trend)]);
+        }
+        let hidden = hidden_here(app, s);
+        if hidden > 0 {
+            push(
+                &mut parts,
+                vec![t.quiet(format!("{hidden} hidden ")), Span::raw("Z"), t.quiet(" shows")],
+            );
+        }
+        if app.all_tab() {
+            let elsewhere: Vec<String> = crate::app::ALL_ELSEWHERE
+                .iter()
+                .filter(|sec| app.counts[sec.index()] > 0)
+                .map(|sec| format!("{} {}", sec.short(), app.counts[sec.index()]))
+                .collect();
+            if !elsewhere.is_empty() {
+                push(&mut parts, vec![t.quiet(format!("{} in their tabs →", elsewhere.join(", ")))]);
+            }
+        }
+    }
+    if parts.is_empty() {
+        return Line::default();
+    }
+    parts.insert(0, Span::raw(" "));
+    parts.push(Span::raw(" "));
+    Line::from(parts)
+}
+
+struct ListLayout {
+    shown: Vec<Shown>,
+    at: usize,
+    top: usize,
+}
+
+fn list_layout(app: &App, s: &Snapshot, height: usize) -> ListLayout {
+    let cursor = app.cursor();
+    let stack_of = |n: usize| s.entry(app.rows[n]).stack;
+    let mut shown: Vec<Shown> = Vec::with_capacity(app.rows.len() + app.groups.len() * 2);
+    let mut at = 0;
+    let mut groups = app.groups.iter().peekable();
+    for n in 0..app.rows.len() {
+        if app.all_tab()
+            && let Some((_, g)) = groups.next_if(|(start, _)| *start == n)
+        {
+            if n > 0 {
+                shown.push(Shown::Gap);
+            }
+            let end = groups.peek().map_or(app.rows.len(), |(next, _)| *next);
+            shown.push(Shown::Group(*g, end - n));
+        }
+        let starts = n == 0 || stack_of(n - 1) != stack_of(n) || app.groups.iter().any(|(start, _)| *start == n);
+        if let Some(k) = stack_of(n).filter(|_| starts) {
+            let visible = (n..app.rows.len())
+                .take_while(|m| stack_of(*m) == Some(k) && (*m == n || !app.groups.iter().any(|(start, _)| start == m)))
+                .count();
+            shown.push(Shown::Head(k, visible));
+        }
+        if n == cursor {
+            at = shown.len();
+        }
+        let next_same = n + 1 < app.rows.len() && stack_of(n + 1) == stack_of(n) && !app.groups.iter().any(|(start, _)| *start == n + 1);
+        let branch = stack_of(n).map(|_| !next_same);
+        shown.push(Shown::Row(n, branch));
+    }
+    let top = at.saturating_sub(height / 2).min(shown.len().saturating_sub(height));
+    ListLayout { shown, at, top }
+}
+
+fn list_inner(app: &App, area: Rect) -> Rect {
+    let inner = block(Color::Reset).inner(area);
+    if column_header(app, inner) {
+        Rect::new(inner.x, inner.y + 1, inner.width, inner.height.saturating_sub(1))
+    } else {
+        inner
+    }
+}
+
+fn column_header(app: &App, inner: Rect) -> bool {
+    app.snapshot.is_some() && !app.rows.is_empty() && wide_tags(inner.width as usize) && inner.height >= 12
 }
 
 fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
     let t = Theme::of(app.tone);
-    let total = app.snapshot.as_ref().map_or(0, |s| s.section(app.section(), true).count());
-    let available = app
-        .snapshot
-        .as_ref()
-        .map_or(0, |s| s.section(app.section(), app.show_hidden).count());
-    let hidden = total.saturating_sub(available);
-    let mut label = Line::default();
-    if app.snapshot.is_some() && !app.filter.is_empty() {
-        label = hint_line(t, &[("Esc", "clears ")]);
-        let matches = format!(" {} of {} match{}", app.rows.len(), available, keys::SEP);
-        label.spans.insert(0, t.quiet(matches));
-    } else if app.snapshot.is_some() {
-        let trend = drift_trend(app, total);
-        if hidden > 0 {
-            label = hint_line(t, &[("Z", "shows ")]);
-            label.spans.insert(0, t.quiet(format!("{hidden} hidden{}", keys::SEP)));
-        }
-        match (trend.is_empty(), hidden > 0) {
-            (true, true) => label.spans.insert(0, Span::raw(" ")),
-            (false, true) => label.spans.insert(0, t.quiet(format!(" {trend}{}", keys::SEP))),
-            (false, false) => label = Line::from(t.quiet(format!(" {trend} "))),
-            (true, false) => {}
-        }
-    }
+    let label = app.snapshot.as_ref().map_or_else(Line::default, |s| list_label(app, s, t));
     let outer = block(t.rule).title_bottom(label);
     let inner = outer.inner(area);
     f.render_widget(outer, area);
     let Some(s) = &app.snapshot else {
         let mut lines = Vec::new();
-        if let Some(e) = &app.error {
-            lines.push(Line::raw("Couldn't fetch your work."));
-            lines.push(Line::styled(e.clone(), fg(t.error)));
-        } else if let Some(step) = &app.busy {
+        if let Some(step) = &app.busy {
             lines.push(Line::raw("Fetching your work…"));
             if step != "Refreshing" {
                 lines.push(Line::from(t.quiet(step.clone())));
             }
+            if let Some(e) = &app.error {
+                lines.push(Line::styled(format!("The last try failed: {e}"), fg(t.error)));
+            }
+        } else if let Some(e) = &app.error {
+            lines.push(Line::raw("Couldn't fetch your work. r retries; s shows which source failed."));
+            lines.push(Line::styled(e.clone(), fg(t.error)));
         } else {
-            lines.push(Line::raw("Nothing fetched yet. r fetches now."));
+            lines.push(Line::raw("No work cached yet. r fetches it now; s shows your sources."));
         }
-        lines.push(Line::from(t.quiet("No cached work yet. s opens Sources; r retries after failure.")));
         f.render_widget(
             Paragraph::new(lines)
                 .wrap(Wrap { trim: false })
@@ -648,10 +827,13 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
     };
     let section = app.section();
     if app.rows.is_empty() {
+        let hidden = hidden_here(app, s);
         let text = if !app.filter.is_empty() {
-            format!("No matches for “{}”. Esc clears the filter.", app.filter)
+            format!("No matches for “{}” here. Esc clears the filter.", app.filter)
         } else if hidden > 0 {
             format!("{hidden} items hidden locally (done or snoozed). Z shows them.")
+        } else if app.all_tab() {
+            "Nothing needs you right now.".to_owned()
         } else if let Some(why) = s.not_checked(section) {
             format!("{why} s opens Sources.")
         } else if let Some(error) = s.raw.failures().next() {
@@ -662,15 +844,26 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
             section.empty().to_owned()
         };
         let mut lines = vec![Line::raw(text)];
-        let next = (app.tab + 1..Section::COUNT)
-            .find(|i| app.counts[*i] > 0)
-            .map(|i| Section::ALL[i])
-            .filter(|s| !matches!(s, Section::Other | Section::Team));
+        let order: Vec<usize> = App::tab_order().collect();
+        let at = order.iter().position(|i| *i == app.tab).unwrap_or(0);
+        let filtering = !app.filter.is_empty();
+        let next = order[at + 1..]
+            .iter()
+            .chain(&order[..at])
+            .copied()
+            .filter(|i| *i != crate::app::ALL_TAB && app.counts[*i] > 0 && app.tab_shown(*i))
+            .find(|i| filtering || !matches!(Section::ALL[*i], Section::Other | Section::Team));
         if let Some(next) = next {
+            let what = if filtering { " match" } else { "" };
             lines.push(Line::from(t.quiet(format!(
-                "Next: {} ({}) →",
-                next.title(),
-                app.counts[next.index()]
+                "{} has {}{what} {}",
+                app.tab_title(next),
+                app.counts[next],
+                if order.iter().position(|i| *i == next).unwrap_or(0) > at {
+                    "→"
+                } else {
+                    "←"
+                }
             ))));
         }
         f.render_widget(
@@ -681,24 +874,26 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
         );
         return;
     }
-    let height = inner.height as usize;
-    let cursor = app.cursor();
-    let stack_of = |n: usize| s.entry(app.rows[n]).stack;
-    let mut shown: Vec<Shown> = Vec::with_capacity(app.rows.len());
-    let mut at = 0;
-    for n in 0..app.rows.len() {
-        if let Some(k) = stack_of(n).filter(|k| n == 0 || stack_of(n - 1) != Some(*k)) {
-            shown.push(Shown::Head(k));
-        }
-        if n == cursor {
-            at = shown.len();
-        }
-        let branch = stack_of(n).map(|k| n + 1 == app.rows.len() || stack_of(n + 1) != Some(k));
-        shown.push(Shown::Row(n, branch));
+    let width = inner.width as usize;
+    let wide = wide_tags(width);
+    let id_width = app
+        .rows
+        .iter()
+        .map(|i| s.id(s.entry(*i)).to_string().width())
+        .max()
+        .unwrap_or(7)
+        .clamp(7, 16);
+    if column_header(app, inner) {
+        let head = format!(" {} {}     ", fit("Age", 4), fit("Why", tag_cells(wide) + 2));
+        let line = Line::from(vec![t.quiet(head), t.quiet(fit("ID", id_width + 1)), t.quiet("Title")]);
+        f.render_widget(Paragraph::new(line), Rect::new(inner.x, inner.y, inner.width, 1));
     }
-    let top = at.saturating_sub(height / 2).min(shown.len().saturating_sub(height));
-    let visible = &shown[top..shown.len().min(top + height)];
-    if shown.len() > height {
+    let body = list_inner(app, area);
+    let height = body.height as usize;
+    let cursor = app.cursor();
+    let layout = list_layout(app, s, height);
+    let visible = &layout.shown[layout.top..layout.shown.len().min(layout.top + height)];
+    if layout.shown.len() > height {
         let numbers = || {
             visible
                 .iter()
@@ -713,38 +908,63 @@ fn draw_list(app: &App, f: &mut Frame<'_>, area: Rect) {
             Rect::new(area.right().saturating_sub(w + 1), area.bottom().saturating_sub(1), w, 1),
         );
     }
-    let id_width = app
-        .rows
-        .iter()
-        .map(|i| s.id(s.entry(*i)).to_string().width())
-        .max()
-        .unwrap_or(7)
-        .clamp(7, 16);
-    let width = inner.width as usize;
+    let indent = lead_width(wide);
     let lines: Vec<Line<'_>> = visible
         .iter()
         .map(|x| match *x {
-            Shown::Head(k) => {
-                let text = worklens_core::stack::header(s, k);
-                let lead = " ".repeat(STACK_INDENT);
+            Shown::Gap => Line::raw(""),
+            Shown::Group(g, count) => Line::from(vec![
+                Span::raw(" "),
+                Span::styled(g.title().to_owned(), bold()),
+                t.quiet(format!(" {count}")),
+            ]),
+            Shown::Head(k, visible) => {
+                let size = s.stack(k).revisions.len();
+                let mut text = worklens_core::stack::header(s, k);
+                if visible < size {
+                    text = text.replacen(&format!("Stack of {size}"), &format!("{visible} of a {size}-revision stack"), 1);
+                }
                 Line::from(vec![
-                    Span::raw(lead),
+                    Span::raw(" ".repeat(indent)),
                     Span::styled("┌ ", fg(t.rule)),
-                    t.quiet(fit(&text, width.saturating_sub(STACK_INDENT + 2)).trim_end().to_owned()),
+                    t.quiet(fit(&text, width.saturating_sub(indent + 2)).trim_end().to_owned()),
                 ])
             }
-            Shown::Row(n, branch) => row(app, t, s, s.entry(app.rows[n]), n == cursor, (width, id_width), branch),
+            Shown::Row(n, branch) => row(
+                app,
+                t,
+                s,
+                s.entry(app.rows[n]),
+                RowLook {
+                    selected: n == cursor,
+                    section: app.row_section(n),
+                    width,
+                    id_width,
+                    wide,
+                    branch,
+                },
+            ),
         })
         .collect();
-    f.render_widget(Paragraph::new(lines), inner);
+    f.render_widget(Paragraph::new(lines), body);
 }
-
-const STACK_INDENT: usize = 16;
 
 #[derive(Clone, Copy)]
 enum Shown {
-    Head(worklens_core::StackIdx),
+    Gap,
+    Group(Section, usize),
+    Head(worklens_core::StackIdx, usize),
     Row(usize, Option<bool>),
+}
+
+#[derive(Clone, Copy)]
+struct RowLook {
+    selected: bool,
+    section: Section,
+    width: usize,
+    id_width: usize,
+    wide: bool,
+    branch: Option<bool>,
 }
 
 fn try_mark(t: Theme, s: &Snapshot, e: &Entry) -> Span<'static> {
@@ -758,15 +978,19 @@ fn try_mark(t: Theme, s: &Snapshot, e: &Entry) -> Span<'static> {
     }
 }
 
-fn row<'a>(
-    app: &App,
-    t: Theme,
-    s: &'a Snapshot,
-    e: &'a Entry,
-    selected: bool,
-    (width, id_width): (usize, usize),
-    branch: Option<bool>,
-) -> Line<'a> {
+fn gloss(tag: &str) -> &str {
+    worklens_core::rules::TAGS.iter().find(|f| f.tag == tag).map_or(tag, |f| f.gloss)
+}
+
+fn row<'a>(app: &App, t: Theme, s: &'a Snapshot, e: &'a Entry, look: RowLook) -> Line<'a> {
+    let RowLook {
+        selected,
+        section,
+        width,
+        id_width,
+        wide,
+        branch,
+    } = look;
     let p = e.placement;
     let lead = if selected {
         Span::styled(t.cursor(), fg(t.accent).add_modifier(Modifier::BOLD))
@@ -783,12 +1007,17 @@ fn row<'a>(
     };
     let tag: Cow<'_, str> = match (e.marks.hidden, p.map(|p| p.reason)) {
         (Some(Hidden::Done), _) => Cow::Borrowed("done"),
+        (Some(Hidden::Snoozed), _) if wide => Cow::Borrowed("snoozed"),
         (Some(Hidden::Snoozed), _) => Cow::Borrowed("zz"),
-        (None, _) if app.section() == Section::Sprint => match e.issue.and_then(|i| s.issue(i).points) {
-            Some(pts) => Cow::Owned(format!("{pts}p")),
-            None => Cow::Borrowed("?p"),
+        (None, _) if section == Section::Sprint => match (e.issue.and_then(|i| s.issue(i).points), wide) {
+            (Some(pts), true) => Cow::Owned(format!("{pts} {}", if (pts - 1.0).abs() < f32::EPSILON { "pt" } else { "pts" })),
+            (Some(pts), false) => Cow::Owned(format!("{pts}p")),
+            (None, true) => Cow::Borrowed("no estimate"),
+            (None, false) => Cow::Borrowed("?p"),
         },
+        (None, Some(Reason::Sprint(_))) if wide => Cow::Owned(gloss(&s.tag(e).to_string()).to_owned()),
         (None, Some(Reason::Sprint(_))) => Cow::Owned(s.tag(e).to_string()),
+        (None, Some(reason)) if wide => Cow::Borrowed(reason.facets().gloss),
         (None, reason) => Cow::Borrowed(reason.map_or("", Reason::tag)),
     };
     let tier = p.filter(|p| !matches!(p.reason, Reason::Landed(_))).map(|p| p.tier);
@@ -802,10 +1031,10 @@ fn row<'a>(
     } else {
         Span::styled("⚑", fg(if e.has_error_drift() { t.error } else { t.warn }))
     };
-    let used = STACK_INDENT + id_width + 1 + if branch.is_some() { 2 } else { 0 };
-    let dim_title = !selected && (app.section() == Section::Other || e.marks.hidden.is_some());
+    let used = lead_width(wide) + id_width + 1 + if branch.is_some() { 2 } else { 0 };
+    let dim_title = !selected && (section == Section::Other || e.marks.hidden.is_some());
     let mut title = Style::new();
-    if selected {
+    if selected || (e.marks.is_new && e.marks.hidden.is_none()) {
         title = title.add_modifier(Modifier::BOLD);
     }
     if dim_title {
@@ -819,13 +1048,13 @@ fn row<'a>(
         ),
         Span::styled(
             format!(
-                "{}{} ",
+                "{} {} ",
                 match tier {
                     Some(Tier::Critical) => "!",
                     Some(Tier::Important) => "*",
                     _ => " ",
                 },
-                fit(&tag, 4)
+                fit(&tag, tag_cells(wide))
             ),
             fg(tag_color),
         ),
@@ -1039,7 +1268,32 @@ fn styled(t: Theme, segments: Vec<Segment>) -> Vec<(String, Style)> {
     segments.into_iter().map(|s| (s.text, t.signal(s.signal))).collect()
 }
 
-fn release_matrix(t: Theme, channels: &[release::Channel], width: usize) -> Vec<Line<'static>> {
+fn release_matrix(t: Theme, all: &[release::Channel], width: usize) -> Vec<Line<'static>> {
+    let cells = |c: &release::Channel| [c.reported, c.uplift, c.landing];
+    let (known, unknown): (Vec<&release::Channel>, Vec<&release::Channel>) = all
+        .iter()
+        .partition(|c| cells(c).iter().any(|x| !matches!(x.text, "unknown" | "not checked" | "—")));
+    let channels = known;
+    let mut out = if channels.is_empty() {
+        Vec::new()
+    } else {
+        channel_grid(t, &channels, width)
+    };
+    if !unknown.is_empty() {
+        let names: Vec<&str> = unknown.iter().map(|c| c.name.as_str()).collect();
+        out.extend(table_row(
+            "Unknown",
+            fg(t.quiet),
+            LABEL,
+            &format!("{}: nothing reported or checked yet", names.join(", ")),
+            fg(t.quiet),
+            width,
+        ));
+    }
+    out
+}
+
+fn channel_grid(t: Theme, channels: &[&release::Channel], width: usize) -> Vec<Line<'static>> {
     use GridCell::{Label, Value};
     const FIELDS: [&str; 3] = ["Reported", "Uplift", "Landing"];
     let cells = |c: &release::Channel| [c.reported, c.uplift, c.landing];
@@ -1129,10 +1383,11 @@ fn grid(t: Theme, table: &[Vec<GridCell>], gap: usize, width: usize) -> Option<V
 fn evidence_rows(workflow: &worklens_core::evidence::Workflow, every: bool, matrix: bool, now: Timestamp) -> Vec<(String, String)> {
     use worklens_core::evidence::Evidence;
     let summary = |evidence: &Evidence| {
+        let text = short_hashes(&evidence.summary);
         if matches!(evidence.source, "treeherder-landings" | "probeinfo") {
-            format!("{} · checked {}", evidence.summary, ago(evidence.observed_at, now))
+            format!("{text} · checked {}", ago(evidence.observed_at, now))
         } else {
-            evidence.summary.clone()
+            text
         }
     };
     let keep = |e: &&Evidence| (every || e.is_known()) && !e.is_reviewer();
@@ -1169,6 +1424,29 @@ fn evidence_rows(workflow: &worklens_core::evidence::Workflow, every: bool, matr
     rows
 }
 
+pub fn short_hashes(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut run = String::new();
+    let flush = |run: &mut String, out: &mut String| {
+        if run.len() >= 40 {
+            out.push_str(&run[..12]);
+        } else {
+            out.push_str(run);
+        }
+        run.clear();
+    };
+    for c in text.chars() {
+        if c.is_ascii_hexdigit() {
+            run.push(c);
+        } else {
+            flush(&mut run, &mut out);
+            out.push(c);
+        }
+    }
+    flush(&mut run, &mut out);
+    out
+}
+
 fn divider(t: Theme, label: &str, width: usize) -> Line<'static> {
     let label = fit(label, width.saturating_sub(5)).trim_end().to_owned();
     let rest = width.saturating_sub(label.width() + 4);
@@ -1183,7 +1461,8 @@ const LOCAL_ROWS: usize = 6;
 
 fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<Line<'a>> {
     let t = Theme::of(app.tone);
-    let drift_first = matches!(app.section(), Section::Drift | Section::Team);
+    let here = app.row_section(app.cursor());
+    let drift_first = matches!(here, Section::Drift | Section::Team);
     let mut out: Vec<Line<'a>> = vec![Line::styled(s.title(e), bold())];
     let push_drift = |out: &mut Vec<Line<'a>>| {
         for d in &e.drift {
@@ -1196,7 +1475,7 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         push_drift(&mut out);
     }
     if let (Some(p), false) = (e.placement, drift_first) {
-        let where_ = if app.section() == Section::Sprint && p.section != Section::Sprint {
+        let where_ = if here == Section::Sprint && p.section != Section::Sprint {
             format!("{}: ", p.section.title())
         } else {
             String::new()
@@ -1380,6 +1659,11 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         push_drift(&mut out);
     }
 
+    if app.tall() && (timeline::events(s, e).len() >= 2 || timeline::ships(s, e).is_some()) {
+        out.push(Line::raw(""));
+        out.push(divider(t, "Timeline", width));
+        out.extend(timeline_rows(app, s, e, width));
+    }
     let asked = s.needinfo_comment(e);
     if let Some(c) = asked {
         out.push(Line::raw(""));
@@ -1408,7 +1692,7 @@ fn overview<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
     out
 }
 
-fn timeline_lines<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<Line<'a>> {
+fn timeline_rows(app: &App, s: &Snapshot, e: &Entry, width: usize) -> Vec<Line<'static>> {
     let t = Theme::of(app.tone);
     let tz = jiff::tz::TimeZone::system();
     let year = app.now.to_zoned(tz.clone()).year();
@@ -1424,7 +1708,7 @@ fn timeline_lines<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) ->
     let day_width = days.iter().map(|d| d.width()).max().unwrap_or(0) + 2;
     let source_width = events.iter().map(|ev| ev.source.width()).max().unwrap_or(0) + 2;
     let label_width = (day_width + source_width).max(LABEL);
-    let mut out = vec![Line::styled(s.title(e), bold()), Line::raw("")];
+    let mut out = Vec::new();
     for (ev, day) in events.iter().zip(&days) {
         let label = format!("{day:<day_width$}{}", ev.source);
         out.extend(table_row(&label, fg(t.quiet), label_width, &ev.text, Style::new(), width));
@@ -1432,6 +1716,13 @@ fn timeline_lines<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) ->
     if let Some(text) = timeline::ships(s, e) {
         out.extend(table_row("Release", fg(t.quiet), label_width, &text, Style::new(), width));
     }
+    out
+}
+
+fn timeline_lines<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<Line<'a>> {
+    let t = Theme::of(app.tone);
+    let mut out = vec![Line::styled(s.title(e), bold()), Line::raw("")];
+    out.extend(timeline_rows(app, s, e, width));
     out.push(Line::raw(""));
     out.push(Line::from(t.quiet(
         "Dates come from each tool. Review decisions and uplift approvals carry no date here.",
@@ -1546,7 +1837,7 @@ fn drift_lines(t: Theme, e: &Entry) -> Vec<Line<'_>> {
         out.push(Line::from(t.quiet(format!("  why: {}", d.cause))));
         if let Some(fix) = &d.fix {
             out.push(Line::styled(
-                format!("  Fix: {} (Enter for actions)", present::FixText(fix)),
+                format!("  Fix: {} (F opens it and copies the value)", present::FixText(fix)),
                 fg(t.accent),
             ));
         }
@@ -1555,18 +1846,13 @@ fn drift_lines(t: Theme, e: &Entry) -> Vec<Line<'_>> {
     out
 }
 
-pub const MENU_NUMBERED: usize = 10;
-
-fn menu_number(i: usize) -> &'static str {
-    const NUMBERS: [&str; MENU_NUMBERED] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-    NUMBERS.get(i).copied().unwrap_or(" ")
-}
+const MENU_MARK: usize = 2;
+const MENU_KEY: usize = 3;
+const MENU_MAX: u16 = 72;
 
 fn menu_lines(app: &App, actions: &[crate::app::ItemAction], width: u16) -> Vec<Vec<Line<'static>>> {
     let t = Theme::of(app.tone);
-    const INDENT: usize = 4;
-    const KEY: usize = 3;
-    let label_width = (width as usize).saturating_sub(INDENT + KEY).max(1);
+    let label_width = (width as usize).saturating_sub(MENU_MARK + MENU_KEY).max(1);
     actions
         .iter()
         .enumerate()
@@ -1580,16 +1866,13 @@ fn menu_lines(app: &App, actions: &[crate::app::ItemAction], width: u16) -> Vec<
                 .enumerate()
                 .map(|(n, part)| {
                     let mut spans = if n == 0 {
-                        vec![
-                            Span::styled(mark, fg(t.accent)),
-                            Span::styled(format!(" {} ", menu_number(i)), fg(quiet)),
-                        ]
+                        vec![Span::styled(mark, fg(t.accent)), Span::raw(" ")]
                     } else {
-                        vec![Span::raw(" ".repeat(INDENT))]
+                        vec![Span::raw(" ".repeat(MENU_MARK))]
                     };
                     let key = a.key.filter(|_| n == 0).map_or_else(String::new, String::from);
                     spans.push(Span::raw(fit(&part, label_width)));
-                    spans.push(Span::styled(format!("{key:>KEY$}"), fg(quiet)));
+                    spans.push(Span::styled(format!("{key:>MENU_KEY$}"), fg(quiet)));
                     let line = Line::from(spans);
                     if !selected {
                         line
@@ -1605,20 +1888,48 @@ fn menu_lines(app: &App, actions: &[crate::app::ItemAction], width: u16) -> Vec<
         .collect()
 }
 
-fn menu_needs_body(app: &App, actions: &[crate::app::ItemAction], side: Rect) -> bool {
-    let lines: usize = menu_lines(app, actions, side.width.saturating_sub(4)).iter().map(Vec::len).sum();
-    lines + 3 > side.height as usize
+fn selected_row_y(app: &App, list: Rect) -> u16 {
+    let Some(s) = &app.snapshot else { return list.y };
+    let inner = list_inner(app, list);
+    let layout = list_layout(app, s, inner.height as usize);
+    inner.y + layout.at.saturating_sub(layout.top).min(inner.height.saturating_sub(1) as usize) as u16
 }
 
-fn menu_body(app: &App, actions: &[crate::app::ItemAction]) -> Rect {
+fn menu_rect(app: &App, actions: &[crate::app::ItemAction], area: Rect) -> Rect {
+    let [list, _] = body_panes(app, area);
+    let longest = actions.iter().map(|a| a.label.width()).max().unwrap_or(0) as u16;
+    let width = (longest + (MENU_MARK + MENU_KEY) as u16 + 4).clamp(36, MENU_MAX).min(area.width);
+    let lines: usize = menu_lines(app, actions, width.saturating_sub(4)).iter().map(Vec::len).sum();
+    if lines as u16 + 2 > area.height {
+        return area;
+    }
+    let height = lines as u16 + 2;
+    let row = selected_row_y(app, list);
+    let x = (list.x + 1 + lead_width(wide_tags(list.width.saturating_sub(2) as usize)) as u16).min(area.right().saturating_sub(width));
+    let y = if row + 1 + height <= area.bottom() {
+        row + 1
+    } else if row >= area.y + height {
+        row - height
+    } else {
+        area.bottom().saturating_sub(height)
+    };
+    Rect::new(x, y, width, height)
+}
+
+fn menu_body(app: &App, actions: &[crate::app::ItemAction]) -> (Rect, bool) {
     let area = Rect::new(0, 2, app.size.0, app.size.1.saturating_sub(3));
-    let side = body_panes(app, area)[1];
-    let menu = if menu_needs_body(app, actions, side) { area } else { side };
-    Rect::new(menu.x + 2, menu.y + 1, menu.width.saturating_sub(4), menu.height.saturating_sub(3))
+    let menu = menu_rect(app, actions, area);
+    let inner = Rect::new(menu.x + 2, menu.y + 1, menu.width.saturating_sub(4), menu.height.saturating_sub(2));
+    let lines: usize = menu_lines(app, actions, inner.width).iter().map(Vec::len).sum();
+    if lines > inner.height as usize {
+        (Rect::new(inner.x, inner.y, inner.width, inner.height.saturating_sub(1)), true)
+    } else {
+        (inner, false)
+    }
 }
 
 pub fn menu_scroll_max(app: &App, actions: &[crate::app::ItemAction]) -> u16 {
-    let body = menu_body(app, actions);
+    let (body, _) = menu_body(app, actions);
     let lines: usize = menu_lines(app, actions, body.width).iter().map(Vec::len).sum();
     lines.saturating_sub(body.height as usize).min(u16::MAX as usize) as u16
 }
@@ -1634,14 +1945,19 @@ fn draw_menu(app: &App, f: &mut Frame<'_>, area: Rect, actions: &[crate::app::It
     let outer = block(t.accent).title(title).padding(Padding::horizontal(1));
     let inner = outer.inner(area);
     f.render_widget(outer, area);
-    let [body, status] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(inner);
-    let per_action = menu_lines(app, actions, body.width);
+    let per_action = menu_lines(app, actions, inner.width);
+    let total: usize = per_action.iter().map(Vec::len).sum();
+    let overflow = total > inner.height as usize;
+    let [body, status] = if overflow {
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(inner)
+    } else {
+        [inner, Rect::default()]
+    };
     let above: usize = per_action.iter().take(app.menu_cursor).map(Vec::len).sum();
     let lines: Vec<Line<'static>> = per_action.into_iter().flatten().collect();
-    let total = lines.len();
     let scroll = (above + app.menu_scroll as usize).min(total.saturating_sub(body.height as usize));
     f.render_widget(Paragraph::new(lines).scroll((scroll.min(u16::MAX as usize) as u16, 0)), body);
-    if total > body.height as usize {
+    if overflow {
         let mut line = hint_line(t, keys::MENU_SCROLL_HINTS);
         let at = format!("Action {} of {}{}", app.menu_cursor + 1, actions.len(), keys::SEP);
         line.spans.insert(0, t.quiet(at));
@@ -2027,8 +2343,9 @@ fn draw_status(app: &App, f: &mut Frame<'_>, area: Rect) {
         && (app.mode == Mode::List || (app.mode == Mode::Setup && app.page == Page::Sources))
     {
         Line::from(vec![
+            Span::styled(if toast.error { "! " } else { "✓ " }, fg(if toast.error { t.error } else { t.ok })),
             Span::styled(
-                fit(&toast.text, area.width.saturating_sub(9) as usize).trim_end().to_owned(),
+                fit(&toast.text, area.width.saturating_sub(11) as usize).trim_end().to_owned(),
                 if toast.error { fg(t.error) } else { Style::new() },
             ),
             t.quiet(keys::SEP),
@@ -2040,7 +2357,7 @@ fn draw_status(app: &App, f: &mut Frame<'_>, area: Rect) {
     } else {
         match app.mode {
             Mode::List if app.snapshot.is_none() => hint_line(t, keys::NO_CACHE_HINTS),
-            Mode::List => hint_line(t, &keys::list_hint_pairs()),
+            Mode::List => hint_line(t, &keys::footer(area.width as usize)),
             Mode::Menu => hint_line(t, keys::MENU_HINTS),
             Mode::Filter => hint_line(t, keys::FILTER_HINTS),
             Mode::Help => hint_line(t, keys::HELP_HINTS),
@@ -2057,18 +2374,7 @@ fn draw_status(app: &App, f: &mut Frame<'_>, area: Rect) {
             }
             Mode::Setup => hint_line(t, keys::SETUP_HINTS),
             Mode::Log => hint_line(t, keys::LOG_HINTS),
-            Mode::Snooze => {
-                let id = app
-                    .snapshot
-                    .as_ref()
-                    .zip(app.selected())
-                    .map(|(s, e)| s.id(e).to_string())
-                    .unwrap_or_default();
-                let mut line = hint_line(t, keys::EDIT_HINTS);
-                let text = input_tail(&app.snooze_text, area.width.saturating_sub(56) as usize);
-                line.spans.insert(0, t.quiet(format!("Snooze {id} locally: {text}▏{}", keys::SEP)));
-                line
-            }
+            Mode::Snooze => hint_line(t, keys::SNOOZE_HINTS),
         }
     };
     f.render_widget(Paragraph::new(line), area);
@@ -2095,6 +2401,15 @@ mod tests {
         assert_eq!(ago(now, now), "just now");
         assert_eq!(ago("2026-11-02T11:55:00Z".parse().unwrap(), now), "5m ago");
         assert_eq!(ago("2026-10-31T12:00:00Z".parse().unwrap(), now), "2d ago");
+    }
+
+    #[test]
+    fn full_commit_hashes_shorten_to_twelve_characters() {
+        let full = "0123456789abcdef0123456789abcdef01234567";
+        assert_eq!(short_hashes(&format!("Commit {full} observed")), "Commit 0123456789ab observed");
+        assert_eq!(short_hashes(&format!("push {full}; done")), "push 0123456789ab; done");
+        assert_eq!(short_hashes("D360001 and bug 2010001"), "D360001 and bug 2010001");
+        assert_eq!(short_hashes("deadbeef"), "deadbeef");
     }
 
     #[test]

@@ -82,35 +82,17 @@ impl Phab<'_> {
     }
 
     pub async fn group_reviews(&self, phid: &str) -> Result<Vec<(Revision, String)>> {
-        #[derive(Deserialize)]
-        struct Page {
-            data: Vec<Project>,
-        }
-        #[derive(Deserialize)]
-        struct Project {
-            phid: String,
-        }
-        let projects: Page = self.call("project.search", &list("members", &[phid])).await?;
-        let groups: Vec<String> = projects.data.into_iter().map(|p| p.phid).collect();
+        let mut params = list("members", &[phid]);
+        params.push(("attachments[members]".into(), "1".into()));
+        let projects: ProjectPage = self.call("project.search", &params).await?;
+        let groups = members_of(projects);
         if groups.is_empty() {
             return Ok(Vec::new());
         }
-        let mut c = list("reviewerPHIDs", &groups);
+        let phids: Vec<&String> = groups.keys().collect();
+        let mut c = list("reviewerPHIDs", &phids);
         c.extend(list("statuses", &["needs-review"]));
-        let revs = self.search(c).await?;
-        Ok(revs
-            .into_iter()
-            .filter(|r| r.author != phid && !r.reviewers.iter().any(|x| x.phid == phid))
-            .filter_map(|r| {
-                let group = r
-                    .reviewers
-                    .iter()
-                    .find(|x| groups.contains(&x.phid) && matches!(x.status, ReviewerStatus::Added | ReviewerStatus::Blocking))?
-                    .phid
-                    .clone();
-                Some((r, group))
-            })
-            .collect())
+        Ok(group_requests(self.search(c).await?, &groups, phid))
     }
 
     pub async fn diff_dates(&self, phids: &[&str]) -> Result<HashMap<String, Timestamp>> {
@@ -453,6 +435,62 @@ pub fn parse_revisions(bytes: &[u8]) -> Result<Vec<Revision>> {
         .collect())
 }
 
+#[derive(Deserialize)]
+struct ProjectPage {
+    data: Vec<Project>,
+}
+
+#[derive(Deserialize)]
+struct Project {
+    phid: String,
+    #[serde(default)]
+    attachments: ProjectAttachments,
+}
+
+#[derive(Deserialize, Default)]
+struct ProjectAttachments {
+    #[serde(default)]
+    members: Members,
+}
+
+#[derive(Deserialize, Default)]
+struct Members {
+    #[serde(default)]
+    members: Vec<Member>,
+}
+
+#[derive(Deserialize)]
+struct Member {
+    phid: String,
+}
+
+fn members_of(page: ProjectPage) -> HashMap<String, Vec<String>> {
+    page.data
+        .into_iter()
+        .map(|p| (p.phid, p.attachments.members.members.into_iter().map(|m| m.phid).collect()))
+        .collect()
+}
+
+fn group_requests(revs: Vec<Revision>, groups: &HashMap<String, Vec<String>>, me: &str) -> Vec<(Revision, String)> {
+    revs.into_iter()
+        .filter(|r| r.author != me && !r.reviewers.iter().any(|x| x.phid == me))
+        .filter_map(|r| {
+            let asked: Vec<&String> = r
+                .reviewers
+                .iter()
+                .filter(|x| matches!(x.status, ReviewerStatus::Added | ReviewerStatus::Blocking))
+                .filter_map(|x| groups.get_key_value(&x.phid).map(|(k, _)| k))
+                .collect();
+            let teammate = r
+                .reviewers
+                .iter()
+                .any(|x| x.status != ReviewerStatus::Resigned && asked.iter().any(|g| groups[g.as_str()].contains(&x.phid)));
+            let group = asked.first().map(|g| (*g).clone())?;
+            (!teammate).then_some((r, group))
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -546,5 +584,37 @@ mod tests {
         let names: HashMap<_, _> = res.into_iter().map(|(k, v)| (k, v.display_name())).collect();
         assert_eq!(names["PHID-PROJ-1"], "#ai-platform-reviewers");
         assert_eq!(names["PHID-USER-1"], "quillfox");
+    }
+
+    fn group_case(reviewers: serde_json::Value) -> Vec<(Revision, String)> {
+        let groups = members_of(conduit_result("project.search", &fixture("project.search.json")).unwrap());
+        let mut page: serde_json::Value = serde_json::from_slice(&fixture("revision.search.json")).unwrap();
+        page["result"]["data"][0]["fields"]["authorPHID"] = serde_json::json!("PHID-USER-author");
+        page["result"]["data"][0]["attachments"]["reviewers"]["reviewers"] = reviewers;
+        let mut revs = parse_revisions(&serde_json::to_vec(&page).unwrap()).unwrap();
+        revs.truncate(1);
+        group_requests(revs, &groups, "PHID-USER-me")
+    }
+
+    #[test]
+    fn a_group_review_is_mine_while_no_teammate_has_it() {
+        let found = group_case(serde_json::json!([
+            {"reviewerPHID":"PHID-PROJ-1","status":"blocking","isBlocking":true},
+            {"reviewerPHID":"PHID-USER-1","status":"resigned","isBlocking":false},
+            {"reviewerPHID":"PHID-USER-outsider","status":"added","isBlocking":false}
+        ]));
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].1, "PHID-PROJ-1");
+    }
+
+    #[test]
+    fn a_group_review_a_teammate_is_on_is_not_mine() {
+        for status in ["added", "blocking", "accepted", "rejected", "commented"] {
+            let found = group_case(serde_json::json!([
+                {"reviewerPHID":"PHID-PROJ-1","status":"added","isBlocking":false},
+                {"reviewerPHID":"PHID-USER-2","status":status,"isBlocking":false}
+            ]));
+            assert!(found.is_empty(), "{status}");
+        }
     }
 }
