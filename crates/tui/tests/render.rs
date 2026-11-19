@@ -18,9 +18,19 @@ fn app(w: u16, h: u16) -> App {
     app_from("raw.json", w, h)
 }
 
+fn app_with_raw(w: u16, h: u16, edit: impl FnOnce(&mut serde_json::Value)) -> App {
+    app_edited("raw.json", w, h, edit)
+}
+
 fn app_from(fixture: &str, w: u16, h: u16) -> App {
+    app_edited(fixture, w, h, |_| {})
+}
+
+fn app_edited(fixture: &str, w: u16, h: u16, edit: impl FnOnce(&mut serde_json::Value)) -> App {
     let path = format!("{}/../store/fixtures/{fixture}", env!("CARGO_MANIFEST_DIR"));
-    let raw: Raw = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    edit(&mut value);
+    let raw: Raw = serde_json::from_value(value).unwrap();
     let opts = Options {
         cache_minutes: None,
         agent: None,
@@ -1489,6 +1499,17 @@ fn jira_keys_in_the_list_are_never_cut() {
 }
 
 #[test]
+fn the_sprint_gauge_counts_work_in_review_outside_it_when_there_is_room() {
+    let header = |a: &App| screen(a).lines().next().unwrap().to_owned();
+    let wide = header(&overloaded(260, 50));
+    assert!(wide.contains(" · 27 in review outside"), "{wide}");
+    let narrow = header(&overloaded(80, 24));
+    assert!(narrow.contains("of 10 pts") && !narrow.contains("outside"), "{narrow}");
+    let none = header(&app(200, 50));
+    assert!(none.contains("Sprint") && !none.contains("outside"), "{none}");
+}
+
+#[test]
 fn sprint_done_carries_its_unit() {
     let s = screen(&overloaded(200, 50));
     let header = line_with(&s, "of 10 pts");
@@ -1758,6 +1779,16 @@ fn the_header_says_which_sources_are_read_and_which_are_not_set_up() {
         assert!(header.contains("Phabricator"), "{s}");
         assert!(!header.contains('✗'), "unset is not a failure: {s}");
     }
+}
+
+#[test]
+fn the_header_says_when_bugzilla_shows_only_public_bugs() {
+    let s = screen(&app_from("bugzilla_only.json", 160, 48));
+    assert!(s.lines().next().unwrap().contains("Bugzilla: public bugs only"), "{s}");
+    let s = screen(&app_with_raw(80, 24, |raw| raw["publicBugsOnly"] = true.into()));
+    assert!(s.lines().next().unwrap().contains("Public bugs only"), "{s}");
+    let s = screen(&app(140, 30));
+    assert!(!s.to_lowercase().contains("public bugs only"), "{s}");
 }
 
 #[test]

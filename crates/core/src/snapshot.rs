@@ -3,7 +3,7 @@ use std::fmt::{self, Write as _};
 
 use jiff::Timestamp;
 
-use crate::bugs::{HumanDays, State, days_between, is_closed, is_dead, jira_key_of};
+use crate::bugs::{HumanDays, State, days_between, is_closed, is_dead};
 use crate::drift::{Drift, DriftInput, JiraStatuses, Level, drift_of};
 use crate::ideas::{Work, idea_of};
 use crate::ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, LocalIdx, RevId, RevIdx};
@@ -105,6 +105,7 @@ pub struct SprintSummary {
     pub done: f32,
     pub unestimated: Vec<IssueIdx>,
     pub tickets: Vec<IssueIdx>,
+    pub outside: Vec<EntryIdx>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -153,7 +154,7 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
                 .collect()
         })
     };
-    let issue_at = |key: &str| raw.issues.get_index_of(key).map(IssueIdx::new);
+    let parents = crate::tickets::Parents::of(&raw);
     let idea_at = |i: Option<IssueIdx>| i.and_then(|i| raw.issues.get_index(i.get())).and_then(|(_, x)| idea_of(&raw, x));
 
     let with_jira = raw.state("jira") == SourceState::Read;
@@ -166,15 +167,18 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
         if bug.via.iter().all(|v| *v == Via::Team) {
             continue;
         }
-        let key = jira_key_of(bug);
-        let issue = key.and_then(issue_at);
+        let tickets = crate::tickets::of(&raw, &parents, bug);
+        let (key, issue) = (tickets.key, tickets.issue);
         if let Some((_, x)) = issue.and_then(|i| raw.issues.get_index(i.get())) {
+            claimed.insert(&x.key.0);
+        }
+        for x in tickets.rollups.iter().filter_map(|k| raw.issues.get(*k)) {
             claimed.insert(&x.key.0);
         }
         let mut e = Entry::new(ItemId::Bug(bug.id));
         e.bug = Some(BugIdx::new(b));
         e.issue = issue;
-        e.idea = idea_at(issue);
+        e.idea = idea_at(issue).or(tickets.idea);
         e.needinfo = bug
             .flags
             .iter()
@@ -190,6 +194,7 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
             e.drift = drift_of(&DriftInput {
                 bug,
                 key,
+                rollups: &tickets.rollups,
                 issue: issue.and_then(|i| raw.issues.get_index(i.get())).map(|(_, x)| x),
                 revs: &statuses,
                 mirrored: cfg.whiteboard().is_some_and(|w| bug.whiteboard.contains(w)),
@@ -231,6 +236,9 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
 
     let syncs = crate::local::syncs(&raw);
     link_local(&raw, &syncs, &mut entries, now);
+    for e in entries.iter_mut().filter(|e| e.bug.is_some()) {
+        e.drift.extend(duplicate_drift(&raw, &e.revisions));
+    }
 
     let ctx = Ctx { raw: &raw, now };
     for e in &mut entries {
@@ -275,9 +283,9 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
             if !bug.via.contains(&Via::Team) {
                 continue;
             }
-            let key = jira_key_of(bug);
-            let issue = key.and_then(issue_at);
-            if let Some(i) = idea_at(issue) {
+            let tickets = crate::tickets::of(&raw, &parents, bug);
+            let (key, issue) = (tickets.key, tickets.issue);
+            if let Some(i) = idea_at(issue).or(tickets.idea) {
                 team_work.push((
                     i,
                     Work {
@@ -293,6 +301,7 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
             let drift = drift_of(&DriftInput {
                 bug,
                 key,
+                rollups: &tickets.rollups,
                 issue: issue.and_then(|i| raw.issues.get_index(i.get())).map(|(_, x)| x),
                 revs: &statuses,
                 mirrored: true,
@@ -332,7 +341,10 @@ pub fn build_snapshot(raw: Raw, cfg: &CoreConfig, now: Timestamp) -> Snapshot {
         }
     }
 
-    let sprint = sprint_of(&raw, cfg);
+    let mut sprint = sprint_of(&raw, cfg);
+    if let Some(sp) = sprint.as_mut() {
+        sp.outside = outside_sprint(&raw, &entries[..mine], &sp.tickets);
+    }
     let stacks = crate::stack::find(&raw, &entries[..mine]);
     crate::stack::assign(&stacks, &mut entries);
     let mut sections = sections_of(&raw, &entries, mine, sprint.as_ref(), &syncs);
@@ -401,6 +413,38 @@ fn link_local(raw: &Raw, syncs: &[crate::local::Sync], entries: &mut Vec<Entry>,
     }
 }
 
+fn duplicate_drift(raw: &Raw, revisions: &[RevIdx]) -> Vec<Drift> {
+    let phid = raw.me.phid.as_deref();
+    let mut open: Vec<&Revision> = revisions
+        .iter()
+        .map(|r| &raw.revisions[r.get()])
+        .filter(|r| Some(r.author.as_str()) == phid && !matches!(r.status, RevStatus::Published | RevStatus::Abandoned))
+        .collect();
+    open.sort_by_key(|r| r.id);
+    let mut out = Vec::new();
+    let mut done: Vec<&str> = Vec::new();
+    for r in &open {
+        let title = r.title.trim();
+        if title.is_empty() || done.contains(&title) {
+            continue;
+        }
+        done.push(title);
+        let same: Vec<String> = open.iter().filter(|x| x.title.trim() == title).map(|x| x.id.to_string()).collect();
+        let Some((last, rest)) = same.split_last().filter(|(_, rest)| !rest.is_empty()) else {
+            continue;
+        };
+        out.push(Drift {
+            level: Level::Warn,
+            message: format!("{} and {last} have the same title; one may be stale", rest.join(", ")),
+            cause:
+                "submitting a commit that lost its Differential Revision line opens a new revision; the old one keeps waiting on reviewers"
+                    .to_owned(),
+            fix: None,
+        });
+    }
+    out
+}
+
 fn parent_drift(raw: &Raw, e: &Entry) -> Option<Drift> {
     let (_, issue) = raw.issues.get_index(e.issue?.get())?;
     let parent = crate::ideas::parent_of(raw, issue).filter(|p| p.status_category == StatusCategory::Done)?;
@@ -458,7 +502,32 @@ fn sprint_of(raw: &Raw, cfg: &CoreConfig) -> Option<SprintSummary> {
         done,
         unestimated,
         tickets,
+        outside: Vec::new(),
     })
+}
+
+fn outside_sprint(raw: &Raw, entries: &[Entry], tickets: &[IssueIdx]) -> Vec<EntryIdx> {
+    let phid = raw.me.phid.as_deref();
+    let in_review = |r: &RevIdx| {
+        let rev = &raw.revisions[r.get()];
+        Some(rev.author.as_str()) == phid
+            && matches!(
+                rev.status,
+                RevStatus::NeedsReview | RevStatus::Accepted | RevStatus::NeedsRevision | RevStatus::ChangesPlanned
+            )
+    };
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            let assigned = e.bug.is_some_and(|b| {
+                let bug = &raw.bugs[b.get()];
+                bug.assigned_to == raw.me.email && !is_closed(bug)
+            });
+            assigned && e.issue.is_none_or(|i| !tickets.contains(&i)) && e.revisions.iter().any(in_review)
+        })
+        .map(|(i, _)| EntryIdx::new(i))
+        .collect()
 }
 
 fn sections_of(
@@ -485,6 +554,15 @@ fn sections_of(
         if !e.drift.is_empty() {
             sections[Section::Drift.index()].push(idx);
         }
+        let returned = e.placement.is_some_and(|p| p.section == Section::Returned);
+        let phid = raw.me.phid.as_deref();
+        let changes_requested = e.revisions.iter().any(|r| {
+            let rev = &raw.revisions[r.get()];
+            Some(rev.author.as_str()) == phid && rev.status == RevStatus::NeedsRevision
+        });
+        if !returned && changes_requested {
+            sections[Section::Returned.index()].push(idx);
+        }
         let local_placed = e.placement.is_some_and(|p| p.section == Section::Local);
         if !local_placed && e.local.iter().any(|l| syncs.get(l.get()) == Some(&crate::local::Sync::NotUploaded)) {
             sections[Section::Local.index()].push(idx);
@@ -494,7 +572,8 @@ fn sections_of(
         let facet = |i: &EntryIdx| entries[i.get()].placement.map(|p| p.reason.facets());
         let first = |i: &EntryIdx| facet(i).is_some_and(|f| f.sorts_first);
         let last = |i: &EntryIdx| facet(i).is_some_and(|f| f.sorts_last);
-        sections[s.index()].sort_by_key(|i| (!first(i), entries[i.get()].placement.map(|p| p.tier), last(i), since(i)));
+        let bottom = |i: &EntryIdx| facet(i).is_some_and(|f| f.sorts_at_bottom);
+        sections[s.index()].sort_by_key(|i| (!first(i), bottom(i), entries[i.get()].placement.map(|p| p.tier), last(i), since(i)));
     }
     sections[Section::Sprint.index()].sort_by_key(since);
     sections[Section::Landed.index()].sort_by_key(|i| std::cmp::Reverse(since(i)));
@@ -542,7 +621,7 @@ impl Snapshot {
                 Some(l) if l.error.is_some() => Some("Not checked: git couldn't read your checkout; `worklens doctor` says why."),
                 Some(_) => None,
             },
-            Section::Drift if self.raw.local.is_some() && !self.sections[Section::Drift.index()].is_empty() => None,
+            Section::Drift if !self.sections[Section::Drift.index()].is_empty() => None,
             Section::Sprint | Section::Ideas | Section::Drift | Section::Team => match self.raw.state("jira") {
                 SourceState::Off => Some("Off: Jira isn't set up. `worklens auth set jira` turns it on."),
                 SourceState::Failed => Some("Not checked: Jira couldn't be read."),
@@ -558,7 +637,7 @@ impl Snapshot {
     pub fn off(&self, section: Section) -> bool {
         let source = match section {
             Section::Local => return self.raw.local.is_none(),
-            Section::Drift if self.raw.local.is_some() && !self.sections[Section::Drift.index()].is_empty() => return false,
+            Section::Drift if !self.sections[Section::Drift.index()].is_empty() => return false,
             Section::Land | Section::Returned | Section::Others => "phabricator",
             Section::Sprint | Section::Ideas | Section::Drift | Section::Team => "jira",
             _ => return false,
@@ -856,6 +935,31 @@ pub struct ReasonText<'a> {
 
 impl fmt::Display for ReasonText<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.primary(f)?;
+        let (s, e) = (self.snap, self.entry);
+        let Some(p) = e.placement else { return Ok(()) };
+        let shown = p.reason.revision();
+        let others = needs_me(s, e).filter(|r| Some(*r) != shown);
+        for (n, r) in others.enumerate() {
+            let what = match s.rev(r).status {
+                RevStatus::Accepted => "accepted",
+                _ => "changes requested",
+            };
+            write!(f, "{}{} {what}", if n == 0 { "; also " } else { ", " }, s.rev(r).id)?;
+        }
+        Ok(())
+    }
+}
+
+pub fn needs_me<'a>(s: &'a Snapshot, e: &'a Entry) -> impl Iterator<Item = RevIdx> + 'a {
+    e.revisions
+        .iter()
+        .copied()
+        .filter(|r| s.is_mine(s.rev(*r)) && matches!(s.rev(*r).status, RevStatus::NeedsRevision | RevStatus::Accepted))
+}
+
+impl ReasonText<'_> {
+    fn primary(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (s, e) = (self.snap, self.entry);
         let Some(p) = e.placement else { return Ok(()) };
         let days = HumanDays(days_between(p.since, s.now));
@@ -883,6 +987,17 @@ impl fmt::Display for ReasonText<'_> {
             Reason::Needinfo => {
                 let from = s.needinfo(e).map_or("someone", |flag| flag.setter.as_str());
                 write!(f, "needinfo from {from}, {days}")
+            }
+            Reason::ClosedNeedinfo => {
+                let from = s.needinfo(e).map_or("someone", |flag| flag.setter.as_str());
+                if let Some(bug) = e.bug.map(|b| s.bug(b)) {
+                    write!(f, "bug {}", State(bug))?;
+                    if let Some(at) = bug.cf_last_resolved {
+                        write!(f, " on {}", crate::train::day(at.to_zoned(jiff::tz::TimeZone::UTC).date()))?;
+                    }
+                    f.write_str("; ")?;
+                }
+                write!(f, "needinfo from {from} still set, {days}")
             }
             Reason::ReviewRequested(r) => {
                 let rev = s.rev(r);

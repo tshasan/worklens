@@ -53,6 +53,8 @@ pub struct Raw {
     pub away: HashMap<String, Timestamp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local: Option<Local>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub public_bugs_only: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

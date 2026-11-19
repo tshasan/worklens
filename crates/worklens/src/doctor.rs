@@ -155,10 +155,10 @@ pub async fn run_checks(cfg: &Config) -> Vec<Check> {
         match bugzilla_whoami(&http, cfg.sources.bugzilla_api_key.as_deref()).await {
             Ok(None) => check(
                 "bugzilla",
-                true,
-                true,
-                "reachable, anonymous (public bugs only; `worklens auth set bugzilla` for restricted bugs)",
-                None,
+                false,
+                false,
+                "reachable, anonymous: public bugs only, so security and other restricted bugs are missing from every list",
+                Some("`worklens auth set bugzilla` (an API key from https://bugzilla.mozilla.org/userprefs.cgi?tab=apikey)"),
             ),
             Ok(Some(name)) => check("bugzilla", true, true, format!("signed in as {name}"), None),
             Err(e) => check("bugzilla", true, false, e.summary(), fix),

@@ -4,7 +4,7 @@ use std::future::Future;
 use futures::{StreamExt, stream};
 use indexmap::IndexMap;
 use jiff::Timestamp;
-use worklens_core::bugs::jira_key_of;
+use worklens_core::bugs::jira_keys_of;
 use worklens_core::raw::{Bug, Comment, Issue, Me, Revision, SourceError, Thread, TryPush, Via};
 use worklens_core::{BugId, JiraKey, RAW_VERSION, Raw, RevId};
 
@@ -238,7 +238,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         if !issues.is_empty() {
             log("Linking Jira tickets to bugs");
         }
-        let linked: HashSet<&str> = bugs.values().filter_map(jira_key_of).collect();
+        let linked: HashSet<&str> = bugs.values().flat_map(jira_keys_of).collect();
         let unlinked: Vec<&str> = issues.iter().map(|i| i.key.0.as_str()).filter(|k| !linked.contains(k)).collect();
         let mirrors = if unlinked.is_empty() {
             Ok(Vec::new())
@@ -280,7 +280,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         let mut issue_by_key: IndexMap<JiraKey, Issue> = issues.into_iter().map(|i| (JiraKey(i.key.0.clone()), i)).collect();
         let mut missing: Vec<&str> = bugs
             .values()
-            .filter_map(jira_key_of)
+            .flat_map(jira_keys_of)
             .filter(|k| !issue_by_key.contains_key(*k))
             .collect();
         let mut seen = HashSet::new();
@@ -489,6 +489,7 @@ pub async fn fetch_raw(http: &Http, cfg: &Config, previous: Option<Raw>, log: im
         dependencies: Default::default(),
         away,
         local,
+        public_bugs_only: cfg.bugzilla_api_key.is_none(),
     };
     crate::supplemental::restore(&mut raw, previous.as_ref());
     crate::supplemental::refresh(http, cfg, &mut raw, &[], log, Timestamp::now()).await;

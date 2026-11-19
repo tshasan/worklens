@@ -25,8 +25,8 @@ pub fn lando_url(id: RevId) -> String {
     format!("https://lando.moz.tools/{id}/")
 }
 
-pub fn jira_key_of(bug: &Bug) -> Option<&str> {
-    bug.see_also.iter().find_map(|url| jira_key_in(url))
+pub fn jira_keys_of(bug: &Bug) -> impl Iterator<Item = &str> {
+    bug.see_also.iter().filter_map(|url| jira_key_in(url))
 }
 
 fn jira_key_in(url: &str) -> Option<&str> {

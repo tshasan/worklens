@@ -3188,6 +3188,37 @@
    "via": [
     "local"
    ]
+  },
+  {
+   "id": 1996888,
+   "summary": "Expiring metric smart_window.chat_latency needs a renewal decision",
+   "status": "RESOLVED",
+   "resolution": "FIXED",
+   "assigned_to": "harbor@mozilla.com",
+   "severity": "S1",
+   "priority": "P1",
+   "keywords": [],
+   "whiteboard": "",
+   "see_also": [],
+   "last_change_time": "2026-11-03T11:00:00Z",
+   "creation_time": "2026-10-01T09:00:00Z",
+   "flags": [
+    {
+     "name": "needinfo",
+     "status": "?",
+     "requestee": "harbor@mozilla.com",
+     "setter": "release-mgmt-account-bot@mozilla.tld",
+     "creation_date": "2026-10-13T08:00:00Z"
+    }
+   ],
+   "depends_on": [],
+   "regressed_by": [],
+   "cf_last_resolved": "2026-11-03T11:00:00Z",
+   "product": "Toolkit",
+   "component": "Telemetry",
+   "via": [
+    "needinfo"
+   ]
   }
  ],
  "issues": {
@@ -4566,6 +4597,27 @@
     }
    ],
    "diffPHID": "PHID-DIFF-348908",
+   "diffCreated": "2026-11-03T11:48:00Z"
+  },
+  {
+   "id": 348914,
+   "title": "Bug 2002636 - Hang when closing perf regression on Speedometer",
+   "status": "needs-review",
+   "author": "PHID-USER-harbor",
+   "bug": 2002636,
+   "modified": "2026-10-29T10:20:00Z",
+   "created": "2026-10-26T05:18:29Z",
+   "reviewers": [
+    {
+     "phid": "PHID-USER-ember",
+     "status": "blocking"
+    },
+    {
+     "phid": "PHID-PROJECT-ml",
+     "status": "added"
+    }
+   ],
+   "diffPHID": "PHID-DIFF-348914",
    "diffCreated": "2026-11-03T11:48:00Z"
   },
   {

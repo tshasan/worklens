@@ -63,6 +63,13 @@ pub fn header(st: Style, s: &Snapshot) -> String {
         let line = format!("{}: {}", e.source, e.message);
         let _ = write!(out, "\n{}", if e.unset { st.dim(line) } else { st.yellow(format!("! {line}")) });
     }
+    if s.raw.public_bugs_only {
+        let _ = write!(
+            out,
+            "\n{}",
+            st.yellow("! Bugzilla: public bugs only; restricted bugs are missing. `worklens auth set bugzilla` adds them")
+        );
+    }
     out
 }
 
@@ -92,6 +99,10 @@ pub fn sprint_line(st: Style, s: &Snapshot) -> Option<String> {
     if !sp.unestimated.is_empty() {
         let keys: Vec<&str> = sp.unestimated.iter().map(|i| s.issue(*i).key.0.as_str()).collect();
         parts.push(st.yellow(format!("unestimated: {}", keys.join(", "))));
+    }
+    if !sp.outside.is_empty() {
+        let bugs: Vec<String> = sp.outside.iter().map(|i| s.id(s.entry(*i)).to_string()).collect();
+        parts.push(st.yellow(format!("in review outside the sprint: {}", bugs.join(", "))));
     }
     Some(parts.join(" · "))
 }

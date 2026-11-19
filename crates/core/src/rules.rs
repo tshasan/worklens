@@ -32,6 +32,7 @@ impl Tier {
 pub enum Reason {
     BackedOut(crate::ids::BugId),
     Needinfo,
+    ClosedNeedinfo,
     ReviewRequested(RevIdx),
     Accepted(RevIdx),
     LandingBlocked(RevIdx),
@@ -64,6 +65,7 @@ pub struct Facets {
     pub kept_when_landed: bool,
     pub sorts_first: bool,
     pub sorts_last: bool,
+    pub sorts_at_bottom: bool,
 }
 
 const fn facets(tag: &'static str, gloss: &'static str) -> Facets {
@@ -73,6 +75,7 @@ const fn facets(tag: &'static str, gloss: &'static str) -> Facets {
         kept_when_landed: false,
         sorts_first: false,
         sorts_last: false,
+        sorts_at_bottom: false,
     }
 }
 
@@ -88,6 +91,10 @@ pub const BACKED_OUT: Facets = Facets {
     ..kept_when_landed("bo", "backed out")
 };
 pub const NEEDINFO: Facets = facets("ni?", "asked of you");
+pub const CLOSED_NEEDINFO: Facets = Facets {
+    sorts_at_bottom: true,
+    ..facets("nix", "clear flag")
+};
 pub const ASKED: Facets = facets("ni>", "you asked");
 pub const REVIEW: Facets = facets("r?", "review");
 pub const GROUP_REVIEW: Facets = Facets {
@@ -109,6 +116,7 @@ pub const UNTAGGED: Facets = facets("", "");
 pub const TAGS: &[Facets] = &[
     BACKED_OUT,
     NEEDINFO,
+    CLOSED_NEEDINFO,
     ASKED,
     REVIEW,
     GROUP_REVIEW,
@@ -129,6 +137,7 @@ impl Reason {
         match self {
             Self::BackedOut(_) => BACKED_OUT,
             Self::Needinfo => NEEDINFO,
+            Self::ClosedNeedinfo => CLOSED_NEEDINFO,
             Self::Asked(_) => ASKED,
             Self::ReviewRequested(_) | Self::InReview(_) => REVIEW,
             Self::GroupReview(_) => GROUP_REVIEW,
@@ -170,6 +179,7 @@ impl Reason {
                 Some(NextStep::OpenBackout(b))
             }
             Self::Needinfo => Some(NextStep::AnswerNeedinfo),
+            Self::ClosedNeedinfo => Some(NextStep::ClearNeedinfo),
             Self::ReviewRequested(r) | Self::GroupReview(r) => Some(NextStep::Review(rev(r))),
             Self::Accepted(r) => Some(NextStep::Land(rev(r))),
             Self::LandingBlocked(r) => crate::guidance::landing_issue(raw, r).map(|i| i.next_step()),
@@ -271,6 +281,7 @@ pub const RULES: &[Rule] = &[
     Rule { id: "inReview",         section: Section::Others,   test: in_review },
     Rule { id: "upliftRequested",  section: Section::Others,   test: uplift_requested },
     Rule { id: "asked",            section: Section::Others,   test: asked },
+    Rule { id: "closedNeedinfo",   section: Section::Waiting,  test: closed_needinfo },
     Rule { id: "notUploaded",      section: Section::Local,    test: not_uploaded },
     Rule { id: "sprint",           section: Section::Sprint,   test: sprint },
     Rule { id: "idea",             section: Section::Ideas,    test: idea },
@@ -330,9 +341,20 @@ fn backed_out(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
 }
 
 fn needinfo(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
-    let flag = &ctx.raw.bugs[e.bug?.get()].flags[e.needinfo? as usize];
-    Some(Hit {
+    let bug = &ctx.raw.bugs[e.bug?.get()];
+    let flag = bug.flags.get(e.needinfo? as usize)?;
+    (!crate::bugs::is_closed(bug)).then_some(Hit {
         reason: Reason::Needinfo,
+        since: Some(flag.creation_date),
+        stale: false,
+    })
+}
+
+fn closed_needinfo(ctx: &Ctx<'_>, e: &Entry) -> Option<Hit> {
+    let bug = &ctx.raw.bugs[e.bug?.get()];
+    let flag = bug.flags.get(e.needinfo? as usize)?;
+    crate::bugs::is_closed(bug).then_some(Hit {
+        reason: Reason::ClosedNeedinfo,
         since: Some(flag.creation_date),
         stale: false,
     })
@@ -584,6 +606,7 @@ fn other_since(raw: &Raw, e: &Entry) -> Option<Timestamp> {
 pub enum NextStep {
     OpenBackout(crate::ids::BugId),
     AnswerNeedinfo,
+    ClearNeedinfo,
     Review(crate::ids::RevId),
     Land(crate::ids::RevId),
     ResolveClassification(crate::ids::RevId),
@@ -616,6 +639,7 @@ impl std::fmt::Display for NextStep {
         match self {
             Self::OpenBackout(b) => write!(f, "Open the backout of bug {b} in Treeherder"),
             Self::AnswerNeedinfo => f.write_str("Answer the needinfo"),
+            Self::ClearNeedinfo => f.write_str("Clear the needinfo in Bugzilla, or answer it if the question still stands"),
             Self::Review(r) => write!(f, "Review {r}"),
             Self::Land(r) => write!(f, "Land {r}"),
             Self::ResolveClassification(r) => write!(f, "Resolve data classification on {r} in Phabricator"),
