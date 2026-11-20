@@ -136,14 +136,20 @@ fn same_changes_with_a_new_title_only_flag_the_title() {
     assert_eq!(s.syncs[older], Sync::Superseded);
     assert_eq!(s.syncs[e.local[0].get()], Sync::Same);
     let messages: Vec<&str> = e.drift.iter().map(|d| d.message.as_str()).collect();
-    assert_eq!(messages, ["D348881's title differs from local commit d4c000000000"]);
+    assert_eq!(
+        messages,
+        [
+            "bug has revisions in review but no Jira ticket",
+            "D348881's title differs from local commit d4c000000000"
+        ]
+    );
     assert!(
-        e.drift[0]
+        e.drift[1]
             .cause
             .contains("Phabricator says \"Bug 2002472 - Throttle WebGPU backend\"")
     );
     assert!(
-        e.drift[0]
+        e.drift[1]
             .cause
             .contains("\"Bug 2002472 - Throttle the WebGPU backend while hidden\"")
     );

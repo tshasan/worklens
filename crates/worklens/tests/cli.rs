@@ -444,6 +444,33 @@ fn says_off_never_failed(args: &[&str], text: &str) {
 }
 
 #[test]
+fn anonymous_bugzilla_is_a_warning_in_doctor_and_in_every_header() {
+    let home = first_run_home("anonymous-doctor");
+    let replay = replay_dir("first_run");
+    let (ok, out, err) = home.run_with(&["doctor"], &[("WORKLENS_REPLAY", &replay)]);
+    assert!(ok, "anonymous still works, so doctor passes: {out}{err}");
+    let line = out.lines().find(|l| l.contains("bugzilla")).unwrap();
+    assert!(line.starts_with("~ bugzilla"), "a warning, not a pass: {out}");
+    assert!(line.contains("public bugs only"), "{out}");
+    assert!(out.contains("fix: `worklens auth set bugzilla`"), "{out}");
+    let (_, out, _) = home.run_with(&["doctor", "--json"], &[("WORKLENS_REPLAY", &replay)]);
+    let checks: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let bugzilla = checks.as_array().unwrap().iter().find(|c| c["name"] == "bugzilla").unwrap();
+    assert_eq!(bugzilla["ok"], false, "{bugzilla}");
+
+    let anonymous = Home::with_cache("anonymous-header", "bugzilla_only.json");
+    for args in [&["sections"][..], &["next"]] {
+        let (ok, out, _) = anonymous.run(args);
+        assert!(ok);
+        assert!(out.contains("! Bugzilla: public bugs only"), "{args:?}: {out}");
+    }
+    let (_, out, _) = anonymous.run(&["next", "--json"]);
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&out).unwrap()["publicBugsOnly"], true);
+    let (_, out, _) = Home::new("signed-in-header").run(&["sections"]);
+    assert!(!out.contains("public bugs only"), "{out}");
+}
+
+#[test]
 fn a_bugzilla_only_user_hears_what_is_off_and_never_that_it_failed() {
     let home = Home::with_cache("bugzilla-only", "bugzilla_only.json");
     let commands: [&[&str]; 6] = [
@@ -567,6 +594,11 @@ fn a_first_run_with_no_keys_fetches_only_bugzilla_and_says_what_is_off() {
         "bugzilla_only.json must match what a real first run writes"
     );
     assert_eq!(raw["me"]["phid"], hand_made["me"]["phid"]);
+    assert_eq!(
+        raw["publicBugsOnly"], true,
+        "no Bugzilla key, so restricted bugs were never asked for"
+    );
+    assert_eq!(raw["publicBugsOnly"], hand_made["publicBugsOnly"]);
 
     let (ok, text, err) = home.run(&["next"]);
     assert!(ok, "{err}");

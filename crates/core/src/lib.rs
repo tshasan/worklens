@@ -19,6 +19,7 @@ pub mod rules;
 pub mod section;
 pub mod snapshot;
 pub mod stack;
+pub mod tickets;
 pub mod timeline;
 pub mod train;
 

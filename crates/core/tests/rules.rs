@@ -1,11 +1,12 @@
 use worklens_core::ids::{BugId, IdeaIdx, IssueIdx, RevIdx};
 use worklens_core::rules::{Channel, Reason, TAGS};
 
-fn every_reason() -> [Reason; 19] {
+fn every_reason() -> [Reason; 20] {
     let r = RevIdx(0);
     let all = [
         Reason::BackedOut(BugId(1)),
         Reason::Needinfo,
+        Reason::ClosedNeedinfo,
         Reason::ReviewRequested(r),
         Reason::Accepted(r),
         Reason::LandingBlocked(r),
@@ -28,6 +29,7 @@ fn every_reason() -> [Reason; 19] {
         match reason {
             Reason::BackedOut(_)
             | Reason::Needinfo
+            | Reason::ClosedNeedinfo
             | Reason::ReviewRequested(_)
             | Reason::Accepted(_)
             | Reason::LandingBlocked(_)
@@ -56,7 +58,7 @@ fn each_reason_has_its_tag() {
     assert_eq!(
         tags,
         [
-            "bo", "ni?", "r?", "r+", "chk", "r-", "r?", "", "up+", "up?", "reg", "ni>", "cr", "r?#", "", "ld", "bl", "loc", ""
+            "bo", "ni?", "nix", "r?", "r+", "chk", "r-", "r?", "", "up+", "up?", "reg", "ni>", "cr", "r?#", "", "ld", "bl", "loc", ""
         ]
     );
 }

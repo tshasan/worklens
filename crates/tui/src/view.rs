@@ -271,7 +271,7 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
         ));
     }
     let mut merge = Vec::new();
-    let mut health = (Vec::new(), Vec::new());
+    let mut health = (Vec::new(), Vec::new(), Vec::new());
     if let Some(s) = &app.snapshot {
         if warnings.is_empty()
             && app.busy.is_none()
@@ -290,7 +290,13 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
     let least = left.width() + 2 * HEADER_GAP + app.snapshot.as_ref().map_or(0, |s| sprint_gauge(t, s, false, app.now).width());
     let width = |parts: &[&Vec<Span<'static>>]| parts.iter().flat_map(|p| p.iter()).map(Span::width).sum::<usize>();
     let none = Vec::new();
-    let choices = [[&health.0, &merge], [&health.1, &merge], [&health.1, &none], [&none, &none]];
+    let choices = [
+        [&health.0, &merge],
+        [&health.1, &merge],
+        [&health.1, &none],
+        [&health.2, &none],
+        [&none, &none],
+    ];
     let [h, m] = choices
         .into_iter()
         .find(|[h, m]| least + width(&[&right, h, m, &tail]) <= area.width as usize)
@@ -302,8 +308,14 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
     let room = (area.width as usize).saturating_sub(left.width() + right.width() + 2 * HEADER_GAP);
     let mut left = left;
     if let Some(s) = &app.snapshot {
-        let gauge = sprint_gauge(t, s, true, app.now);
+        let mut gauge = sprint_gauge(t, s, true, app.now);
         let line = if gauge.width() <= room {
+            if let Some(sp) = s.sprint.as_ref().filter(|sp| !sp.outside.is_empty()) {
+                let note = Span::styled(format!(" · {} in review outside", sp.outside.len()), fg(t.warn));
+                if gauge.width() + note.width() <= room {
+                    gauge.spans.push(note);
+                }
+            }
             gauge
         } else {
             sprint_gauge(t, s, false, app.now)
@@ -320,7 +332,9 @@ fn draw_header(app: &App, f: &mut Frame<'_>, area: Rect) {
 
 const HEADER_GAP: usize = 3;
 
-fn source_health(t: Theme, s: &Snapshot) -> (Vec<Span<'static>>, Vec<Span<'static>>) {
+type Spans = Vec<Span<'static>>;
+
+fn source_health(t: Theme, s: &Snapshot) -> (Spans, Spans, Spans) {
     use worklens_core::raw::SourceState;
     let name = |source: &str| match source {
         "bugzilla" => "Bugzilla",
@@ -331,6 +345,10 @@ fn source_health(t: Theme, s: &Snapshot) -> (Vec<Span<'static>>, Vec<Span<'stati
     let mut full = Vec::new();
     for (source, state) in states {
         match state {
+            SourceState::Read if source == "bugzilla" && s.raw.public_bugs_only => {
+                full.push(t.quiet("Bugzilla: "));
+                full.push(Span::styled("public bugs only", fg(t.warn)));
+            }
             SourceState::Read => {
                 full.push(t.quiet(format!("{} ", name(source))));
                 full.push(Span::styled("✓", fg(t.ok)));
@@ -361,10 +379,17 @@ fn source_health(t: Theme, s: &Snapshot) -> (Vec<Span<'static>>, Vec<Span<'stati
     if !off.is_empty() {
         compact.push(t.quiet(format!("{} not set up · s   ", off.join(", "))));
     }
+    let mut noted = compact.clone();
     if compact.is_empty() {
         compact = vec![t.quiet("Sources "), Span::styled("✓", fg(t.ok)), Span::raw("   ")];
     }
-    (full, compact)
+    if s.raw.public_bugs_only && s.raw.state("bugzilla") == SourceState::Read {
+        noted.push(Span::styled("Public bugs only", fg(t.warn)));
+        noted.push(t.quiet(" · s   "));
+    } else {
+        noted.clone_from(&compact);
+    }
+    (full, noted, compact)
 }
 
 fn sprint_gauge(t: Theme, s: &Snapshot, full: bool, now: Timestamp) -> Line<'static> {

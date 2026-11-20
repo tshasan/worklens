@@ -55,6 +55,7 @@ pub struct Drift {
 pub struct DriftInput<'a> {
     pub bug: &'a Bug,
     pub key: Option<&'a str>,
+    pub rollups: &'a [&'a str],
     pub issue: Option<&'a Issue>,
     pub revs: &'a [RevStatus],
     pub mirrored: bool,
@@ -73,7 +74,7 @@ fn same_email(a: &str, b: &str) -> bool {
     a.eq_ignore_ascii_case(b)
 }
 
-fn same_assignee(bz: Option<&str>, jira: Option<&str>, me: &Me) -> bool {
+pub(crate) fn same_assignee(bz: Option<&str>, jira: Option<&str>, me: &Me) -> bool {
     match (bz, jira) {
         (None, None) => true,
         (Some(bz), Some(jira)) => {
@@ -189,6 +190,7 @@ pub fn drift_of(input: &DriftInput<'_>) -> Vec<Drift> {
     let DriftInput {
         bug,
         key,
+        rollups,
         issue,
         revs,
         mirrored,
@@ -219,12 +221,35 @@ pub fn drift_of(input: &DriftInput<'_>) -> Vec<Drift> {
         }
         return out;
     }
+    let open_revision = revs.iter().any(|r| {
+        matches!(
+            r,
+            RevStatus::NeedsReview | RevStatus::Accepted | RevStatus::NeedsRevision | RevStatus::ChangesPlanned
+        )
+    });
     let Some(key) = key else {
+        let only = if rollups.is_empty() {
+            String::new()
+        } else {
+            format!(" of its own; {} only rolls it up", rollups.join(", "))
+        };
         if mirrored {
             push(
                 Level::Error,
-                "no Jira link in See Also".to_owned(),
+                if rollups.is_empty() {
+                    "no Jira link in See Also".to_owned()
+                } else {
+                    format!("no Jira ticket in See Also; {} only rolls it up", rollups.join(", "))
+                },
                 "JBI makes the ticket when the whiteboard tag is added; it rejects private bugs, and a failed sync waits in its dead-letter queue"
+                    .to_owned(),
+                None,
+            );
+        } else if open_revision && !is_closed(bug) {
+            push(
+                Level::Warn,
+                format!("bug has revisions in review but no Jira ticket{only}"),
+                "work without a ticket isn't counted in any sprint; JBI only makes tickets for bugs with the team's whiteboard tag"
                     .to_owned(),
                 None,
             );
@@ -297,12 +322,6 @@ pub fn drift_of(input: &DriftInput<'_>) -> Vec<Drift> {
         );
     }
 
-    let open_revision = revs.iter().any(|r| {
-        matches!(
-            r,
-            RevStatus::NeedsReview | RevStatus::Accepted | RevStatus::NeedsRevision | RevStatus::ChangesPlanned
-        )
-    });
     if let Some(sprint) = active_sprint
         && issue.sprint.is_none()
         && !jira_done

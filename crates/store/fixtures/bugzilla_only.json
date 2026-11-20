@@ -148,5 +148,6 @@
       "status": 200,
       "ms": 203
     }
-  ]
+  ],
+  "publicBugsOnly": true
 }

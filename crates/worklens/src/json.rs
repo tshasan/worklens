@@ -539,6 +539,7 @@ pub fn sprint(s: &Snapshot) -> Value {
         "done": sp.done,
         "unestimated": keys(&sp.unestimated),
         "keys": keys(&sp.tickets),
+        "inReviewOutside": sp.outside.iter().map(|i| s.id(s.entry(*i)).to_string()).collect::<Vec<_>>(),
     })
 }
 
@@ -548,6 +549,7 @@ pub fn status(s: &Snapshot, now: Timestamp) -> serde_json::Map<String, Value> {
     map.insert("fetchedAt".into(), json!(s.raw.fetched_at));
     map.insert("ageMinutes".into(), json!(age));
     map.insert("partial".into(), json!(s.raw.failures().next().is_some()));
+    map.insert("publicBugsOnly".into(), json!(s.raw.public_bugs_only));
     map.insert("errors".into(), serde_json::to_value(&s.raw.errors).unwrap_or_default());
     let states: serde_json::Map<String, Value> = s
         .raw
