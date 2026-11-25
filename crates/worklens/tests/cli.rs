@@ -367,6 +367,53 @@ fn health_reads_only_the_cache() {
 }
 
 #[test]
+fn usage_reads_the_local_log_and_counts_only_recent_days() {
+    let home = Home::new("usage");
+    let (ok, out, err) = home.run_exactly(&["usage"]);
+    assert!(ok, "{err}");
+    assert!(out.starts_with("Nothing recorded in the last 14 days."), "{out}");
+    assert!(out.contains("nothing leaves this machine"), "{out}");
+
+    let state = home.0.join("state/worklens");
+    fs::create_dir_all(&state).unwrap();
+    let log = concat!(
+        r#"{"at":"2020-01-01T10:00:00Z","kind":"start"}"#,
+        "\n",
+        r#"{"at":"2020-01-01T10:00:20Z","kind":"open","via":"enter","section":"waiting","tag":"ni?","id":"1"}"#,
+        "\n",
+        r#"{"at":"2020-01-01T10:00:30Z","kind":"done","via":"menu","key":"d","section":"waiting","tag":"r?#","id":"2"}"#,
+        "\n",
+        r#"{"at":"2020-01-01T10:00:40Z","kind":"copy","via":"key","key":"yb","section":"waiting","tag":"ni?","id":"1"}"#,
+        "\n",
+        "half a line",
+    );
+    worklens_store::write_atomic(&state.join("usage.jsonl"), |w| std::io::Write::write_all(w, log.as_bytes())).unwrap();
+    let (_, out, _) = home.run_exactly(&["usage"]);
+    assert!(out.starts_with("Nothing recorded"), "2020 is outside the default window: {out}");
+
+    let (ok, out, err) = home.run_exactly(&["usage", "--days", "36500", "--json"]);
+    assert!(ok, "{err}");
+    let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+    assert_eq!(v["schema"], "worklens/2");
+    assert_eq!((v["sessions"].as_u64(), v["sessionsWithOpen"].as_u64()), (Some(1), Some(1)));
+    assert_eq!(v["medianSecondsToFirstOpen"], 20);
+    assert_eq!(v["doneUnopened"], serde_json::json!([{ "name": "r?#", "count": 1 }]));
+    assert_eq!(
+        v["keys"],
+        serde_json::json!([{ "name": "d", "count": 1 }, { "name": "yb", "count": 1 }]),
+        "a chord counts as one key"
+    );
+
+    let (_, out, _) = home.run_exactly(&["usage", "--days", "36500"]);
+    assert!(
+        out.contains("Opened something in 1 of 1 sessions · median 20 s to the first open"),
+        "{out}"
+    );
+    assert!(out.starts_with("Last 36500 days · 1 session\n"), "{out}");
+    assert!(out.contains("Marked done without opening: 1 of 1 done, by tag"), "{out}");
+}
+
+#[test]
 fn drift_json_has_the_daily_history() {
     let home = Home::new("drift-history");
     let (_, out, _) = home.run(&["drift", "--json"]);

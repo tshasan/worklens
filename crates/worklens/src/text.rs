@@ -297,6 +297,60 @@ pub fn date(t: Timestamp) -> String {
     present::date(t, &jiff::tz::TimeZone::system())
 }
 
+fn usage_counts(st: Style, out: &mut String, title: &str, counts: &[worklens_core::usage::Count]) {
+    if counts.is_empty() {
+        return;
+    }
+    let width = counts.iter().map(|c| c.name.chars().count()).max().unwrap_or(0);
+    let _ = writeln!(out, "\n{}", st.bold(title));
+    for c in counts {
+        let line = format!("  {:width$}  {}", c.name, c.count);
+        let _ = writeln!(out, "{}", if c.count == 0 { st.dim(line) } else { line });
+    }
+}
+
+pub fn usage(st: Style, u: &worklens_core::usage::Summary, path: &std::path::Path) -> String {
+    let mut out = String::new();
+    let acted: usize = u.actions.iter().map(|c| c.count).sum();
+    if u.sessions == 0 && acted == 0 {
+        let _ = writeln!(out, "Nothing recorded in the last {} days.", u.days);
+        let _ = writeln!(
+            out,
+            "The interactive UI logs what you do to {}; nothing leaves this machine.",
+            path.display()
+        );
+        return out;
+    }
+    let _ = writeln!(
+        out,
+        "{}",
+        st.bold(format!(
+            "Last {} days · {} {}",
+            u.days,
+            u.sessions,
+            if u.sessions == 1 { "session" } else { "sessions" }
+        ))
+    );
+    let wait = u
+        .median_seconds_to_first_open
+        .map_or_else(String::new, |s| format!(" · median {s} s to the first open"));
+    let _ = writeln!(out, "Opened something in {} of {} sessions{wait}", u.sessions_with_open, u.sessions);
+    usage_counts(st, &mut out, &format!("Actions {acted}"), &u.actions);
+    usage_counts(st, &mut out, "How you ran them", &u.via);
+    usage_counts(st, &mut out, "Keys", &u.keys);
+    usage_counts(st, &mut out, "Items acted on, by section", &u.sections);
+    usage_counts(st, &mut out, "Tabs you switched to", &u.tabs);
+    let unopened: usize = u.done_unopened.iter().map(|c| c.count).sum();
+    usage_counts(
+        st,
+        &mut out,
+        &format!("Marked done without opening: {unopened} of {} done, by tag", u.done),
+        &u.done_unopened,
+    );
+    let _ = writeln!(out, "\n{}", st.dim(format!("From {}", path.display())));
+    out
+}
+
 #[cfg(test)]
 mod no_color_tests {
     use super::no_color_in;

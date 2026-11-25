@@ -33,7 +33,7 @@ tools.
 │                                                                                                  │
 │ 1–10 of 12 lines · PgUp PgDn scroll                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
- ↑↓ move · ←→ section · Tab detail · Enter open · Space actions · / filter · ? help · d done
+ ↑↓ move · ←→ section · Tab detail · Enter open · g go · y copy · Space actions · / filter · ? help
 ```
 
 ## Start
@@ -83,9 +83,16 @@ the cache.
 ← →      switch section     d   done (u undoes)
 Tab      switch detail tab  z   snooze (u undoes)
 Enter    open the next step r   refresh
-Space    actions            s   sources and settings
+g        go: gb Bugzilla, gj Jira, gp Phabricator, gt try
+y        copy: yy ID, yb brief, yr review prompt
+Space    every key for the item
 ?        all keys           q   quit
 ```
+
+Keys on an item read verb then noun, as in vim: `g` then a letter opens the
+item somewhere, `y` then a letter copies something. Pressing `g` or `y` shows
+what can follow. `gg` and `G` jump to the top and bottom. `Esc` closes a
+popup or clears the filter and never quits; `q` quits.
 
 worklens opens on **All**: everything that needs you, each item once, grouped
 under the most urgent section it belongs to. The other tabs show one section
@@ -98,6 +105,7 @@ worklens next             # what to work on next
 worklens sections         # everything, by section
 worklens sprint           # sprint points against your budget
 worklens drift --team     # where Bugzilla and Jira disagree
+worklens usage            # how you use the UI, from a local log; nothing is sent
 worklens local            # local commits not on Phabricator yet
 worklens show D123        # one bug, revision or Jira ticket
 worklens brief 2066590    # a markdown summary to hand to an agent

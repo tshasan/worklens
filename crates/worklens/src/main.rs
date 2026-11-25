@@ -157,6 +157,14 @@ enum Command {
     Health,
     #[command(hide = true, about = "Every API request behind the cached data")]
     Log,
+    #[command(
+        about = "How you use the interactive UI, from a local log",
+        long_about = "How you use the interactive UI, from a local log.\n\nThe UI appends one line per action (which action, how you ran it, the item, its section and tag) to usage.jsonl beside the marks file. Nothing is sent anywhere. Delete the file to start over."
+    )]
+    Usage {
+        #[arg(long, default_value_t = worklens_core::usage::DEFAULT_DAYS, help = "How many days back to count")]
+        days: i64,
+    },
     #[command(about = "Run as an MCP server over stdio")]
     Mcp,
     #[command(hide = true, about = "Text to paste into an agent's AGENTS.md")]
@@ -325,6 +333,19 @@ fn doctor(json: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn usage(days: i64, json: bool) -> anyhow::Result<()> {
+    let path = worklens_store::usage_file().context("no home directory")?;
+    let events = worklens_store::read_usage(&path);
+    let summary = worklens_core::usage::summarize(&events, Timestamp::now(), days);
+    if json {
+        let mut value = serde_json::to_value(&summary)?;
+        value["schema"] = json!(json::SCHEMA);
+        value["file"] = json!(path);
+        return emit(format!("{}\n", serde_json::to_string_pretty(&value)?).as_bytes());
+    }
+    emit(text::usage(Style::detect(), &summary, &path).as_bytes())
+}
+
 fn health(json: bool) -> anyhow::Result<()> {
     let cfg = config::load()?;
     let path = cache_file().context("no home directory")?;
@@ -395,6 +416,7 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
         Some(Command::Mcp) => return mcp::serve(),
         Some(Command::Doctor) => return doctor(cli.json || cli.compact),
         Some(Command::Health) => return health(cli.json || cli.compact),
+        Some(Command::Usage { days }) => return usage(*days, cli.json || cli.compact),
         Some(Command::AgentInstructions) => {
             const SKILL: &str = include_str!("../SKILL.md");
             let body = SKILL
@@ -698,6 +720,7 @@ fn run(cli: &Cli) -> anyhow::Result<()> {
         | Command::Mcp
         | Command::Doctor
         | Command::Health
+        | Command::Usage { .. }
         | Command::AgentInstructions
         | Command::Setup
         | Command::Auth { .. } => {

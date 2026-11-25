@@ -679,7 +679,7 @@ fn draw_body(app: &App, f: &mut Frame<'_>, area: Rect) {
     }
     draw_detail(app, f, side);
     if app.mode == Mode::Menu {
-        let actions = app.actions();
+        let actions = app.menu_actions();
         draw_menu(app, f, menu_rect(app, &actions, area), &actions);
     }
 }
@@ -1802,7 +1802,10 @@ fn comments<'a>(app: &App, s: &'a Snapshot, e: &'a Entry, width: usize) -> Vec<L
         return vec![Line::from(t.quiet("No bug, so no comments."))];
     };
     let Some(thread) = s.raw.threads.get(&b.id) else {
-        return vec![Line::from(t.quiet("Comments unavailable locally. B opens the bug in Bugzilla."))];
+        return vec![Line::from(t.quiet(format!(
+            "Comments unavailable locally. {} opens the bug in Bugzilla.",
+            keys::chord_of(keys::Verb::Bugzilla)
+        )))];
     };
     let mut out = Vec::new();
     let skipped = (thread.total as usize).saturating_sub(thread.comments.len());
@@ -1862,7 +1865,11 @@ fn drift_lines(t: Theme, e: &Entry) -> Vec<Line<'_>> {
         out.push(Line::from(t.quiet(format!("  why: {}", d.cause))));
         if let Some(fix) = &d.fix {
             out.push(Line::styled(
-                format!("  Fix: {} (F opens it and copies the value)", present::FixText(fix)),
+                format!(
+                    "  Fix: {} ({} opens it and copies the value)",
+                    present::FixText(fix),
+                    keys::chord_of(keys::Verb::DriftFix)
+                ),
                 fg(t.accent),
             ));
         }
@@ -1872,45 +1879,76 @@ fn drift_lines(t: Theme, e: &Entry) -> Vec<Line<'_>> {
 }
 
 const MENU_MARK: usize = 2;
-const MENU_KEY: usize = 3;
 const MENU_MAX: u16 = 72;
+
+fn menu_key(app: &App, a: &crate::app::ItemAction) -> String {
+    match (a.key, app.menu_group) {
+        (None, _) if a.group == keys::Group::Next => "⏎".to_owned(),
+        (None, _) => String::new(),
+        (Some(k), Some(_)) => k.to_string(),
+        (Some(k), None) => a.group.prefix().map_or_else(|| k.to_string(), |p| format!("{p} {k}")),
+    }
+}
+
+fn menu_key_width(app: &App, actions: &[crate::app::ItemAction]) -> usize {
+    actions.iter().map(|a| menu_key(app, a).width()).max().unwrap_or(1) + 2
+}
 
 fn menu_lines(app: &App, actions: &[crate::app::ItemAction], width: u16) -> Vec<Vec<Line<'static>>> {
     let t = Theme::of(app.tone);
-    let label_width = (width as usize).saturating_sub(MENU_MARK + MENU_KEY).max(1);
-    actions
+    let key_width = menu_key_width(app, actions);
+    let label_width = (width as usize).saturating_sub(MENU_MARK + key_width).max(1);
+    let mut out: Vec<Vec<Line<'static>>> = actions
         .iter()
         .enumerate()
         .map(|(i, a)| {
             let selected = i == app.menu_cursor;
             let mark = if selected { t.cursor() } else { " " };
-            let quiet = if selected { Color::Reset } else { t.quiet };
-            let parts = wrap(&a.label, label_width);
-            parts
-                .into_iter()
-                .enumerate()
-                .map(|(n, part)| {
-                    let mut spans = if n == 0 {
-                        vec![Span::styled(mark, fg(t.accent)), Span::raw(" ")]
-                    } else {
-                        vec![Span::raw(" ".repeat(MENU_MARK))]
-                    };
-                    let key = a.key.filter(|_| n == 0).map_or_else(String::new, String::from);
-                    spans.push(Span::raw(fit(&part, label_width)));
-                    spans.push(Span::styled(format!("{key:>MENU_KEY$}"), fg(quiet)));
-                    let line = Line::from(spans);
-                    if !selected {
-                        line
-                    } else if t.select.is_none() {
-                        let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
-                        Line::styled(text, t.selection())
-                    } else {
-                        line.style(t.selection())
-                    }
-                })
-                .collect()
+            let heading = app.menu_group.is_none() && a.group != keys::Group::Next && (i == 0 || actions[i - 1].group != a.group);
+            let mut lines = Vec::new();
+            if heading {
+                lines.push(Line::from(vec![
+                    Span::raw(" ".repeat(MENU_MARK)),
+                    t.quiet(a.group.title().to_owned()),
+                ]));
+            }
+            let key = menu_key(app, a);
+            for (n, part) in wrap(&a.label, label_width).into_iter().enumerate() {
+                let mut spans = if n == 0 {
+                    vec![
+                        Span::styled(mark, fg(t.accent)),
+                        Span::raw(" "),
+                        Span::styled(fit(&key, key_width), bold()),
+                    ]
+                } else {
+                    vec![Span::raw(" ".repeat(MENU_MARK + key_width))]
+                };
+                spans.push(Span::raw(fit(&part, label_width)));
+                let line = Line::from(spans);
+                lines.push(if !selected {
+                    line
+                } else if t.select.is_none() {
+                    let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+                    Line::styled(text, t.selection())
+                } else {
+                    line.style(t.selection())
+                });
+            }
+            lines
         })
-        .collect()
+        .collect();
+    if app.menu_group == Some(keys::Group::Go) {
+        let top = Line::from(vec![
+            Span::raw(" ".repeat(MENU_MARK)),
+            Span::styled(fit("g", key_width), bold()),
+            t.quiet("Top of the list"),
+        ]);
+        match out.last_mut() {
+            Some(last) => last.push(top),
+            None => out.push(vec![top]),
+        }
+    }
+    out
 }
 
 fn selected_row_y(app: &App, list: Rect) -> u16 {
@@ -1923,7 +1961,9 @@ fn selected_row_y(app: &App, list: Rect) -> u16 {
 fn menu_rect(app: &App, actions: &[crate::app::ItemAction], area: Rect) -> Rect {
     let [list, _] = body_panes(app, area);
     let longest = actions.iter().map(|a| a.label.width()).max().unwrap_or(0) as u16;
-    let width = (longest + (MENU_MARK + MENU_KEY) as u16 + 4).clamp(36, MENU_MAX).min(area.width);
+    let width = (longest + (MENU_MARK + menu_key_width(app, actions)) as u16 + 4)
+        .clamp(36, MENU_MAX)
+        .min(area.width);
     let lines: usize = menu_lines(app, actions, width.saturating_sub(4)).iter().map(Vec::len).sum();
     if lines as u16 + 2 > area.height {
         return area;
@@ -1961,11 +2001,10 @@ pub fn menu_scroll_max(app: &App, actions: &[crate::app::ItemAction]) -> u16 {
 
 fn draw_menu(app: &App, f: &mut Frame<'_>, area: Rect, actions: &[crate::app::ItemAction]) {
     f.render_widget(Clear, area);
-    let title = app
-        .snapshot
-        .as_ref()
-        .zip(app.selected())
-        .map_or_else(String::new, |(s, e)| format!(" Actions · {} ", s.id(e)));
+    let title = app.snapshot.as_ref().zip(app.selected()).map_or_else(String::new, |(s, e)| {
+        let what = app.menu_group.map_or("Actions", keys::Group::title);
+        format!(" {what} · {} ", s.id(e))
+    });
     let t = Theme::of(app.tone);
     let outer = block(t.accent).title(title).padding(Padding::horizontal(1));
     let inner = outer.inner(area);
@@ -2012,6 +2051,35 @@ fn tag_grid(t: Theme, width: usize) -> Vec<Line<'static>> {
         .collect()
 }
 
+fn item_help(app: &App, width: usize) -> Vec<Line<'static>> {
+    let t = Theme::of(app.tone);
+    let go = width / 2;
+    let rows = |group: keys::Group, room: usize| -> Vec<Line<'static>> {
+        let mut lines = vec![Line::from(t.quiet(group.title().to_owned()))];
+        for k in keys::ITEM_KEYS.iter().filter(|k| k.group == group) {
+            lines.extend(table_row(&keys::chord(group, k.key), bold(), 3, k.help, fg(t.quiet), room));
+        }
+        lines
+    };
+    let left = rows(keys::Group::Go, go);
+    let mut right = rows(keys::Group::Copy, width - go);
+    right.extend(rows(keys::Group::Item, width - go));
+    for (k, d) in app.custom_key_help() {
+        right.extend(table_row(&k, bold(), 3, &d, fg(t.quiet), width - go));
+    }
+    let mut out = vec![Line::styled("On the selected item", bold())];
+    for i in 0..left.len().max(right.len()) {
+        let mut spans = left.get(i).map_or_else(Vec::new, |l| l.spans.clone());
+        let used: usize = spans.iter().map(Span::width).sum();
+        spans.push(Span::raw(" ".repeat(go.saturating_sub(used))));
+        if let Some(r) = right.get(i) {
+            spans.extend(r.spans.iter().cloned());
+        }
+        out.push(Line::from(spans));
+    }
+    out
+}
+
 fn help_lines(app: &App, width: usize) -> Vec<Line<'static>> {
     let t = Theme::of(app.tone);
     let col = width / 2;
@@ -2023,14 +2091,7 @@ fn help_lines(app: &App, width: usize) -> Vec<Line<'static>> {
     for b in keys::BINDINGS.iter().filter(|b| !b.label.is_empty()) {
         left.extend(table_row(b.label, bold(), 11, b.help, fg(t.quiet), col.saturating_sub(1)));
     }
-    let mut right = vec![heading("On the selected item")];
-    let items = keys::ITEM_KEYS
-        .iter()
-        .map(|(k, d)| ((*k).to_owned(), (*d).to_owned()))
-        .chain(app.custom_key_help());
-    for (k, d) in items {
-        right.extend(table_row(&k, bold(), 3, &d, fg(t.quiet), width - col));
-    }
+    let right = item_help(app, width - col);
     let mut out = Vec::new();
     for i in 0..left.len().max(right.len()) {
         let mut spans = left.get(i).map_or_else(Vec::new, |l| l.spans.clone());

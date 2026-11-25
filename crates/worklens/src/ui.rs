@@ -13,6 +13,7 @@ use futures::stream::FuturesUnordered;
 use jiff::Timestamp;
 use worklens_core::Raw;
 use worklens_core::marks::Marks;
+use worklens_core::usage;
 use worklens_store::{cache_file, marks_file, read_marks, read_raw, write_raw};
 use worklens_tui::{App, Command, Effect, Msg, Options, Setting, Touched, update, view};
 
@@ -40,8 +41,15 @@ pub fn run(cfg: &Config, cached: bool) -> anyhow::Result<()> {
     if let Some(path) = worklens_store::drift_file() {
         app.drift_log = worklens_store::read_drift_log(&path);
     }
+    record_usage(&usage::Event::new(Timestamp::now(), usage::Kind::Start));
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
     runtime.block_on(event_loop(app, cfg, saved))
+}
+
+fn record_usage(event: &usage::Event) {
+    if let Some(path) = worklens_store::usage_file() {
+        let _ = worklens_store::record_usage(&path, event);
+    }
 }
 
 fn enter() -> anyhow::Result<ratatui::DefaultTerminal> {
@@ -263,6 +271,10 @@ fn run_effect(effect: Effect, marks: &Marks, saved: &mut Marks) -> Started {
             Some(Err(e)) => Started::Now(Msg::Done(Err(format!("Couldn't save the drift count: {e}")))),
             _ => Started::Nothing,
         },
+        Effect::RecordUsage(event) => {
+            record_usage(&event);
+            Started::Nothing
+        }
         Effect::RunQuietly { command, label } => {
             Started::Later(Box::pin(async move { Some(run_quietly(&command, &label, QUIET_TIMEOUT).await) }))
         }

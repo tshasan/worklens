@@ -86,6 +86,8 @@ fn every_keypress_redraws_within_a_frame() {
     keys.extend((1..=9).map(|d| KeyCode::Char(char::from(b'0' + d))));
     keys.extend([KeyCode::Char('/'), KeyCode::Char('i'), KeyCode::Char('t'), KeyCode::Esc]);
     keys.extend([KeyCode::Char('?'), KeyCode::Esc, KeyCode::Enter, KeyCode::Esc]);
+    keys.extend([KeyCode::Char(' '), KeyCode::Down, KeyCode::Char('g'), KeyCode::Esc]);
+    keys.extend([KeyCode::Char('y'), KeyCode::Esc, KeyCode::Char('g'), KeyCode::Char('g')]);
     for (w, h) in [(80, 24), (220, 60)] {
         let mut a = app(w, h);
         let (took, key) = slowest(&mut a, &keys);

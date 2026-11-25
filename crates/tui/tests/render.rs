@@ -103,8 +103,29 @@ fn help_fits_80x24() {
     let s = screen(&a);
     assert!(s.lines().any(|l| l.contains("Keys") && l.contains("On the selected item")), "{s}");
     assert!(s.lines().any(|l| l.contains("Tab        Switch detail tab")), "{s}");
-    assert!(s.contains("Keys · vim too: j k l h ^d ^u g G"), "{s}");
-    assert!(s.lines().any(|l| l.contains("B  Open in Bugzilla")), "{s}");
+    assert!(s.contains("Keys · vim too: j k l h ^d ^u gg G"), "{s}");
+    let grid = line_with(&s, "gb Bugzilla");
+    assert!(grid.contains("yy ID"), "go and copy sit side by side: {grid}");
+    assert!(line_with(&s, "Go ").contains("Copy"), "{s}");
+    for chord in [
+        "gj Jira",
+        "gp Phabricator",
+        "gl Lando",
+        "gt Try push",
+        "ga Landing push",
+        "yb ",
+        "yr ",
+        "yf ",
+        "d  Done",
+        "z  Snooze",
+        "c  Coding agent",
+        "C  Check out",
+    ] {
+        assert!(s.contains(chord), "{chord}:\n{s}");
+    }
+    for retired in ["B  ", "J  ", "P  ", "R  ", "F  "] {
+        assert!(!s.lines().any(|l| l.contains(&format!(" {retired}"))), "{retired} is retired:\n{s}");
+    }
     assert!(s.contains("*   important"), "the last help line still fits:\n{s}");
     assert!(!s.contains("scroll ·"), "{s}");
 }
@@ -258,9 +279,13 @@ fn landing_guidance_and_the_first_action_target_the_same_requirement() {
         assert!(a.actions()[0].label.contains("Resolve data classification"));
         press(&mut a, KeyCode::Enter);
         let effects = update(&mut a, Msg::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)), now());
-        assert!(matches!(&effects[..], [worklens_tui::Effect::Open(url)] if url.ends_with("/D321987")));
+        assert!(
+            matches!(&effects[..], [worklens_tui::Effect::Open(url), worklens_tui::Effect::RecordUsage(_)] if url.ends_with("/D321987"))
+        );
         let effects = update(&mut a, Msg::Key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::NONE)), now());
-        assert!(matches!(&effects[..], [worklens_tui::Effect::Open(url)] if url.ends_with("/D321987")));
+        assert!(
+            matches!(&effects[..], [worklens_tui::Effect::Open(url), worklens_tui::Effect::RecordUsage(_)] if url.ends_with("/D321987"))
+        );
     }
 }
 
@@ -407,13 +432,21 @@ fn the_menu_shows_actions_with_their_keys() {
     let mut a = app(140, 30);
     press(&mut a, KeyCode::Char(' '));
     let s = screen(&a);
-    assert!(s.contains("> Open bug 1995008 in Bugzilla"), "{s}");
+    assert!(s.contains("> g b  Open bug 1995008 in Bugzilla"), "{s}");
     let snooze = menu_rows(&s, "Snooze locally until");
-    assert!(snooze.starts_with("│   Snooze"), "no numbers, only keys: {snooze}");
-    assert!(snooze.ends_with(" z │"), "the key sits in a right-aligned column: {s}");
+    assert!(snooze.starts_with("│   z    Snooze"), "the key comes first: {snooze}");
     let bugzilla = menu_rows(&s, "Open bug 1995008 in Bugzilla");
     assert_eq!(bugzilla.chars().count(), snooze.chars().count(), "{s}");
-    assert!(bugzilla.ends_with(" B │") && !bugzilla.contains("[B]"), "{s}");
+    let copy = menu_rows(&s, "Copy \"1995008\"");
+    assert!(copy.starts_with("│   y y  Copy"), "{s}");
+    let label_at = |row: &str, label: &str| row[..row.find(label).unwrap()].chars().count();
+    assert_eq!(label_at(&snooze, "Snooze"), label_at(&bugzilla, "Open bug"), "labels line up: {s}");
+    let headings: Vec<usize> = ["│   Go ", "│   Copy ", "│   Item "]
+        .iter()
+        .map(|h| s.lines().position(|l| l.contains(h)).unwrap_or_else(|| panic!("{h}:\n{s}")))
+        .collect();
+    assert!(headings.windows(2).all(|w| w[0] < w[1]), "Go, Copy, Item in order:\n{s}");
+    assert!(headings[0] < s.lines().position(|l| l.contains("g b  Open bug")).unwrap(), "{s}");
     assert!(!s.contains("Action 1"), "a menu that fits doesn't repeat the footer: {s}");
     assert!(
         s.contains("Next: Answer the needinfo"),
@@ -421,6 +454,136 @@ fn the_menu_shows_actions_with_their_keys() {
     );
     press(&mut a, KeyCode::Char('z'));
     assert!(screen(&a).contains("Snooze locally"), "a key runs its action");
+}
+
+fn popup_rows(s: &str) -> Vec<String> {
+    let top = s
+        .lines()
+        .position(|l| l.contains("╭ ") && l.contains(" · 2010001 "))
+        .unwrap_or_else(|| panic!("no popup:\n{s}"));
+    let left = s.lines().nth(top).unwrap().chars().position(|c| c == '╭').unwrap();
+    s.lines()
+        .skip(top + 1)
+        .map(|l| l.chars().skip(left).collect::<String>())
+        .take_while(|l| !l.starts_with('╰'))
+        .map(|l| l.trim_start_matches('│').split('│').next().unwrap_or("").to_owned())
+        .collect()
+}
+
+#[test]
+fn the_popups_show_the_key_first_under_group_headings_at_80x24_and_wide() {
+    for (w, h) in [(80, 24), (140, 40)] {
+        let mut a = overloaded(w, h);
+        press(&mut a, KeyCode::Char(' '));
+        let s = screen(&a);
+        assert!(s.lines().all(|l| l.chars().count() <= w as usize), "{s}");
+        let rows = popup_rows(&s);
+        assert_eq!(
+            rows.iter().map(|r| r.trim_end()).collect::<Vec<_>>(),
+            [
+                "> ⏎    Open next step: Open the backout of bug 2010001 in Treeherder",
+                "  Go",
+                "  g b  Open bug 2010001 in Bugzilla",
+                "  g p  Open D360001 in Phabricator",
+                "  g a  Open D360001's autoland push in Treeherder",
+                "  Copy",
+                "  y y  Copy \"2010001\"",
+                "  y b  Copy a brief for a coding agent",
+                "  Item",
+                "  d    Done locally: hide until new activity",
+                "  z    Snooze locally until a date or new activity…",
+                "  C    Check out D360001 locally (moz-phab patch)",
+            ]
+            .map(|r| format!(" {r}")),
+            "{w}x{h}:\n{s}"
+        );
+        assert!(s.lines().last().unwrap().contains("Enter or key run"), "{s}");
+
+        press(&mut a, KeyCode::Esc);
+        press(&mut a, KeyCode::Char('g'));
+        let s = screen(&a);
+        let border = line_with(&s, "╭ Go · 2010001 ");
+        let corners = (
+            border.chars().position(|c| c == '╭').unwrap(),
+            border.chars().position(|c| c == '╮').unwrap(),
+        );
+        assert_eq!(
+            corners.1 + 1 - corners.0,
+            "Open D360001's autoland push in Treeherder".len() + "> b  ".len() + 4,
+            "sized to its longest row:\n{s}"
+        );
+        assert_eq!(
+            popup_rows(&s).iter().map(|r| r.trim_end()).collect::<Vec<_>>(),
+            [
+                "> b  Open bug 2010001 in Bugzilla",
+                "  p  Open D360001 in Phabricator",
+                "  a  Open D360001's autoland push in Treeherder",
+                "  g  Top of the list",
+            ]
+            .map(|r| format!(" {r}")),
+            "{w}x{h}:\n{s}"
+        );
+
+        press(&mut a, KeyCode::Esc);
+        press(&mut a, KeyCode::Char('y'));
+        let s = screen(&a);
+        assert!(s.contains("╭ Copy · 2010001 "), "{s}");
+        assert_eq!(
+            popup_rows(&s).iter().map(|r| r.trim_end()).collect::<Vec<_>>(),
+            ["> y  Copy \"2010001\"", "  b  Copy a brief for a coding agent"].map(|r| format!(" {r}")),
+            "{w}x{h}:\n{s}"
+        );
+    }
+}
+
+#[test]
+fn the_selected_popup_row_is_the_raised_band_and_others_are_not() {
+    let mut a = overloaded(80, 24);
+    a.tone = worklens_tui::Tone::Dark;
+    press(&mut a, KeyCode::Char(' '));
+    let s = screen(&a);
+    let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+    terminal.draw(|f| view(&a, f)).unwrap();
+    let buf = terminal.backend().buffer();
+    let bg = |label: &str| {
+        let y = s.lines().position(|l| l.contains(label)).unwrap() as u16;
+        let x = line_with(&s, label)[..line_with(&s, label).find(label).unwrap()].chars().count() as u16;
+        buf[(x, y)].bg
+    };
+    assert_ne!(bg("Open next step"), bg("Open bug 2010001"), "{s}");
+    assert_eq!(bg("Open bug 2010001"), bg("Copy a brief"), "{s}");
+    assert_eq!(
+        bg("Copy a brief"),
+        ratatui::style::Color::Reset,
+        "only the selected row is raised:\n{s}"
+    );
+}
+
+#[test]
+fn numbered_links_count_up_and_name_their_source() {
+    let mut a = overloaded(80, 24);
+    filter_to(&mut a, "1996607");
+    press(&mut a, KeyCode::Char('g'));
+    let s = screen(&a);
+    for row in [
+        "1  Open dependency bug 1996929 in Bugzilla",
+        "2  Open dependency bug 9999999 in Bugzilla",
+        "3  Open dependency D338703 in Phabricator",
+    ] {
+        assert!(s.contains(row), "{row}:\n{s}");
+    }
+}
+
+#[test]
+fn comments_that_are_not_cached_name_the_chord_that_opens_the_bug() {
+    let mut a = overloaded(80, 24);
+    for _ in 0..6 {
+        if screen(&a).contains("Comments unavailable") {
+            break;
+        }
+        press(&mut a, KeyCode::Tab);
+    }
+    assert!(screen(&a).contains("gb opens the bug in Bugzilla"), "{}", screen(&a));
 }
 
 #[test]
@@ -438,9 +601,12 @@ fn long_menu_labels_wrap_under_themselves_within_80_columns() {
     });
     press(&mut a, KeyCode::Char(' '));
     let s = screen(&a);
-    assert!(menu_rows(&s, "Open bug 1995008 and copy the See Also URL").ends_with(" F │"), "{s}");
+    assert!(
+        menu_rows(&s, "Open bug 1995008 and copy the See Also URL").starts_with("│   y f  Open bug"),
+        "{s}"
+    );
     let first = menu_rows(&s, "Run the long custom");
-    assert!(first.ends_with(" x │"), "the key is on the first line:\n{s}");
+    assert!(first.starts_with("│   x    Run"), "the key is on the first line:\n{s}");
     let at = s.lines().position(|l| l.contains("Run the long custom")).unwrap();
     let line: Vec<char> = s.lines().nth(at).unwrap().chars().collect();
     let next: Vec<char> = s.lines().nth(at + 1).unwrap().chars().collect();
@@ -507,6 +673,16 @@ fn help_lists_custom_keys_and_still_fits_80x24() {
     let s = screen(&a);
     assert!(s.lines().any(|l| l.contains("S  Searchfox")), "{s}");
     assert!(s.lines().any(|l| l.contains("x  Run tests")), "{s}");
+    assert!(s.contains("*   important"), "two custom keys still fit:\n{s}");
+    for (key, label) in [('X', "One more"), ('Y', "Another"), ('W', "And a fifth one")] {
+        a.opts.keys.push(worklens_tui::CustomKey {
+            key,
+            label: label.into(),
+            run: "echo {{bug}}".into(),
+            terminal: false,
+        });
+    }
+    let s = screen(&a);
     assert!(!at_the_end(&s, "lines · ↑↓ scroll"), "{s}");
     for _ in 0..5 {
         press(&mut a, KeyCode::Down);
@@ -516,6 +692,17 @@ fn help_lists_custom_keys_and_still_fits_80x24() {
         s.contains("*   important") && at_the_end(&s, "lines · ↑↓ scroll"),
         "the last help line is reachable:\n{s}"
     );
+    a.opts.keys.push(worklens_tui::CustomKey {
+        key: 'V',
+        label: "Open the searchfox results for this bug in a new browser tab END-OF-LABEL".into(),
+        run: "echo {{bug}}".into(),
+        terminal: false,
+    });
+    for _ in 0..10 {
+        press(&mut a, KeyCode::Down);
+    }
+    let s = screen(&a);
+    assert!(s.contains("END-OF-LABEL"), "a long custom label wraps inside its column:\n{s}");
     let mut wide = app(140, 30);
     wide.opts.keys = a.opts.keys.clone();
     press(&mut wide, KeyCode::Char('?'));
@@ -1225,7 +1412,7 @@ fn every_footer_and_hint_separates_keys_the_same_way() {
     let s = screen(&a);
     assert_eq!(
         s.lines().last().unwrap(),
-        " ↑↓ move · ←→ section · Enter open · Space actions · / filter · ? help"
+        " ↑↓ move · ←→ section · Enter open · g go · y copy · Space actions · ? help"
     );
     let hint = line_with(&s, "lines · PgUp PgDn scroll");
     assert!(
@@ -1867,7 +2054,10 @@ fn a_wide_footer_shows_more_keys() {
     let footer = s.lines().last().unwrap();
     for key in [
         "Enter open",
+        "g go",
+        "y copy",
         "Space actions",
+        "/ filter",
         "d done",
         "z snooze",
         "r refresh",
@@ -2071,7 +2261,7 @@ fn sprint_points_and_snoozes_read_in_words_on_a_wide_list() {
 fn the_drift_pane_names_the_key_that_fixes_it() {
     let mut a = overloaded(140, 30);
     open_section(&mut a, "Drift");
-    while !a.actions().iter().any(|x| x.key == Some('F')) {
+    while !a.actions().iter().any(|x| x.chord().as_deref() == Some("yf")) {
         let at = a.cursor();
         press(&mut a, KeyCode::Down);
         assert_ne!(a.cursor(), at, "busy.json needs drift with a fix");
@@ -2082,7 +2272,7 @@ fn the_drift_pane_names_the_key_that_fixes_it() {
         }
         press(&mut a, KeyCode::Tab);
     }
-    assert!(screen(&a).contains("(F opens it"), "{}", screen(&a));
+    assert!(screen(&a).contains("(yf opens it"), "{}", screen(&a));
 }
 
 #[test]
