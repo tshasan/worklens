@@ -12,9 +12,10 @@ use worklens_core::raw::Raw;
 use worklens_core::section::Section;
 use worklens_core::snapshot::ItemId;
 use worklens_core::timeline;
+use worklens_core::usage::{self, Via};
 use worklens_core::{BugId, CoreConfig, Entry, EntryIdx, RevId, Snapshot, brief, build_snapshot};
 
-use crate::keys::{self, Action};
+use crate::keys::{self, Action, Group, Verb};
 use crate::settings::{self, Kind, Prefs, Setting, Show};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -66,6 +67,7 @@ pub enum Effect {
     Copy { text: String, done: String },
     SaveMarks,
     RecordDrift(worklens_core::drift_log::DriftDay),
+    RecordUsage(usage::Event),
     RunChecks,
     RunInTerminal { command: Command, pause: bool },
     RunQuietly { command: Command, label: String },
@@ -162,9 +164,42 @@ pub struct Toast {
 }
 
 pub struct ItemAction {
+    pub group: Group,
     pub key: Option<char>,
     pub label: String,
     kind: ActionKind,
+}
+
+impl ItemAction {
+    pub fn chord(&self) -> Option<String> {
+        self.key.map(|k| keys::chord(self.group, k))
+    }
+}
+
+fn push(out: &mut Vec<ItemAction>, verb: Verb, label: String, kind: ActionKind) {
+    let k = keys::item_key(verb);
+    out.push(ItemAction {
+        group: k.group,
+        key: Some(k.key),
+        label,
+        kind,
+    });
+}
+
+fn push_link(out: &mut Vec<ItemAction>, label: String, url: String) {
+    if out.iter().any(|action| matches!(&action.kind, ActionKind::Open(u) if *u == url)) {
+        return;
+    }
+    let used = out
+        .iter()
+        .filter(|a| a.group == Group::Go && a.key.is_some_and(|k| keys::LINK_KEYS.contains(&k)))
+        .count();
+    out.push(ItemAction {
+        group: Group::Go,
+        key: keys::LINK_KEYS.get(used).copied(),
+        label,
+        kind: ActionKind::Open(url),
+    });
 }
 
 enum ActionKind {
@@ -239,10 +274,13 @@ pub struct App {
     pub pane_scroll: u16,
     pub menu_cursor: usize,
     pub menu_scroll: u16,
+    pub menu_group: Option<Group>,
+    menu_via: Via,
     pub log_offset: usize,
     pub help_scroll: u16,
     pub snooze_text: String,
     snooze_for: Option<EntryKey>,
+    snooze_via: Via,
     pub busy: Option<String>,
     pub error: Option<String>,
     pub action_error: Option<String>,
@@ -288,10 +326,13 @@ impl App {
             pane_scroll: 0,
             menu_cursor: 0,
             menu_scroll: 0,
+            menu_group: None,
+            menu_via: Via::Menu,
             log_offset: 0,
             help_scroll: 0,
             snooze_text: String::new(),
             snooze_for: None,
+            snooze_via: Via::Key,
             busy: None,
             error: None,
             action_error: None,
@@ -779,72 +820,114 @@ impl App {
             && let Some(url) = worklens_core::guidance::next_url(&s.raw, step)
         {
             out.push(ItemAction {
+                group: Group::Next,
                 key: None,
                 label: format!("Open next step: {step}"),
                 kind: ActionKind::Open(url),
             });
         }
-        let mut add = |key, label: String, kind| {
-            out.push(ItemAction {
-                key: Some(key),
-                label,
-                kind,
-            })
-        };
         let links = present::links(s, e);
         let first = |kind| links.iter().find(|l| l.kind == kind);
         if let (Some(b), Some(l)) = (e.bug.map(|b| s.bug(b)), first(LinkKind::Bug)) {
-            add('B', format!("Open bug {} in Bugzilla", b.id), ActionKind::Open(l.url.clone()));
+            push(
+                &mut out,
+                Verb::Bugzilla,
+                format!("Open bug {} in Bugzilla", b.id),
+                ActionKind::Open(l.url.clone()),
+            );
         }
         if let (Some(i), Some(l)) = (e.issue.map(|i| s.issue(i)), first(LinkKind::Jira)) {
-            add('J', format!("Open {} in Jira", i.key), ActionKind::Open(l.url.clone()));
+            push(
+                &mut out,
+                Verb::Jira,
+                format!("Open {} in Jira", i.key),
+                ActionKind::Open(l.url.clone()),
+            );
         }
         let idea = e.idea.map(|i| s.idea(i)).zip(first(LinkKind::Idea));
         if let (Some((i, l)), None) = (idea, e.issue) {
-            add('J', format!("Open {} in Jira", i.key), ActionKind::Open(l.url.clone()));
+            push(
+                &mut out,
+                Verb::Jira,
+                format!("Open {} in Jira", i.key),
+                ActionKind::Open(l.url.clone()),
+            );
         }
         let rev = s.revision_of(e).map(|r| s.rev(r));
         if let Some(r) = rev {
-            add('P', format!("Open {} in Phabricator", r.id), ActionKind::Open(rev_url(r.id)));
+            push(
+                &mut out,
+                Verb::Phabricator,
+                format!("Open {} in Phabricator", r.id),
+                ActionKind::Open(rev_url(r.id)),
+            );
         }
         if let Some(l) = first(LinkKind::Lando)
             && let Some(r) = l.rev
         {
-            add('L', format!("Open {r} in Lando"), ActionKind::Open(l.url.clone()));
+            push(&mut out, Verb::Lando, format!("Open {r} in Lando"), ActionKind::Open(l.url.clone()));
         }
         if let Some(l) = first(LinkKind::Try)
             && let Some(r) = l.rev
         {
-            add('T', format!("Open {r}'s try push in Treeherder"), ActionKind::Open(l.url.clone()));
+            push(
+                &mut out,
+                Verb::Try,
+                format!("Open {r}'s try push in Treeherder"),
+                ActionKind::Open(l.url.clone()),
+            );
         }
+        if let Some(report) = &s.raw.landings {
+            for repo in report.repositories.iter().filter(|repo| repo.error.is_none()) {
+                for landing in &repo.matches {
+                    if !e.revisions.iter().chain(&e.review).any(|idx| s.rev(*idx).id == landing.revision) {
+                        continue;
+                    }
+                    let label = format!("Open {}'s {} push in Treeherder", landing.revision, repo.repository);
+                    let landing_key = keys::item_key(Verb::Landing).key;
+                    if out.iter().any(|a| a.group == Group::Go && a.key == Some(landing_key)) {
+                        push_link(&mut out, label, landing.url.clone());
+                    } else {
+                        push(&mut out, Verb::Landing, label, ActionKind::Open(landing.url.clone()));
+                    }
+                }
+            }
+        }
+        for dependency in worklens_core::dependencies::of(s, e) {
+            let source = if dependency.source == "bugzilla" {
+                "Bugzilla"
+            } else {
+                "Phabricator"
+            };
+            push_link(&mut out, format!("Open dependency {} in {source}", dependency.id), dependency.url);
+        }
+        for l in links.iter().filter(|l| matches!(l.kind, LinkKind::Parent | LinkKind::Idea)) {
+            let key = l.url.rsplit('/').next().unwrap_or_default();
+            push_link(&mut out, format!("Open {} {key} in Jira", l.label.to_lowercase()), l.url.clone());
+        }
+        push(&mut out, Verb::Id, format!("Copy \"{}\"", s.id(e)), ActionKind::CopyId);
         match e.id {
-            ItemId::Idea(i) => add(
-                'b',
+            ItemId::Idea(i) => push(
+                &mut out,
+                Verb::Brief,
                 format!("Copy an engineering update for {}", s.idea(i).key),
                 ActionKind::CopyBrief,
             ),
-            _ => add('b', "Copy a brief for a coding agent".into(), ActionKind::CopyBrief),
+            _ => push(
+                &mut out,
+                Verb::Brief,
+                "Copy a brief for a coding agent".into(),
+                ActionKind::CopyBrief,
+            ),
         }
-        if let Some(r) = rev {
-            add(
-                'C',
-                format!("Check out {} locally (moz-phab patch)", r.id),
-                ActionKind::Checkout(r.id),
+        let review = e.review.map(|r| s.rev(r));
+        if let Some(r) = review {
+            push(
+                &mut out,
+                Verb::ReviewPrompt,
+                format!("Copy a prompt for reviewing {} with an agent", r.id),
+                ActionKind::CopyReviewPrompt,
             );
-        }
-        if let Some(r) = e.review.map(|r| s.rev(r)) {
-            match &self.opts.agent {
-                Some(a) => add(
-                    'R',
-                    format!("Review {} with {} (drafts feedback, never posts)", r.id, a.name),
-                    ActionKind::Review,
-                ),
-                None => add(
-                    'R',
-                    format!("Copy a prompt for reviewing {} with an agent", r.id),
-                    ActionKind::CopyReviewPrompt,
-                ),
-            }
         }
         if let Some(fix) = e.drift.iter().find_map(|d| d.fix.as_ref()) {
             let (what, url) = match fix.side {
@@ -862,8 +945,9 @@ impl App {
             } else {
                 format!("\"{}\"", fix.value)
             };
-            add(
-                'F',
+            push(
+                &mut out,
+                Verb::DriftFix,
                 format!("Open {what} and copy {copied}"),
                 ActionKind::FixDrift {
                     value: fix.value.clone(),
@@ -872,82 +956,63 @@ impl App {
                 },
             );
         }
-        if let Some(a) = &self.opts.agent {
-            add('c', format!("Start {} with the brief", a.name), ActionKind::StartAgent);
-        }
-        add('y', format!("Copy \"{}\"", s.id(e)), ActionKind::CopyId);
         let done = if e.marks.hidden == Some(Hidden::Done) {
             "Bring back (undo done)"
         } else {
             "Done locally: hide until new activity"
         };
-        add('d', done.into(), ActionKind::Done);
+        push(&mut out, Verb::Done, done.into(), ActionKind::Done);
         let snooze = if e.marks.hidden == Some(Hidden::Snoozed) {
             "Bring back (undo snooze)"
         } else {
             "Snooze locally until a date or new activity…"
         };
-        add('z', snooze.into(), ActionKind::Snooze);
-        for dependency in worklens_core::dependencies::of(s, e) {
-            if out
-                .iter()
-                .any(|action| matches!(&action.kind, ActionKind::Open(url) if *url == dependency.url))
-            {
-                continue;
+        push(&mut out, Verb::Snooze, snooze.into(), ActionKind::Snooze);
+        if let Some(a) = &self.opts.agent {
+            match review {
+                Some(r) => push(
+                    &mut out,
+                    Verb::Agent,
+                    format!("Review {} with {} (drafts feedback, never posts)", r.id, a.name),
+                    ActionKind::Review,
+                ),
+                None => push(
+                    &mut out,
+                    Verb::Agent,
+                    format!("Start {} with the brief", a.name),
+                    ActionKind::StartAgent,
+                ),
             }
-            let source = if dependency.source == "bugzilla" {
-                "Bugzilla"
-            } else {
-                "Phabricator"
-            };
-            out.push(ItemAction {
-                key: None,
-                label: format!("Open dependency {} in {source}", dependency.id),
-                kind: ActionKind::Open(dependency.url),
-            });
         }
-        for l in links.iter().filter(|l| matches!(l.kind, LinkKind::Parent | LinkKind::Idea)) {
-            if out
-                .iter()
-                .any(|action| matches!(&action.kind, ActionKind::Open(url) if *url == l.url))
-            {
-                continue;
-            }
-            let key = l.url.rsplit('/').next().unwrap_or_default();
-            out.push(ItemAction {
-                key: None,
-                label: format!("Open {} {key} in Jira", l.label.to_lowercase()),
-                kind: ActionKind::Open(l.url.clone()),
-            });
-        }
-        if let Some(report) = &s.raw.landings {
-            for repo in report.repositories.iter().filter(|repo| repo.error.is_none()) {
-                for landing in &repo.matches {
-                    if !e.revisions.iter().chain(&e.review).any(|idx| s.rev(*idx).id == landing.revision)
-                        || out
-                            .iter()
-                            .any(|action| matches!(&action.kind, ActionKind::Open(url) if *url == landing.url))
-                    {
-                        continue;
-                    }
-                    out.push(ItemAction {
-                        key: None,
-                        label: format!("Open {}'s {} push in Treeherder", landing.revision, repo.repository),
-                        kind: ActionKind::Open(landing.url.clone()),
-                    });
-                }
-            }
+        if let Some(r) = rev {
+            push(
+                &mut out,
+                Verb::Checkout,
+                format!("Check out {} locally (moz-phab patch)", r.id),
+                ActionKind::Checkout(r.id),
+            );
         }
         for (n, k) in self.opts.keys.iter().enumerate() {
-            if !out.iter().any(|a| a.key == Some(k.key)) && !keys::RESERVED.contains(&k.key) && self.expand(&k.run, e).is_some() {
+            let taken = out.iter().any(|a| a.group == Group::Item && a.key == Some(k.key));
+            if !taken && !keys::RESERVED.contains(&k.key) && self.expand(&k.run, e).is_some() {
                 out.push(ItemAction {
+                    group: Group::Item,
                     key: Some(k.key),
                     label: k.label.clone(),
                     kind: ActionKind::Custom(n),
                 });
             }
         }
+        out.sort_by_key(|a| a.group);
         out
+    }
+
+    pub fn menu_actions(&self) -> Vec<ItemAction> {
+        let mut actions = self.actions();
+        if let Some(g) = self.menu_group {
+            actions.retain(|a| a.group == g);
+        }
+        actions
     }
 
     pub fn custom_key_help(&self) -> Vec<(String, String)> {
@@ -956,7 +1021,7 @@ impl App {
             .iter()
             .filter(|k| !keys::RESERVED.contains(&k.key))
             .map(|k| {
-                let label = if keys::ITEM_LETTERS.contains(&k.key) {
+                let label = if keys::item_letters().any(|c| c == k.key) {
                     format!("{} (where {} has no built-in use)", k.label, k.key)
                 } else {
                     k.label.clone()
@@ -1003,7 +1068,48 @@ impl App {
         })
     }
 
-    fn run_action(&mut self, action: ItemAction, now: Timestamp) -> Vec<Effect> {
+    fn tab_name(&self) -> &'static str {
+        Section::ALL.get(self.tab).map_or("all", |s| s.id())
+    }
+
+    fn usage_on_selected(&self, kind: usage::Kind, now: Timestamp) -> Option<usage::Event> {
+        let (s, e) = self.snapshot.as_ref().zip(self.selected())?;
+        Some(usage::Event {
+            tab: Some(self.tab_name().to_owned()),
+            ..usage::Event::on_item(now, kind, s, e)
+        })
+    }
+
+    fn run_action(&mut self, action: ItemAction, via: Via, now: Timestamp) -> Vec<Effect> {
+        let hidden = self.selected().and_then(|e| e.marks.hidden);
+        let kind = match &action.kind {
+            ActionKind::Open(_) => Some(usage::Kind::Open),
+            ActionKind::CopyBrief | ActionKind::CopyId | ActionKind::CopyReviewPrompt | ActionKind::FixDrift { .. } => {
+                Some(usage::Kind::Copy)
+            }
+            ActionKind::Checkout(_) => Some(usage::Kind::Checkout),
+            ActionKind::Review | ActionKind::StartAgent => Some(usage::Kind::Agent),
+            ActionKind::Done if hidden == Some(Hidden::Done) => Some(usage::Kind::Restore),
+            ActionKind::Done => Some(usage::Kind::Done),
+            ActionKind::Snooze => Some(usage::Kind::Restore),
+            ActionKind::Custom(_) => Some(usage::Kind::Custom),
+        };
+        let event = kind.and_then(|k| self.usage_on_selected(k, now)).map(|e| usage::Event {
+            via: Some(via),
+            key: action.chord(),
+            ..e
+        });
+        let mut effects = self.act(action, now);
+        if self.mode == Mode::Snooze {
+            self.snooze_via = via;
+        }
+        if !effects.is_empty() {
+            effects.extend(event.map(Effect::RecordUsage));
+        }
+        effects
+    }
+
+    fn act(&mut self, action: ItemAction, now: Timestamp) -> Vec<Effect> {
         let cursor = self.cursor();
         let Some(s) = self.snapshot.as_ref() else { return Vec::new() };
         let Some(e) = selected_in(Some(s), &self.rows, cursor) else {
@@ -1136,12 +1242,20 @@ impl App {
             return Vec::new();
         };
         let id = s.id(e).to_string();
+        let event = usage::Event {
+            tab: Some(self.tab_name().to_owned()),
+            via: Some(self.snooze_via),
+            key: Some(keys::chord_of(Verb::Snooze)),
+            ..usage::Event::on_item(now, usage::Kind::Snooze, s, e)
+        };
         marks::mark_snoozed(&mut self.marks, s, e, until, now);
         self.undo = Some(EntryKey::of(s, e));
         self.mode = Mode::List;
         let when = until.map_or_else(|| "it has new activity".to_owned(), |t| present::date(t, zoned_now.time_zone()));
         self.flash(format!("{id} snoozed locally until {when} · u undoes"), false, now);
-        self.marks_changed(now)
+        let mut effects = self.marks_changed(now);
+        effects.push(Effect::RecordUsage(event));
+        effects
     }
 
     fn undo(&mut self, now: Timestamp) -> Vec<Effect> {
@@ -1159,15 +1273,27 @@ impl App {
             self.flash(format!("{key} is already back"), false, now);
             return Vec::new();
         }
+        let event = usage::Event {
+            tab: Some(self.tab_name().to_owned()),
+            via: Some(Via::Key),
+            key: Some("u".to_owned()),
+            ..usage::Event::on_item(now, usage::Kind::Restore, s, e)
+        };
         marks::restore(&mut self.marks, s, e);
         self.selected_ids[self.tab] = Some(key.clone());
         self.flash(format!("{key} is back"), false, now);
-        self.marks_changed(now)
+        let mut effects = self.marks_changed(now);
+        effects.push(Effect::RecordUsage(event));
+        effects
     }
 
     fn quit(&mut self, now: Timestamp) -> Vec<Effect> {
         self.marks.last_look = Some(now);
-        vec![Effect::SaveMarks, Effect::Quit]
+        let event = usage::Event {
+            tab: Some(self.tab_name().to_owned()),
+            ..usage::Event::new(now, usage::Kind::Quit)
+        };
+        vec![Effect::SaveMarks, Effect::RecordUsage(event), Effect::Quit]
     }
 }
 
@@ -1411,49 +1537,67 @@ fn on_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
             KeyCode::Esc => app.quit(now),
             _ => Vec::new(),
         },
-        Mode::Menu => {
-            let mut actions = app.actions();
-            let pick = match key.code {
-                KeyCode::PageDown => {
-                    app.menu_scroll = app.menu_scroll.saturating_add(5).min(crate::view::menu_scroll_max(app, &actions));
-                    return Vec::new();
-                }
-                KeyCode::PageUp => {
-                    app.menu_scroll = app.menu_scroll.saturating_sub(5);
-                    return Vec::new();
-                }
-                KeyCode::Esc => {
-                    app.mode = Mode::List;
-                    return Vec::new();
-                }
-                KeyCode::Up | KeyCode::Char('k') => {
-                    app.menu_scroll = 0;
-                    app.menu_cursor = app.menu_cursor.saturating_sub(1);
-                    return Vec::new();
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    app.menu_scroll = 0;
-                    app.menu_cursor = (app.menu_cursor + 1).min(actions.len().saturating_sub(1));
-                    return Vec::new();
-                }
-                KeyCode::Char(' ') => {
-                    app.mode = Mode::List;
-                    return Vec::new();
-                }
-                KeyCode::Enter => Some(app.menu_cursor),
-                KeyCode::Char(c) => actions.iter().position(|a| a.key == Some(c)),
-                _ => None,
-            };
-            match pick.filter(|n| *n < actions.len()) {
-                Some(n) => {
-                    app.mode = Mode::List;
-                    let action = actions.swap_remove(n);
-                    app.run_action(action, now)
-                }
-                None => Vec::new(),
-            }
-        }
+        Mode::Menu => on_menu_key(app, key, now),
         Mode::List => on_list_key(app, key, now),
+    }
+}
+
+fn open_menu(app: &mut App, group: Option<Group>, via: Via) {
+    app.menu_cursor = 0;
+    app.menu_scroll = 0;
+    app.menu_group = group;
+    app.menu_via = via;
+    app.mode = Mode::Menu;
+}
+
+fn on_menu_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
+    let mut actions = app.menu_actions();
+    let pick = match (key.code, app.menu_group) {
+        (KeyCode::PageDown, _) => {
+            app.menu_scroll = app.menu_scroll.saturating_add(5).min(crate::view::menu_scroll_max(app, &actions));
+            return Vec::new();
+        }
+        (KeyCode::PageUp, _) => {
+            app.menu_scroll = app.menu_scroll.saturating_sub(5);
+            return Vec::new();
+        }
+        (KeyCode::Up, _) | (KeyCode::Char('k'), None) => {
+            app.menu_scroll = 0;
+            app.menu_cursor = app.menu_cursor.saturating_sub(1);
+            return Vec::new();
+        }
+        (KeyCode::Down, _) | (KeyCode::Char('j'), None) => {
+            app.menu_scroll = 0;
+            app.menu_cursor = (app.menu_cursor + 1).min(actions.len().saturating_sub(1));
+            return Vec::new();
+        }
+        (KeyCode::Enter, _) => Some(app.menu_cursor),
+        (KeyCode::Esc, _) => None,
+        (KeyCode::Char(c), None) if let Some(group) = Group::of_prefix(c) => {
+            open_menu(app, Some(group), app.menu_via);
+            return Vec::new();
+        }
+        (KeyCode::Char(c), None) => match actions.iter().position(|a| a.group == Group::Item && a.key == Some(c)) {
+            Some(n) => Some(n),
+            None if c == ' ' => None,
+            None => return Vec::new(),
+        },
+        (KeyCode::Char(c), Some(Group::Go)) if Some(c) == Group::Go.prefix() => {
+            app.mode = Mode::List;
+            app.move_cursor(isize::MIN / 2);
+            return Vec::new();
+        }
+        (KeyCode::Char(c), Some(_)) => actions.iter().position(|a| a.key == Some(c)),
+        (_, None) => return Vec::new(),
+        (_, Some(_)) => None,
+    };
+    app.mode = Mode::List;
+    match pick.filter(|n| *n < actions.len()) {
+        Some(n) => {
+            let action = actions.swap_remove(n);
+            app.run_action(action, app.menu_via, now)
+        }
+        None => Vec::new(),
     }
 }
 
@@ -1545,13 +1689,17 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
     let Some(action) = keys::action_for(key) else {
         let KeyCode::Char(c) = key.code else { return Vec::new() };
         let mut actions = app.actions();
-        return match actions.iter().position(|a| a.key == Some(c)) {
+        return match actions.iter().position(|a| a.group == Group::Item && a.key == Some(c)) {
             Some(n) => {
                 let action = actions.swap_remove(n);
-                app.run_action(action, now)
+                app.run_action(action, Via::Key, now)
             }
-            None if c == 'c' && app.opts.agent.is_none() && app.selected().is_some() => {
-                app.flash("No coding agent found; set Agent in s › Settings, or b copies the brief", true, now);
+            None if c == keys::item_key(Verb::Agent).key && app.opts.agent.is_none() && app.selected().is_some() => {
+                let text = format!(
+                    "No coding agent found; set Agent in s › Settings, or {} copies the brief",
+                    keys::chord_of(Verb::Brief)
+                );
+                app.flash(text, true, now);
                 Vec::new()
             }
             None => {
@@ -1561,13 +1709,14 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
         };
     };
     let (detail_page, detail_max) = crate::view::detail_paging(app);
+    let tab_before = app.tab;
     match action {
         Action::Quit => return app.quit(now),
         Action::Back if !app.filter.is_empty() => {
             app.filter.clear();
             app.refresh_rows();
         }
-        Action::Back => return app.quit(now),
+        Action::Back => app.dirty = false,
         Action::Help => {
             app.mode = Mode::Help;
             app.help_scroll = 0;
@@ -1602,11 +1751,9 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
         }
         Action::Refresh => return app.begin_refresh(now),
         Action::Undo => return app.undo(now),
-        Action::Menu if app.selected().is_some() => {
-            app.menu_cursor = 0;
-            app.menu_scroll = 0;
-            app.mode = Mode::Menu;
-        }
+        Action::Menu if app.selected().is_some() => open_menu(app, None, Via::Menu),
+        Action::Prefix(group) if app.selected().is_some() => open_menu(app, Some(group), Via::Key),
+        Action::Prefix(_) => app.dirty = false,
         Action::Open => {
             let url = app.snapshot.as_ref().zip(app.selected()).and_then(|(s, e)| {
                 s.next_step(e)
@@ -1619,11 +1766,24 @@ fn on_list_key(app: &mut App, key: KeyEvent, now: Timestamp) -> Vec<Effect> {
                     })
             });
             if let Some(url) = url {
+                let event = app.usage_on_selected(usage::Kind::Open, now).map(|e| usage::Event {
+                    via: Some(Via::Enter),
+                    ..e
+                });
                 app.touch();
-                return vec![Effect::Open(url)];
+                let mut effects = vec![Effect::Open(url)];
+                effects.extend(event.map(Effect::RecordUsage));
+                return effects;
             }
         }
         Action::Menu => {}
+    }
+    if app.tab != tab_before {
+        let event = usage::Event {
+            tab: Some(app.tab_name().to_owned()),
+            ..usage::Event::new(now, usage::Kind::Tab)
+        };
+        return vec![Effect::RecordUsage(event)];
     }
     Vec::new()
 }
@@ -1638,6 +1798,14 @@ mod tests {
 
     fn code(c: KeyCode) -> Msg {
         Msg::Key(KeyEvent::new(c, KeyModifiers::NONE))
+    }
+
+    fn typed(a: &mut App, keys: &str) -> Vec<Effect> {
+        let mut effects = Vec::new();
+        for c in keys.chars() {
+            effects = update(a, key(c), now());
+        }
+        effects
     }
 
     fn now() -> Timestamp {
@@ -1701,7 +1869,7 @@ mod tests {
         let mut a = app();
         assert_eq!(a.rows.len(), 1);
         let effects = update(&mut a, key('d'), now());
-        assert!(matches!(effects.as_slice(), [Effect::SaveMarks]));
+        assert!(matches!(effects.as_slice(), [Effect::SaveMarks, Effect::RecordUsage(_)]));
         assert!(a.rows.is_empty());
         assert!(a.toast.as_ref().unwrap().text.contains("done"));
         update(&mut a, key('Z'), now());
@@ -1728,28 +1896,306 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_lists_actions_and_runs_one_by_letter() {
+    fn the_menu_lists_actions_by_chord_and_runs_one() {
         let mut a = app();
         update(&mut a, key(' '), now());
         assert_eq!(a.mode, Mode::Menu);
         let labels: Vec<String> = a
-            .actions()
+            .menu_actions()
             .iter()
-            .map(|x| format!("{} {}", x.key.unwrap_or(' '), x.label))
+            .map(|x| format!("{} {}", x.chord().unwrap_or_default(), x.label))
             .collect();
-        assert_eq!(labels[0], "B Open bug 1995008 in Bugzilla");
-        assert!(labels.iter().any(|l| l.starts_with("P Open D321987")), "{labels:?}");
-        assert!(labels.iter().any(|l| l.starts_with("T Open D321987's try push")), "{labels:?}");
-        assert!(!labels.iter().any(|l| l.starts_with('c')), "no agent, no start action: {labels:?}");
-        assert!(update(&mut a, key('1'), now()).is_empty(), "the menu has no numbers");
+        assert_eq!(labels[0], "gb Open bug 1995008 in Bugzilla");
+        assert!(labels.iter().any(|l| l.starts_with("gp Open D321987")), "{labels:?}");
+        assert!(labels.iter().any(|l| l.starts_with("gt Open D321987's try push")), "{labels:?}");
+        assert!(labels.iter().any(|l| l.starts_with("yy Copy \"1995008\"")), "{labels:?}");
+        assert!(labels.iter().any(|l| l.starts_with("d Done locally")), "{labels:?}");
+        assert!(!labels.iter().any(|l| l.starts_with("c ")), "no agent, no start action: {labels:?}");
+        assert!(labels.iter().all(|l| !l.starts_with(' ')), "every row has a key: {labels:?}");
+        assert!(update(&mut a, key('1'), now()).is_empty());
+        assert_eq!(a.mode, Mode::Menu, "a key with no action leaves the full menu open");
+        assert!(update(&mut a, key('b'), now()).is_empty(), "b alone is not an item key");
         assert_eq!(a.mode, Mode::Menu);
-        let effects = update(&mut a, key('B'), now());
-        assert!(matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=1995008")));
+        assert!(update(&mut a, key('g'), now()).is_empty());
+        assert_eq!(a.menu_group, Some(Group::Go), "g narrows the menu to Go");
+        let effects = update(&mut a, key('b'), now());
+        assert!(matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.ends_with("id=1995008")));
         assert_eq!(a.mode, Mode::List);
     }
 
     #[test]
-    fn integration_push_is_a_menu_action_without_a_new_shortcut() {
+    fn esc_in_the_list_clears_the_filter_and_never_quits() {
+        let mut a = app();
+        let effects = update(&mut a, code(KeyCode::Esc), now());
+        assert!(effects.is_empty(), "{effects:?}");
+        assert_eq!(a.mode, Mode::List);
+        assert!(a.marks.last_look.is_none(), "nothing was saved as a quit");
+        update(&mut a, key('/'), now());
+        typed(&mut a, "nomatch");
+        update(&mut a, code(KeyCode::Enter), now());
+        assert!(a.rows.is_empty());
+        assert!(update(&mut a, code(KeyCode::Esc), now()).is_empty());
+        assert_eq!(
+            (a.filter.as_str(), a.rows.len(), a.mode),
+            ("", 1, Mode::List),
+            "Esc clears a kept filter"
+        );
+        assert!(
+            update(&mut a, code(KeyCode::Esc), now()).is_empty(),
+            "a second Esc still doesn't quit"
+        );
+        let effects = update(&mut a, key('q'), now());
+        assert!(matches!(effects.last(), Some(Effect::Quit)), "q still quits: {effects:?}");
+    }
+
+    #[test]
+    fn g_and_y_then_an_unknown_key_or_esc_do_nothing() {
+        let mut a = app();
+        for (prefix, then) in [
+            ('g', key('x')),
+            ('g', code(KeyCode::Esc)),
+            ('y', key('q')),
+            ('y', key('d')),
+            ('g', key('d')),
+            ('g', key('q')),
+            ('y', code(KeyCode::Tab)),
+            ('g', key(' ')),
+        ] {
+            assert!(update(&mut a, key(prefix), now()).is_empty());
+            assert_eq!(
+                (a.mode, a.menu_group),
+                (Mode::Menu, Group::of_prefix(prefix)),
+                "{prefix} opens its group"
+            );
+            let effects = update(&mut a, then, now());
+            assert!(effects.is_empty(), "{prefix} then {:?}: {effects:?}", a.mode);
+            assert_eq!(a.mode, Mode::List, "{prefix} then an unknown key closes the popup");
+        }
+        assert_eq!(a.rows.len(), 1, "nothing marked done");
+        assert!(a.marks.items.values().all(|m| m.done.is_none() && m.snooze.is_none()));
+        assert!(a.marks.last_look.is_none(), "nothing quit");
+        assert!(a.toast.is_none(), "nothing ran: {:?}", a.toast.as_ref().map(|t| &t.text));
+    }
+
+    #[test]
+    fn gg_goes_to_the_top_and_g_alone_does_not() {
+        let mut a = app();
+        fetched(&mut a, raw_with(&COPIES));
+        update(&mut a, code(KeyCode::End), now());
+        let last = a.rows.len() - 1;
+        assert_eq!(a.cursor(), last);
+        update(&mut a, key('g'), now());
+        assert_eq!(a.cursor(), last, "g waits for the next key");
+        let effects = update(&mut a, key('g'), now());
+        assert!(effects.is_empty(), "{effects:?}");
+        assert_eq!((a.cursor(), a.mode), (0, Mode::List));
+        update(&mut a, key('G'), now());
+        assert_eq!(a.cursor(), last, "G goes to the bottom");
+        update(&mut a, code(KeyCode::Home), now());
+        assert_eq!(a.cursor(), 0, "Home goes to the top");
+        update(&mut a, key(' '), now());
+        typed(&mut a, "gg");
+        assert_eq!((a.cursor(), a.mode), (0, Mode::List), "g g from the full menu too");
+    }
+
+    #[test]
+    fn a_second_landing_push_takes_the_next_number() {
+        let mut a = app();
+        let mut raw = a.snapshot.take().unwrap().raw;
+        let repo = |name: &str, push: &str| {
+            serde_json::json!({
+                "repository":name,"checkedAt":"2026-11-03T19:00:00Z",
+                "pushLimit":100,"scannedPushes":1,"oldestPush":"2026-11-03T10:00:00Z","error":null,
+                "matches":[{"revision":321987,"commit":"1111111111111111111111111111111111111111",
+                    "pushRevision":push,
+                    "url":format!("https://treeherder.mozilla.org/jobs?repo={name}&revision={push}"),
+                    "pushedAt":"2026-11-03T10:00:00Z","health":null,"healthError":null}]
+            })
+        };
+        raw.landings = Some(
+            serde_json::from_value(serde_json::json!({
+                "revisions":[321987],
+                "repositories":[repo("autoland", "aaaa"), repo("mozilla-central", "cccc")]
+            }))
+            .unwrap(),
+        );
+        fetched(&mut a, raw);
+        let rows: Vec<(String, String)> = a
+            .actions()
+            .iter()
+            .filter(|x| x.label.contains(" push in Treeherder") && !x.label.contains("try"))
+            .map(|x| (x.chord().unwrap_or_default(), x.label.clone()))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("ga".to_owned(), "Open D321987's autoland push in Treeherder".to_owned()),
+                ("g1".to_owned(), "Open D321987's mozilla-central push in Treeherder".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn custom_keys_never_replace_a_built_in_item_key() {
+        let mut a = app();
+        for (key, label) in [('d', "Shadow done"), ('c', "Mine when no agent"), ('b', "Free now")] {
+            a.opts.keys.push(CustomKey {
+                key,
+                label: label.into(),
+                run: "echo {{id}}".into(),
+                terminal: false,
+            });
+        }
+        let item: Vec<(String, String)> = a
+            .actions()
+            .iter()
+            .filter(|x| x.group == Group::Item)
+            .map(|x| (x.chord().unwrap_or_default(), x.label.clone()))
+            .collect();
+        assert!(item.iter().any(|(k, l)| k == "d" && l.starts_with("Done locally")), "{item:?}");
+        assert!(!item.iter().any(|(_, l)| l == "Shadow done"), "{item:?}");
+        assert!(item.iter().any(|(k, l)| k == "c" && l == "Mine when no agent"), "{item:?}");
+        assert!(
+            item.iter().any(|(k, l)| k == "b" && l == "Free now"),
+            "b is free since gb and yb: {item:?}"
+        );
+        assert!(matches!(
+            &typed(&mut a, "b")[..],
+            [Effect::RunQuietly { .. }, Effect::RecordUsage(_)]
+        ));
+    }
+
+    #[test]
+    fn with_nothing_selected_space_g_and_y_open_nothing() {
+        let mut a = app();
+        update(&mut a, key('/'), now());
+        typed(&mut a, "nomatch");
+        update(&mut a, code(KeyCode::Enter), now());
+        assert!(a.selected().is_none());
+        for c in [' ', 'g', 'y'] {
+            assert!(update(&mut a, key(c), now()).is_empty());
+            assert_eq!(a.mode, Mode::List, "{c:?}");
+        }
+    }
+
+    #[test]
+    fn retired_capitals_and_the_old_single_y_do_nothing() {
+        let mut a = app();
+        for c in ['B', 'J', 'P', 'L', 'T', 'R', 'F'] {
+            assert!(update(&mut a, key(c), now()).is_empty(), "{c}");
+            assert_eq!(a.mode, Mode::List, "{c}");
+        }
+        assert!(update(&mut a, key('b'), now()).is_empty());
+        assert!(a.toast.is_none());
+        assert!(update(&mut a, key('y'), now()).is_empty(), "y waits for what to copy");
+        assert_eq!(a.mode, Mode::Menu);
+    }
+
+    #[test]
+    fn g_and_y_typed_into_a_prompt_edit_the_prompt() {
+        let mut a = app();
+        update(&mut a, key('/'), now());
+        assert!(typed(&mut a, "gyggb").is_empty());
+        assert_eq!((a.mode, a.filter.as_str()), (Mode::Filter, "gyggb"));
+        update(&mut a, code(KeyCode::Esc), now());
+        update(&mut a, key('z'), now());
+        assert!(typed(&mut a, "gyb").is_empty());
+        assert_eq!((a.mode, a.snooze_text.as_str()), (Mode::Snooze, "gyb"));
+    }
+
+    fn busy(agent: bool) -> App {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../store/fixtures/busy.json");
+        let raw: Raw = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let opts = Options {
+            cache_minutes: None,
+            agent: agent.then(|| Agent {
+                name: "claude".into(),
+                program: "claude".into(),
+                args: Vec::new(),
+            }),
+            dir: PathBuf::from("/tmp"),
+            keys: Vec::new(),
+        };
+        let mut a = App::new(CoreConfig::default(), opts, Some(raw), Marks::default(), now());
+        a.size = (80, 24);
+        a
+    }
+
+    fn select_with(a: &mut App, chord: &str, label: &str) -> String {
+        for tab in App::tab_order() {
+            a.switch_tab(tab);
+            for row in 0..a.rows.len() {
+                a.cursors[tab] = row;
+                if a.actions()
+                    .iter()
+                    .any(|x| x.chord().as_deref() == Some(chord) && x.label.contains(label))
+                {
+                    return selected_id(a).unwrap();
+                }
+            }
+        }
+        panic!("busy.json has no item with {chord} {label}")
+    }
+
+    #[test]
+    fn every_chord_runs_its_action_from_the_list() {
+        let opens = [
+            ("gb", "Bugzilla", "bugzilla.mozilla.org/show_bug.cgi?id="),
+            ("gj", "Jira", "atlassian.net/browse/"),
+            ("gp", "Phabricator", "phabricator.services.mozilla.com/D"),
+            ("gl", "Lando", "lando"),
+            ("gt", "try push", "repo=try"),
+            ("ga", "autoland push", "repo=autoland"),
+            ("g1", "dependency", "mozilla"),
+        ];
+        for (chord, label, url_part) in opens {
+            let mut a = busy(false);
+            let id = select_with(&mut a, chord, label);
+            let effects = typed(&mut a, chord);
+            assert!(
+                matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(e)] if url.contains(url_part) && e.key.as_deref() == Some(chord) && e.via == Some(Via::Key)),
+                "{chord} on {id}: {effects:?}"
+            );
+            assert_eq!(a.mode, Mode::List);
+        }
+        let mut a = busy(false);
+        let id = select_with(&mut a, "yy", "Copy");
+        assert!(matches!(&typed(&mut a, "yy")[..], [Effect::Copy { text, .. }, Effect::RecordUsage(_)] if *text == id));
+        select_with(&mut a, "yb", "brief");
+        assert!(matches!(&typed(&mut a, "yb")[..], [Effect::Copy { text, .. }, Effect::RecordUsage(_)] if text.starts_with("# ")));
+        select_with(&mut a, "yr", "review");
+        assert!(
+            matches!(&typed(&mut a, "yr")[..], [Effect::Copy { text, .. }, Effect::RecordUsage(_)] if text.contains("asked to review"))
+        );
+        select_with(&mut a, "yf", "copy");
+        assert!(matches!(
+            &typed(&mut a, "yf")[..],
+            [Effect::Copy { .. }, Effect::Open(_), Effect::RecordUsage(_)]
+        ));
+        select_with(&mut a, "C", "Check out");
+        assert!(
+            matches!(&typed(&mut a, "C")[..], [Effect::RunInTerminal { command, .. }, Effect::RecordUsage(_)] if command.program == "moz-phab")
+        );
+        select_with(&mut a, "d", "Done");
+        assert!(matches!(&typed(&mut a, "d")[..], [Effect::SaveMarks, Effect::RecordUsage(_)]));
+        select_with(&mut a, "z", "Snooze");
+        assert!(typed(&mut a, "z").is_empty());
+        assert_eq!(a.mode, Mode::Snooze);
+        let mut a = busy(true);
+        select_with(&mut a, "c", "Start claude with the brief");
+        assert!(
+            matches!(&typed(&mut a, "c")[..], [Effect::RunInTerminal { command, .. }, Effect::RecordUsage(_)] if command.program == "claude")
+        );
+        select_with(&mut a, "c", "Review");
+        let effects = typed(&mut a, "c");
+        let [Effect::RunInTerminal { command, .. }, Effect::RecordUsage(_)] = &effects[..] else {
+            panic!("{effects:?}")
+        };
+        assert!(command.args.last().is_some_and(|p| p.contains("asked to review")), "{command:?}");
+    }
+
+    #[test]
+    fn the_integration_push_opens_with_ga_or_from_the_menu() {
         let mut a = app();
         let mut raw = a.snapshot.take().unwrap().raw;
         raw.landings = Some(
@@ -1768,14 +2214,19 @@ mod tests {
         update(&mut a, Msg::Fetched(Ok(Box::new(raw))), now());
         let actions = a.actions();
         let at = actions.iter().position(|action| action.label.contains("autoland push")).unwrap();
-        assert_eq!(actions[at].key, None);
+        assert_eq!(actions[at].chord().as_deref(), Some("ga"));
+        let effects = typed(&mut a, "ga");
+        assert!(
+            matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.contains("repo=autoland&revision=2222222222222222222222222222222222222222")),
+            "{effects:?}"
+        );
         update(&mut a, key(' '), now());
         for _ in 0..at {
             update(&mut a, code(KeyCode::Down), now());
         }
         let effects = update(&mut a, code(KeyCode::Enter), now());
         assert!(
-            matches!(&effects[..], [Effect::Open(url)] if url.contains("repo=autoland&revision=2222222222222222222222222222222222222222"))
+            matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.contains("repo=autoland&revision=2222222222222222222222222222222222222222"))
         );
     }
 
@@ -1784,7 +2235,7 @@ mod tests {
         let mut a = app();
         let effects = update(&mut a, code(KeyCode::Enter), now());
         assert!(
-            matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=1995008")),
+            matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.ends_with("id=1995008")),
             "{effects:?}"
         );
         assert_eq!(a.mode, Mode::List);
@@ -1803,7 +2254,7 @@ mod tests {
         assert!(a.rows.is_empty());
         assert!(a.toast.as_ref().unwrap().text.contains("u undoes"));
         let effects = update(&mut a, key('u'), now());
-        assert!(matches!(effects.as_slice(), [Effect::SaveMarks]));
+        assert!(matches!(effects.as_slice(), [Effect::SaveMarks, Effect::RecordUsage(_)]));
         assert_eq!(a.rows.len(), 1, "the item is back");
         assert!(a.marks.items.values().all(|m| m.done.is_none()), "{:?}", a.marks.items);
         update(&mut a, key('z'), now());
@@ -1889,7 +2340,7 @@ mod tests {
     #[test]
     fn opening_an_item_rechecks_it_when_the_terminal_regains_focus() {
         let mut a = app();
-        update(&mut a, key('B'), now());
+        typed(&mut a, "gb");
         assert!(update(&mut a, Msg::Focus(false), now()).is_empty());
         let effects = update(&mut a, Msg::Focus(true), now());
         assert!(matches!(&effects[..], [Effect::Refetch(items)] if items[0].bug == Some(BugId(1_995_008))));
@@ -1919,7 +2370,7 @@ mod tests {
             terminal: false,
         });
         let effects = update(&mut a, key('S'), now());
-        let [Effect::RunQuietly { command, .. }] = &effects[..] else {
+        let [Effect::RunQuietly { command, .. }, Effect::RecordUsage(_)] = &effects[..] else {
             panic!("{effects:?}")
         };
         assert_eq!(command.args[1], "open https://searchfox.org/?q='1995008' 'AIPLAT-1416'");
@@ -1951,7 +2402,7 @@ mod tests {
     fn q_quits_and_records_the_last_look() {
         let mut a = app();
         let effects = update(&mut a, key('q'), now());
-        assert!(matches!(&effects[..], [Effect::SaveMarks, Effect::Quit]));
+        assert!(matches!(&effects[..], [Effect::SaveMarks, Effect::RecordUsage(_), Effect::Quit]));
         assert_eq!(a.marks.last_look, Some(now()));
     }
     #[test]
@@ -1976,8 +2427,8 @@ mod tests {
         let s = a.snapshot.as_ref().unwrap();
         assert_eq!(s.id(a.selected().unwrap()).to_string(), "1995008");
         update(&mut a, key(' '), now());
-        let effects = update(&mut a, key('B'), now());
-        assert!(matches!(&effects[..], [Effect::Open(url)] if url.ends_with("1995008")));
+        let effects = typed(&mut a, "gb");
+        assert!(matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.ends_with("1995008")));
     }
 
     #[test]
@@ -2044,9 +2495,15 @@ mod tests {
             for row in 0..a.rows.len() {
                 a.cursors[tab] = row;
                 for action in a.actions() {
-                    let Some(c) = action.key else { continue };
+                    let Some(c) = action.key else {
+                        assert_eq!(action.group, Group::Next, "{} has no key", action.label);
+                        continue;
+                    };
+                    let shown = keys::ITEM_KEYS
+                        .iter()
+                        .any(|k| k.group == action.group && (k.key == c || (k.verb == Verb::Link && keys::LINK_KEYS.contains(&c))));
                     assert!(
-                        keys::ITEM_LETTERS.contains(&c) || help.iter().any(|(k, _)| k.contains(c)),
+                        shown || help.iter().any(|(k, _)| *k == c.to_string()),
                         "{c} ({}) isn't in help",
                         action.label
                     );
@@ -2131,7 +2588,7 @@ mod tests {
         assert_eq!(a.mode, Mode::List);
         assert!(a.selected().is_none());
         assert_eq!(toast(&a), "1995008 is no longer in your work; actions closed; nothing else here");
-        let effects = update(&mut a, key('B'), now());
+        let effects = typed(&mut a, "gb");
         assert!(effects.is_empty(), "no action runs on another item: {effects:?}");
     }
 
@@ -2228,9 +2685,9 @@ mod tests {
         assert_eq!(a.mode, Mode::List);
         assert!(toast(&a).contains("reopens actions"));
         update(&mut a, key(' '), now());
-        let effects = update(&mut a, key('B'), now());
+        let effects = typed(&mut a, "gb");
         assert!(
-            matches!(&effects[..], [Effect::Open(url)] if url.ends_with("id=2000013")),
+            matches!(&effects[..], [Effect::Open(url), Effect::RecordUsage(_)] if url.ends_with("id=2000013")),
             "{effects:?}"
         );
     }
@@ -2352,5 +2809,131 @@ mod tests {
         assert!(!a.pane_shown(Pane::Comments));
         a.prefs.panes[Pane::Overview.index()] = Show::Hidden;
         assert!(a.pane_shown(Pane::Overview), "Overview can't be hidden");
+    }
+
+    fn usage_of(effects: &[Effect]) -> Vec<&usage::Event> {
+        effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::RecordUsage(event) => Some(event),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn usage_says_what_ran_how_and_on_which_item() {
+        let mut a = app();
+        let effects = typed(&mut a, "gb");
+        let [by_key] = usage_of(&effects)[..] else { panic!("{effects:?}") };
+        assert_eq!(
+            (by_key.kind, by_key.via, by_key.key.as_deref()),
+            (usage::Kind::Open, Some(Via::Key), Some("gb"))
+        );
+        assert_eq!(by_key.id.as_deref(), Some("1995008"));
+        assert_eq!(by_key.section.as_deref(), Some("waiting"));
+        assert_eq!(by_key.tag.as_deref(), Some("ni?"));
+        assert_eq!(by_key.tab.as_deref(), Some("all"));
+        assert_eq!(by_key.at, now());
+
+        update(&mut a, key(' '), now());
+        let effects = typed(&mut a, "gb");
+        let from_menu = usage_of(&effects)[0];
+        assert_eq!((from_menu.via, from_menu.key.as_deref()), (Some(Via::Menu), Some("gb")));
+
+        update(&mut a, key(' '), now());
+        update(&mut a, code(KeyCode::Down), now());
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        let arrowed = usage_of(&effects)[0];
+        assert_eq!(
+            (arrowed.via, arrowed.key.as_deref()),
+            (Some(Via::Menu), Some("gj")),
+            "Enter on a row logs its chord"
+        );
+
+        update(&mut a, key('y'), now());
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        let group = usage_of(&effects)[0];
+        assert_eq!(
+            (group.kind, group.via, group.key.as_deref()),
+            (usage::Kind::Copy, Some(Via::Key), Some("yy"))
+        );
+
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        let by_enter = usage_of(&effects)[0];
+        assert_eq!(
+            (by_enter.kind, by_enter.via, by_enter.key.as_deref()),
+            (usage::Kind::Open, Some(Via::Enter), None)
+        );
+    }
+
+    #[test]
+    fn a_snooze_started_from_the_menu_is_logged_as_the_menu() {
+        let mut a = app();
+        update(&mut a, key(' '), now());
+        assert!(typed(&mut a, "z").is_empty());
+        assert_eq!(a.mode, Mode::Snooze);
+        typed(&mut a, "3d");
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        let snooze = usage_of(&effects)[0];
+        assert_eq!(
+            (snooze.kind, snooze.via, snooze.key.as_deref()),
+            (usage::Kind::Snooze, Some(Via::Menu), Some("z"))
+        );
+    }
+
+    #[test]
+    fn usage_records_tab_switches_done_and_undo_but_not_a_cancelled_snooze() {
+        let mut a = app();
+        let effects = update(&mut a, key('1'), now());
+        let [tab] = usage_of(&effects)[..] else { panic!("{effects:?}") };
+        assert_eq!(
+            (tab.kind, tab.tab.as_deref(), tab.id.as_deref()),
+            (usage::Kind::Tab, Some("waiting"), None)
+        );
+        assert!(usage_of(&update(&mut a, key('1'), now())).is_empty(), "already there");
+        assert!(usage_of(&update(&mut a, key('j'), now())).is_empty(), "moving isn't logged");
+
+        assert!(usage_of(&update(&mut a, key('z'), now())).is_empty(), "only asked when");
+        assert!(usage_of(&update(&mut a, code(KeyCode::Esc), now())).is_empty(), "cancelled");
+
+        let effects = update(&mut a, key('d'), now());
+        let done = usage_of(&effects)[0];
+        assert_eq!((done.kind, done.id.as_deref()), (usage::Kind::Done, Some("1995008")));
+        let effects = update(&mut a, key('u'), now());
+        let back = usage_of(&effects)[0];
+        assert_eq!(
+            (back.kind, back.key.as_deref(), back.id.as_deref()),
+            (usage::Kind::Restore, Some("u"), Some("1995008"))
+        );
+
+        assert_eq!((back.via, back.tab.as_deref()), (Some(Via::Key), Some("waiting")));
+
+        update(&mut a, key('z'), now());
+        let effects = update(&mut a, code(KeyCode::Enter), now());
+        let snooze = usage_of(&effects)[0];
+        assert_eq!(
+            (snooze.kind, snooze.via, snooze.key.as_deref()),
+            (usage::Kind::Snooze, Some(Via::Key), Some("z"))
+        );
+        assert_eq!(snooze.tab.as_deref(), Some("waiting"));
+
+        update(&mut a, key('Z'), now());
+        let effects = update(&mut a, key('d'), now());
+        assert_eq!(usage_of(&effects)[0].kind, usage::Kind::Done, "d on a snoozed item marks it done");
+        let effects = update(&mut a, key('d'), now());
+        assert_eq!(usage_of(&effects)[0].kind, usage::Kind::Restore, "d on a done item brings it back");
+        update(&mut a, key('z'), now());
+        update(&mut a, code(KeyCode::Enter), now());
+        let effects = update(&mut a, key('z'), now());
+        assert_eq!(
+            usage_of(&effects)[0].kind,
+            usage::Kind::Restore,
+            "z on a snoozed item brings it back"
+        );
+
+        let effects = update(&mut a, key('q'), now());
+        let quit = usage_of(&effects)[0];
+        assert_eq!((quit.kind, quit.tab.as_deref()), (usage::Kind::Quit, Some("waiting")));
     }
 }

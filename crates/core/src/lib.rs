@@ -22,6 +22,7 @@ pub mod stack;
 pub mod tickets;
 pub mod timeline;
 pub mod train;
+pub mod usage;
 
 pub use ids::{BugId, BugIdx, EntryIdx, IdeaIdx, IssueIdx, JiraKey, LocalIdx, RevId, RevIdx, StackIdx};
 pub use raw::{RAW_VERSION, Raw};

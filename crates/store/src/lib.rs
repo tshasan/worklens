@@ -37,6 +37,26 @@ pub fn record_drift(path: &Path, day: worklens_core::drift_log::DriftDay) -> io:
     })
 }
 
+pub fn usage_file() -> Option<PathBuf> {
+    marks_file().map(|m| m.with_file_name("usage.jsonl"))
+}
+
+pub fn read_usage(path: &Path) -> Vec<worklens_core::usage::Event> {
+    fs::read_to_string(path)
+        .map(|text| worklens_core::usage::parse(&text))
+        .unwrap_or_default()
+}
+
+pub fn record_usage(path: &Path, event: &worklens_core::usage::Event) -> io::Result<()> {
+    use std::io::Write as _;
+    if let Some(dir) = parent_dir(path) {
+        create_private_dir(dir)?;
+    }
+    let mut line = serde_json::to_vec(event).map_err(io::Error::other)?;
+    line.push(b'\n');
+    OpenOptions::new().create(true).append(true).open(path)?.write_all(&line)
+}
+
 pub fn read_marks(path: &Path) -> Result<Marks, ReadError> {
     match fs::read(path) {
         Ok(bytes) => Ok(serde_json::from_slice(&bytes)?),
@@ -389,6 +409,24 @@ mod tests {
         keys.sort();
         assert_eq!(keys, ["2", "3"], "the CLI's 2 survives; the UI's restore of 1 and its 3 apply");
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn usage_events_append_one_line_each() -> io::Result<()> {
+        let dir = temp_dir("usage");
+        let path = dir.join("state/usage.jsonl");
+        assert!(read_usage(&path).is_empty());
+        let events = worklens_core::usage::parse(
+            "{\"at\":\"2026-11-01T10:00:00Z\",\"kind\":\"start\"}\n{\"at\":\"2026-11-01T10:00:09Z\",\"kind\":\"open\",\"id\":\"D1\"}",
+        );
+        let [first, second] = events.as_slice() else {
+            panic!("two events: {events:?}")
+        };
+        record_usage(&path, first)?;
+        record_usage(&path, second)?;
+        assert_eq!(fs::read_to_string(&path)?.lines().count(), 2);
+        assert_eq!(read_usage(&path), events);
+        fs::remove_dir_all(dir)
     }
 
     #[test]

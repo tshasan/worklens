@@ -83,22 +83,38 @@ Section and detail tabs look the same:
 ## Keys
 
 - Arrows move, `Enter` opens the next step (what `o` opens), `Space` opens
-  the actions menu, `Esc` backs out.
+  the actions popup, `Esc` backs out of a popup, prompt or filter. `Esc`
+  never quits; `q` does.
 - `←` `→` switch sections, `Tab` switches detail tabs.
+- Item keys read verb then noun, as in vim. `g` goes: `gb` Bugzilla, `gj`
+  Jira, `gp` Phabricator, `gl` Lando, `gt` try push, `ga` landing push, `g1`
+  and on for other links. `y` copies: `yy` the ID, `yb` the brief, `yr` the
+  review prompt, `yf` the drift fix. `gg` and `G` go to the top and bottom.
+- Single letters act on the item: `d` done, `z` snooze, `c` coding agent,
+  `C` check out, and the user's custom keys. `g` and `y` are reserved so
+  custom keys can't shadow them.
+- One key per action, no aliases. Add a new action as a row in `ITEM_KEYS`
+  under its group; prefer a chord under `g` or `y` to a new letter.
 - `u` undoes the last done or snooze; the confirmation says so.
-- Add new actions to the actions menu before giving them a letter. The menu
-  shows each action's letter, not a number, and leaves out actions that
-  can't run (no coding agent found).
-- The menu is a popup under the selected row, sized to its actions, so the
-  detail stays readable. Only a menu taller than the body covers it.
-- Keys, footer, menu and help all come from `BINDINGS`. Help must fit 80x24.
-- The footer fills by rank as width allows: at 80 columns the essentials, on
-  a full screen done, snooze, refresh and sources too.
+- `g` or `y` alone opens the popup with only that group; the next key runs
+  an action, and `Esc` or any other key cancels. `Space` shows every group
+  with full chords (`g b`), and `g` or `y` there narrows it.
+- The popup is a cheat sheet: the key on the left of every row (`⏎` for the
+  next step), rows under Go, Copy and Item headings. It leaves out actions
+  that can't run (no coding agent found).
+- The popup sits under the selected row, sized to its rows, so the detail
+  stays readable. Only a popup taller than the body covers it.
+- Keys, footer, popup and help all come from `BINDINGS` and `ITEM_KEYS`.
+  Help must fit 80x24.
+- The footer fills by rank as width allows: at 80 columns the essentials,
+  `g go` and `y copy` among them; on a full screen filter, done, snooze,
+  refresh and sources too.
 - Footers and hints read `key label · key label`: keys in the default fg,
   labels and separators quiet. Scroll hints give the range with its unit and
   the keys: "1–9 of 13 lines · PgUp PgDn scroll".
 - Confirmations start with `✓`, errors with `!`.
-- Typing in a prompt (filter, snooze) edits the prompt, not item shortcuts.
+- Typing in a prompt (filter, snooze) edits the prompt, not item shortcuts,
+  `g` and `y` included.
 
 ## States
 
@@ -116,7 +132,8 @@ queue with a loading screen.
 ## Before shipping a UI change
 
 - At 80x24 and full screen, find the first item, read why it's there, open
-  its actions with `Space` and close with `Esc`.
+  its actions with `Space` and close with `Esc`. Press `g`, then `y`, and
+  read each popup; run one chord; check `Esc` in the list doesn't quit.
 - Filter to a match, then to no match, then clear the filter. Mark an item
   done and undo it with `u`.
 - Refresh while reading an item. Try a failing source, no cache and an empty

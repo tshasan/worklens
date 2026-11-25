@@ -25,6 +25,40 @@ pub enum Action {
     Help,
     Back,
     Quit,
+    Prefix(Group),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Group {
+    Next,
+    Go,
+    Copy,
+    Item,
+}
+
+impl Group {
+    pub const PREFIXED: [Self; 2] = [Self::Go, Self::Copy];
+
+    pub const fn prefix(self) -> Option<char> {
+        match self {
+            Self::Go => Some('g'),
+            Self::Copy => Some('y'),
+            Self::Next | Self::Item => None,
+        }
+    }
+
+    pub const fn title(self) -> &'static str {
+        match self {
+            Self::Next => "Next step",
+            Self::Go => "Go",
+            Self::Copy => "Copy",
+            Self::Item => "Item",
+        }
+    }
+
+    pub fn of_prefix(c: char) -> Option<Self> {
+        Self::PREFIXED.into_iter().find(|g| g.prefix() == Some(c))
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -32,6 +66,7 @@ enum K {
     Char(char),
     Code(KeyCode),
     Ctrl(char),
+    Twice(char),
     Digit,
 }
 
@@ -92,7 +127,7 @@ pub const BINDINGS: &[Binding] = &[
         label: "Tab",
         help: "Switch detail tab",
         hint: Some("Tab detail"),
-        rank: 7,
+        rank: 9,
         action: Action::NextPane,
     },
     Binding {
@@ -120,7 +155,7 @@ pub const BINDINGS: &[Binding] = &[
         action: Action::PageUp,
     },
     Binding {
-        keys: &[Code(KeyCode::Home), Char('g')],
+        keys: &[Code(KeyCode::Home), K::Twice('g')],
         label: "",
         help: "",
         hint: None,
@@ -152,9 +187,25 @@ pub const BINDINGS: &[Binding] = &[
         action: Action::Open,
     },
     Binding {
+        keys: &[Char('g')],
+        label: "",
+        help: "",
+        hint: Some("g go"),
+        rank: 6,
+        action: Action::Prefix(Group::Go),
+    },
+    Binding {
+        keys: &[Char('y')],
+        label: "",
+        help: "",
+        hint: Some("y copy"),
+        rank: 7,
+        action: Action::Prefix(Group::Copy),
+    },
+    Binding {
         keys: &[Char(' ')],
         label: "Space",
-        help: "Actions for the item",
+        help: "Every key for the item",
         hint: Some("Space actions"),
         rank: 5,
         action: Action::Menu,
@@ -164,7 +215,7 @@ pub const BINDINGS: &[Binding] = &[
         label: "/",
         help: "Filter",
         hint: Some("/ filter"),
-        rank: 6,
+        rank: 8,
         action: Action::Filter,
     },
     Binding {
@@ -172,7 +223,7 @@ pub const BINDINGS: &[Binding] = &[
         label: "Z",
         help: "Show done and snoozed",
         hint: Some("Z hidden"),
-        rank: 12,
+        rank: 14,
         action: Action::ToggleHidden,
     },
     Binding {
@@ -188,7 +239,7 @@ pub const BINDINGS: &[Binding] = &[
         label: "r",
         help: "Refresh",
         hint: Some("r refresh"),
-        rank: 10,
+        rank: 12,
         action: Action::Refresh,
     },
     Binding {
@@ -196,7 +247,7 @@ pub const BINDINGS: &[Binding] = &[
         label: "s",
         help: "Sources and settings",
         hint: Some("s sources"),
-        rank: 11,
+        rank: 13,
         action: Action::Setup,
     },
     Binding {
@@ -233,23 +284,82 @@ pub const BINDINGS: &[Binding] = &[
     },
 ];
 
-pub const ITEM_KEYS: &[(&str, &str)] = &[
-    ("B", "Open in Bugzilla"),
-    ("J", "Open in Jira"),
-    ("P", "Open in Phabricator"),
-    ("L", "Open in Lando"),
-    ("T", "Open in Treeherder"),
-    ("b", "Copy a brief for an agent"),
-    ("y", "Copy the ID"),
-    ("c", "Start your coding agent"),
-    ("C", "Check out the revision"),
-    ("R", "Copy a review prompt"),
-    ("F", "Copy the drift fix"),
-    ("d", "Done until new activity (u undoes)"),
-    ("z", "Snooze until a date (u undoes)"),
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Verb {
+    Bugzilla,
+    Jira,
+    Phabricator,
+    Lando,
+    Try,
+    Landing,
+    Link,
+    Id,
+    Brief,
+    ReviewPrompt,
+    DriftFix,
+    Done,
+    Snooze,
+    Agent,
+    Checkout,
+}
+
+pub struct ItemKey {
+    pub verb: Verb,
+    pub group: Group,
+    pub key: char,
+    pub help: &'static str,
+}
+
+const fn item(verb: Verb, group: Group, key: char, help: &'static str) -> ItemKey {
+    ItemKey { verb, group, key, help }
+}
+
+pub const ITEM_KEYS: &[ItemKey] = &[
+    item(Verb::Bugzilla, Group::Go, 'b', "Bugzilla"),
+    item(Verb::Jira, Group::Go, 'j', "Jira"),
+    item(Verb::Phabricator, Group::Go, 'p', "Phabricator"),
+    item(Verb::Lando, Group::Go, 'l', "Lando"),
+    item(Verb::Try, Group::Go, 't', "Try push"),
+    item(Verb::Landing, Group::Go, 'a', "Landing push"),
+    item(Verb::Link, Group::Go, '1', "Other links"),
+    item(Verb::Id, Group::Copy, 'y', "ID"),
+    item(Verb::Brief, Group::Copy, 'b', "Agent brief"),
+    item(Verb::ReviewPrompt, Group::Copy, 'r', "Review prompt"),
+    item(Verb::DriftFix, Group::Copy, 'f', "Drift fix"),
+    item(Verb::Done, Group::Item, 'd', "Done; u undoes"),
+    item(Verb::Snooze, Group::Item, 'z', "Snooze; u undoes"),
+    item(Verb::Agent, Group::Item, 'c', "Coding agent"),
+    item(Verb::Checkout, Group::Item, 'C', "Check out"),
 ];
 
-pub const ITEM_LETTERS: &[char] = &['B', 'J', 'P', 'L', 'T', 'b', 'y', 'c', 'C', 'R', 'F', 'd', 'z'];
+pub const LINK_KEYS: [char; 9] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+pub const fn item_key(verb: Verb) -> &'static ItemKey {
+    &ITEM_KEYS[verb as usize]
+}
+
+pub fn chord(group: Group, key: char) -> String {
+    group.prefix().map_or_else(|| key.to_string(), |p| format!("{p}{key}"))
+}
+
+pub fn chord_of(verb: Verb) -> String {
+    let k = item_key(verb);
+    chord(k.group, k.key)
+}
+
+pub fn item_letters() -> impl Iterator<Item = char> {
+    ITEM_KEYS.iter().filter(|k| k.group == Group::Item).map(|k| k.key)
+}
+
+pub fn built_in() -> String {
+    RESERVED
+        .iter()
+        .copied()
+        .filter(|c| *c != ' ')
+        .chain(item_letters())
+        .chain('0'..='9')
+        .collect()
+}
 
 pub const MARK_GRID: &[(&str, &str)] = &[
     ("✓", "try passed"),
@@ -271,9 +381,9 @@ pub fn legend(i: usize) -> Option<(&'static str, &'static str)> {
     }
 }
 
-pub const RESERVED: &[char] = &['o', 'q', 'r', 's', 'u', '?', '/', 'Z', 'j', 'k', 'h', 'l', 'g', 'G', '@', ' '];
+pub const RESERVED: &[char] = &['o', 'q', 'r', 's', 'u', '?', '/', 'Z', 'j', 'k', 'h', 'l', 'g', 'y', 'G', '@', ' '];
 
-pub const ITEM_HINTS: &[(&str, &str, u8)] = &[("d", "done", 8), ("z", "snooze", 9)];
+pub const ITEM_HINTS: &[(&str, &str, u8)] = &[("d", "done", 10), ("z", "snooze", 11)];
 
 pub fn action_for(key: KeyEvent) -> Option<Action> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -304,6 +414,7 @@ pub fn vim_keys() -> String {
         .filter_map(|k| match k {
             Char(c) => Some(c.to_string()),
             Ctrl(c) => Some(format!("^{c}")),
+            K::Twice(c) => Some(format!("{c}{c}")),
             _ => None,
         })
         .collect();
@@ -371,7 +482,13 @@ mod tests {
         assert_eq!(press(KeyCode::Char('3')), Some(Action::Section(2)));
         assert_eq!(press(KeyCode::Char('9')), Some(Action::Section(8)));
         assert_eq!(press(KeyCode::Char('0')), Some(Action::Section(9)));
-        assert_eq!(press(KeyCode::Char('B')), None, "item actions aren't list keys");
+        assert_eq!(press(KeyCode::Char('g')), Some(Action::Prefix(Group::Go)));
+        assert_eq!(press(KeyCode::Char('y')), Some(Action::Prefix(Group::Copy)));
+        assert_eq!(press(KeyCode::Home), Some(Action::Top));
+        assert_eq!(press(KeyCode::Char('G')), Some(Action::Bottom));
+        for retired in ['B', 'J', 'P', 'L', 'T', 'b', 'R', 'F'] {
+            assert_eq!(press(KeyCode::Char(retired)), None, "{retired} is retired");
+        }
         assert_eq!(
             action_for(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)),
             Some(Action::PageDown)
@@ -379,12 +496,46 @@ mod tests {
     }
 
     #[test]
+    fn the_item_table_is_indexed_by_verb() {
+        for (n, k) in ITEM_KEYS.iter().enumerate() {
+            assert_eq!(k.verb as usize, n, "{:?} is out of place", k.verb);
+        }
+        assert_eq!(chord_of(Verb::Bugzilla), "gb");
+        assert_eq!(chord_of(Verb::Landing), "ga");
+        assert_eq!(chord_of(Verb::Id), "yy");
+        assert_eq!(chord_of(Verb::Brief), "yb");
+        assert_eq!(chord_of(Verb::ReviewPrompt), "yr");
+        assert_eq!(chord_of(Verb::DriftFix), "yf");
+        assert_eq!(chord_of(Verb::Done), "d");
+        assert_eq!(chord_of(Verb::Checkout), "C");
+    }
+
+    #[test]
+    fn no_two_item_keys_share_a_chord_and_prefixes_are_reserved() {
+        let chords: Vec<String> = ITEM_KEYS.iter().map(|k| chord(k.group, k.key)).collect();
+        for (n, c) in chords.iter().enumerate() {
+            assert!(!chords[n + 1..].contains(c), "{c} twice");
+        }
+        for g in Group::PREFIXED {
+            assert!(RESERVED.contains(&g.prefix().unwrap()), "{g:?}");
+        }
+        for c in item_letters() {
+            assert!(!RESERVED.contains(&c) && press(KeyCode::Char(c)).is_none(), "{c} is taken");
+        }
+        let taken = built_in();
+        for c in ['g', 'y', 'd', 'z', 'c', 'C', 'q', '1', '0'] {
+            assert!(taken.contains(c), "{c} missing from {taken}");
+        }
+        assert!(!taken.contains('B') && !taken.contains(' '), "{taken}");
+    }
+
+    #[test]
     fn every_help_line_fits_its_column_at_80() {
         for b in BINDINGS {
             assert!(b.help.width() <= 27, "{} cells: {}", b.help.width(), b.help);
         }
-        for (_, d) in ITEM_KEYS {
-            assert!(d.width() <= 35, "{} cells: {d}", d.width());
+        for k in ITEM_KEYS {
+            assert!(k.help.width() <= 16, "{} cells: {}", k.help.width(), k.help);
         }
         for (tag, d) in (0..LEGEND_LEN).filter_map(legend) {
             assert!(tag.width() <= 3 && d.width() <= 14, "{tag} {d}");
@@ -396,33 +547,25 @@ mod tests {
         for b in BINDINGS.iter().filter(|b| !b.label.is_empty()) {
             assert!(!b.help.contains(" / "), "one action per row: {}", b.help);
         }
-        for (k, _) in ITEM_KEYS {
-            assert_eq!(k.chars().count(), 1, "one letter per row: {k}");
-        }
-    }
-
-    #[test]
-    fn help_describes_every_built_in_item_letter() {
-        let described: Vec<char> = ITEM_KEYS.iter().flat_map(|(k, _)| k.chars()).collect();
-        for c in ITEM_LETTERS {
-            assert!(described.contains(c), "{c} is an item action but not in help");
+        for k in ITEM_KEYS {
+            assert_eq!(chord(k.group, k.key).chars().count(), 1 + usize::from(k.group.prefix().is_some()));
         }
     }
 
     #[test]
     fn vim_keys_come_from_the_table() {
-        assert_eq!(vim_keys(), "j k l h ^d ^u g G");
+        assert_eq!(vim_keys(), "j k l h ^d ^u gg G");
     }
 
     #[test]
     fn the_footer_comes_from_the_table() {
         assert_eq!(
             list_hints(),
-            "↑↓ move · ←→ section · Tab detail · Enter open · Space actions · / filter · Z hidden · r refresh · s sources · ? help · d done · z snooze"
+            "↑↓ move · ←→ section · Tab detail · Enter open · g go · y copy · Space actions · / filter · Z hidden · r refresh · s sources · ? help · d done · z snooze"
         );
         assert_eq!(
-            footer(80).iter().map(|(k, l)| format!("{k} {l}")).collect::<Vec<_>>().join(SEP),
-            "↑↓ move · ←→ section · Enter open · Space actions · / filter · ? help"
+            footer(78).iter().map(|(k, l)| format!("{k} {l}")).collect::<Vec<_>>().join(SEP),
+            "↑↓ move · ←→ section · Enter open · g go · y copy · Space actions · ? help"
         );
     }
 }

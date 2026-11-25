@@ -106,8 +106,6 @@ fn no_phab() -> Check {
     )
 }
 
-const BUILT_IN: &str = "BJPLTbcyCRFdzZoqrs?/jkhlgG12345678@";
-
 fn check(name: &str, required: bool, ok: bool, detail: impl Into<String>, fix: Option<&str>) -> Check {
     Check {
         name: name.into(),
@@ -240,7 +238,10 @@ fn agent_check(cfg: &Config) -> Check {
             "agent",
             false,
             false,
-            "no claude or codex on PATH; the c key copies the brief instead",
+            format!(
+                "no claude or codex on PATH; {} copies the brief to paste into one",
+                worklens_tui::keys::chord_of(worklens_tui::keys::Verb::Brief)
+            ),
             Some("install one, or set \"agent\" in ~/.config/worklens.json"),
         ),
     }
@@ -250,10 +251,11 @@ fn keys_check(cfg: &Config) -> Option<Check> {
     if cfg.keys.is_empty() && cfg.bad_keys.is_empty() {
         return None;
     }
+    let built_in = worklens_tui::keys::built_in();
     let mut clash: Vec<String> = cfg
         .keys
         .iter()
-        .filter(|k| BUILT_IN.contains(k.key))
+        .filter(|k| built_in.contains(k.key))
         .map(|k| k.key.to_string())
         .collect();
     clash.extend(cfg.bad_keys.iter().cloned());
@@ -261,7 +263,7 @@ fn keys_check(cfg: &Config) -> Option<Check> {
         let keys: Vec<String> = cfg.keys.iter().map(|k| format!("{} {}", k.key, k.label)).collect();
         check("keys", false, true, keys.join(", "), None)
     } else {
-        let fix = format!("use a single key worklens doesn't already use (not {BUILT_IN})");
+        let fix = format!("use a single key worklens doesn't already use (not {built_in})");
         check("keys", false, false, format!("{} can't be used", clash.join(", ")), Some(&fix))
     })
 }
